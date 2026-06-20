@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OpisAI — demonstracja</title>
+<style>
+/* ===================================================================
+   OpisAI — interaktywne demo (symulacja pulpitu Windows + system
+   gabinetowy + żywy bąbelek). Pojedynczy plik, zero zależności.
+   Bąbelek odwzorowany 1:1 wg opisai.py (Bubble.paintEvent / _tick).
+   =================================================================== */
+:root{
+  --op-green-1:#6fd07f; --op-green-2:#27ae60; --op-green-3:#1f8038; --op-green-4:#15622c;
+  --kxp-bar-1:#2f8f4a; --kxp-bar-2:#247a3c; --kxp-ribbon:#3a9a55; --kxp-field-border:#9bb59c;
+  --rodo-1:#46a64f; --rodo-2:#2f8f3f;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden}
+body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;
+  user-select:none;-webkit-user-select:none;color:#1a1a1a;background:#0b1f3a}
+
+/* ---------- PULPIT / TAPETA ---------- */
+#desktop{position:fixed;inset:0;overflow:hidden;
+  background:
+    radial-gradient(1200px 800px at 18% 12%, rgba(64,200,140,.30), transparent 60%),
+    radial-gradient(1000px 900px at 85% 88%, rgba(40,90,220,.45), transparent 60%),
+    radial-gradient(1400px 1000px at 70% 20%, rgba(120,90,230,.30), transparent 55%),
+    linear-gradient(135deg,#0e2a52 0%, #133b6e 45%, #0c2547 100%);}
+#desktop::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 240px rgba(0,0,0,.45)}
+
+/* ---------- IKONY PULPITU ---------- */
+.icons{position:absolute;top:14px;left:12px;display:flex;flex-direction:column;gap:6px;z-index:10}
+.dicon{width:96px;padding:8px 4px 10px;border-radius:8px;text-align:center;cursor:default;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+.dicon:hover{background:rgba(255,255,255,.12)}
+.dicon.sel{background:rgba(90,200,120,.30);outline:1px solid rgba(150,230,170,.55)}
+.dicon .glyph{width:46px;height:46px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;border-radius:9px;font-size:24px;box-shadow:0 3px 8px rgba(0,0,0,.35)}
+.dicon .lbl{font-size:12px;line-height:1.15}
+.glyph.kxp{background:linear-gradient(160deg,#3aa85a,#1f7a39);color:#fff}
+.glyph.bin{background:linear-gradient(160deg,#dfe6ee,#aeb9c6);color:#54616e}
+.glyph.opis{background:radial-gradient(circle at 32% 28%, var(--op-green-1), var(--op-green-2) 55%, var(--op-green-3));color:#fff;font-weight:700;font-size:13px}
+
+/* ---------- OKNO (generyczne) ---------- */
+.win{position:absolute;background:#eef1f3;border-radius:10px 10px 8px 8px;
+  box-shadow:0 26px 70px rgba(0,0,0,.55),0 4px 14px rgba(0,0,0,.4);
+  display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.25)}
+.win.min{display:none !important}
+.win.maxed{border-radius:0}
+
+/* ---------- SYSTEM GABINETOWY ---------- */
+#kxp{left:60px;top:62px;width:940px;height:636px;z-index:120}
+.kxp-title{height:34px;background:linear-gradient(180deg,var(--kxp-bar-1),var(--kxp-bar-2));color:#fff;display:flex;align-items:center;gap:8px;padding:0 6px 0 10px;cursor:default;font-size:13px}
+.kxp-title .ti-ico{width:18px;height:18px;border-radius:4px;background:linear-gradient(160deg,#bff0c8,#5db877);display:flex;align-items:center;justify-content:center;font-size:11px}
+.kxp-title .ti-txt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;letter-spacing:.2px}
+.wbtns{display:flex;gap:2px}
+.wbtn{width:42px;height:28px;display:flex;align-items:center;justify-content:center;color:#fff;border-radius:4px;font-size:13px;cursor:pointer}
+.wbtn:hover{background:rgba(255,255,255,.18)}
+.wbtn.close:hover{background:#e23b3b}
+.kxp-menu{display:flex;background:#2c8a46;color:#fff;font-size:11.5px;padding:0 4px;height:26px;align-items:stretch}
+.kxp-menu .m{padding:0 9px;display:flex;align-items:center;cursor:default;white-space:nowrap}
+.kxp-menu .m:hover{background:rgba(255,255,255,.16)}
+.kxp-menu .m.hot{background:rgba(0,0,0,.18);font-weight:600}
+.kxp-tools{display:flex;gap:6px;background:#e9efe9;border-bottom:1px solid #cdd8cd;padding:6px 8px}
+.kxp-tools button{font:inherit;font-size:12px;padding:5px 12px;border:1px solid #7fae87;background:linear-gradient(180deg,#fbfffb,#d9ecdc);color:#1c3f23;border-radius:5px;cursor:pointer}
+.kxp-tools button:hover{background:linear-gradient(180deg,#fff,#cfe7d3)}
+.kxp-tools button.primary{background:linear-gradient(180deg,#46b262,#2f8f4a);color:#fff;border-color:#247a3c;font-weight:600}
+.kxp-head{display:flex;gap:10px;padding:10px;background:#dde6df}
+.pcard{flex:1;background:#fff;border:1px solid #c5d3c7;border-radius:6px;padding:8px 10px;min-width:0}
+.pcard h4{margin:0 0 6px;font-size:11px;letter-spacing:.6px;color:#2f7d44;text-transform:uppercase}
+.prow{display:flex;font-size:12px;line-height:1.55;gap:6px}
+.prow b{color:#3a4a3e;min-width:72px;font-weight:600}
+.prow span{color:#222}
+.photo{width:104px;background:#fff;border:1px solid #c5d3c7;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:#9aa}
+.photo .pic{font-size:38px}
+.kxp-tabs{display:flex;gap:3px;padding:8px 10px 0;background:#dde6df}
+.kxp-tabs .tab{font-size:12px;padding:6px 12px;border:1px solid #c5d3c7;border-bottom:none;background:#eef3ee;border-radius:6px 6px 0 0;color:#41513f;cursor:default}
+.kxp-tabs .tab:hover{background:#f6faf6}
+.kxp-tabs .tab.active{background:#fff;font-weight:600;color:#1c3f23}
+.kxp-body{flex:1;background:#fff;padding:12px 14px;overflow:auto;display:flex;flex-direction:column;gap:12px;border-top:1px solid #c5d3c7}
+.field{display:flex;flex-direction:column;gap:4px}
+.field>label{font-size:13px;font-weight:700;color:#1c3f23}
+.memo{border:1px solid var(--kxp-field-border);border-radius:4px;background:#fff;padding:9px 11px;font-size:13.5px;line-height:1.55;color:#16240f;white-space:pre-wrap;overflow:auto;font-family:"Segoe UI",system-ui,sans-serif}
+.memo:focus{outline:none;box-shadow:0 0 0 2px rgba(39,174,96,.45);border-color:transparent}
+.memo.wywiad{min-height:64px}.memo.badanie{min-height:88px}.memo.diagnoza{min-height:58px}
+.memo.reading{box-shadow:0 0 0 2px rgba(60,170,90,.5);border-color:transparent;animation:dash 1s linear infinite}
+.memo.writing{box-shadow:0 0 0 2px var(--op-green-2),0 0 18px rgba(39,174,96,.45);border-color:transparent;background:#f6fff8}
+@keyframes dash{to{box-shadow:0 0 0 2px rgba(60,170,90,.2)}}
+.caret{display:inline-block;width:2px;height:1.05em;background:var(--op-green-3);margin-left:1px;vertical-align:-2px;animation:blink .9s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.kxp-status{height:24px;background:#2c8a46;color:#fff;font-size:11px;display:flex;align-items:center;gap:14px;padding:0 12px}
+.kxp-status .dot{width:8px;height:8px;border-radius:50%;background:#bff0c8;display:inline-block;margin-right:5px}
+
+/* ---------- BĄBELEK ---------- */
+/* Kontener = obszar interakcji (120px). Canvas (192px) wystaje poza
+   kontener (overflow widoczny) — daje miejsce na rozciąganie/cień, ale
+   ma pointer-events:none, więc zdarzenia łapie kontener. Kursor = strzałka. */
+#bubble{position:absolute;z-index:9500;width:120px;height:120px;cursor:default;touch-action:none}
+#bubble canvas{position:absolute;left:-36px;top:-36px;width:192px;height:192px;pointer-events:none}
+.bubble-status{position:absolute;left:60px;top:120px;transform:translateX(-50%);background:rgba(20,40,25,.92);color:#eafff0;font-size:12px;padding:6px 12px;border-radius:14px;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.4);opacity:0;transition:opacity .25s;pointer-events:none}
+.bubble-status.show{opacity:1}
+.bubble-status .d::after{content:"";animation:dots 1.3s steps(4,end) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.bubble-toast{position:absolute;left:60px;top:120px;transform:translateX(-50%) translateY(6px);background:linear-gradient(180deg,#3ec465,#27ae60);color:#fff;font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:16px;white-space:nowrap;box-shadow:0 8px 22px rgba(20,90,40,.5);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}
+.bubble-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.coach-ring{position:absolute;left:-16px;top:-16px;width:152px;height:152px;border-radius:50%;border:3px solid rgba(120,235,160,.9);animation:coachPulse 1.8s ease-out infinite;pointer-events:none}
+@keyframes coachPulse{0%{transform:scale(.62);opacity:.9}100%{transform:scale(1.12);opacity:0}}
+#bubble.coached .coach-ring{display:none}
+#bubble.popping{animation:bubblePop .58s cubic-bezier(.4,0,.6,1) forwards;transform-origin:60px 60px}
+@keyframes bubblePop{0%{transform:scale(1);opacity:1}22%{transform:scale(1.32)}100%{transform:scale(0);opacity:0}}
+#bubble.emerging{animation:bubbleEmerge .5s cubic-bezier(.2,1.3,.3,1);transform-origin:60px 60px}
+@keyframes bubbleEmerge{0%{transform:scale(0);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1)}}
+
+/* ---------- MENU KONTEKSTOWE ---------- */
+.ctx{position:absolute;z-index:10001;min-width:248px;max-height:calc(100vh - 24px);overflow:auto;background:#1c3322;color:#eafff0;border:1px solid rgba(140,220,160,.35);border-radius:12px;padding:6px;box-shadow:0 18px 50px rgba(0,0,0,.55);font-size:13px;display:none}
+.ctx .it{padding:9px 12px;border-radius:8px;cursor:default;display:flex;gap:10px;align-items:center}
+.ctx .it:hover{background:rgba(90,200,120,.22)}
+.ctx .sep{height:1px;background:rgba(255,255,255,.12);margin:5px 8px}
+.ctx .it .k{opacity:.6;margin-left:auto;font-size:11px}
+
+/* ---------- RODO ---------- */
+#scrim{position:fixed;inset:0;z-index:9990;background:rgba(8,20,12,.45);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center}
+#scrim.show{display:flex}
+#rodo{width:560px;max-width:94vw;border-radius:34px;position:relative;color:#fff;background:radial-gradient(120% 120% at 50% 0%, var(--rodo-1), var(--rodo-2));box-shadow:0 30px 90px rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,255,255,.18);padding:22px 26px 20px;animation:rodoIn .28s cubic-bezier(.2,1.2,.3,1)}
+@keyframes rodoIn{from{transform:scale(.9) translateY(10px);opacity:0}to{transform:none;opacity:1}}
+#rodo .grip{width:46px;height:5px;border-radius:3px;background:rgba(255,255,255,.5);margin:0 auto 12px}
+#rodo .x{position:absolute;right:16px;top:16px;width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;cursor:pointer}
+#rodo .x:hover{background:rgba(255,255,255,.32)}
+#rodo h3{margin:0 0 6px;text-align:center;font-size:18px;font-weight:700}
+#rodo .sub{text-align:center;font-size:12px;opacity:.92;line-height:1.4;margin:0 18px 12px}
+#rodo .note{width:100%;min-height:92px;max-height:150px;resize:vertical;border:none;border-radius:12px;padding:10px 12px;font:inherit;font-size:12.5px;line-height:1.5;color:#1c2a1c;background:#f3faf0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+#rodo .confirm{display:flex;gap:8px;align-items:flex-start;font-size:12px;margin:12px 2px;line-height:1.4}
+#rodo .confirm input{margin-top:2px;width:16px;height:16px;accent-color:#fff}
+.matrix{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
+.mbtn{border:none;border-radius:13px;padding:11px 10px 12px;text-align:left;cursor:pointer;color:#173318;font:inherit;line-height:1.25;box-shadow:0 4px 12px rgba(0,0,0,.22);transition:transform .08s,filter .15s}
+.mbtn:hover{transform:translateY(-2px);filter:brightness(1.04)}
+.mbtn:active{transform:translateY(0)}
+.mbtn .t{font-size:11px;opacity:.85}
+.mbtn .m{font-weight:700;font-size:13.5px;margin-top:3px}
+.mbtn .e{font-size:10px;opacity:.7;margin-top:5px}
+.mbtn.hot{color:#fff}
+.rodo-foot{display:flex;justify-content:flex-end;margin-top:14px}
+.rodo-foot button{font:inherit;font-size:13px;padding:8px 18px;border-radius:10px;border:none;cursor:pointer;background:rgba(255,255,255,.92);color:#1c3a20;font-weight:600}
+.rodo-foot button:hover{background:#fff}
+
+/* ---------- PASEK ZADAŃ (zielony — akcent motywu) ---------- */
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:48px;z-index:9000;background:rgba(17,46,27,.82);backdrop-filter:blur(22px) saturate(1.5);border-top:1px solid rgba(150,230,170,.14);display:flex;align-items:center;padding:0 10px}
+.tb-center{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center}
+.tb-btn{height:38px;min-width:40px;padding:0 9px;border-radius:7px;display:flex;align-items:center;gap:8px;cursor:default;color:#eaf0f6;position:relative}
+.tb-btn:hover{background:rgba(120,220,150,.18)}
+.tb-btn.active{background:rgba(120,220,150,.16)}
+.tb-btn.active::after{content:"";position:absolute;left:9px;right:9px;bottom:3px;height:3px;border-radius:2px;background:#4fcf73}
+.tb-btn .g{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.tb-btn .g.start{background:transparent}
+.win-logo{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;width:18px;height:18px}
+.win-logo i{background:#5cc16f;border-radius:1px}
+.tb-btn .g.kxp{background:linear-gradient(160deg,#3aa85a,#1f7a39);color:#fff;font-size:10px}
+.tb-btn .lbl{font-size:12.5px;max-width:176px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-search{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 12px;border-radius:18px;background:rgba(255,255,255,.12);color:#cdd6e0;font-size:12.5px;cursor:text}
+.tray{margin-left:auto;display:flex;align-items:center;gap:6px;color:#dfe7ef;padding-right:6px}
+.tray .ic{width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:default;font-size:13px}
+.tray .ic:hover{background:rgba(120,220,150,.18)}
+.tray .ic.opis .b{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 33% 30%, var(--op-green-1), var(--op-green-2) 60%, var(--op-green-3));box-shadow:0 0 0 1.5px rgba(255,255,255,.4)}
+.clock{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2;font-size:12px;padding:0 8px;cursor:default;color:#eaf0f6}
+.clock .d{font-size:11px;opacity:.85}
+
+/* ---------- START MENU ---------- */
+#startmenu{position:fixed;left:50%;transform:translateX(-50%);bottom:56px;width:520px;max-width:94vw;z-index:9100;background:rgba(16,44,26,.94);backdrop-filter:blur(26px);border:1px solid rgba(150,230,170,.14);border-radius:14px;padding:18px;display:none;box-shadow:0 24px 70px rgba(0,0,0,.5);color:#eef3f8}
+#startmenu.show{display:block}
+#startmenu h5{margin:2px 4px 12px;font-size:12px;opacity:.7;font-weight:600}
+.sm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sm-app{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 6px;border-radius:10px;cursor:default}
+.sm-app:hover{background:rgba(120,220,150,.16)}
+.sm-app .g{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px}
+.sm-app .nm{font-size:11.5px}
+
+/* ---------- O PROGRAMIE ---------- */
+.about{position:fixed;z-index:10002;left:50%;top:50%;transform:translate(-50%,-50%);width:380px;background:#fff;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.5);display:none;overflow:hidden}
+.about.show{display:block}
+.about .hd{background:linear-gradient(135deg,var(--op-green-2),var(--op-green-3));color:#fff;padding:18px 20px;display:flex;gap:12px;align-items:center}
+.about .hd .b{width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 33% 30%,var(--op-green-1),var(--op-green-2) 60%,var(--op-green-3));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+.about .bd{padding:16px 20px;font-size:13px;line-height:1.6;color:#243}
+.about .bd b{color:var(--op-green-3)}
+.about .ft{padding:0 20px 18px;text-align:right}
+.about .ft button{font:inherit;padding:8px 18px;border-radius:9px;border:none;background:var(--op-green-2);color:#fff;cursor:pointer;font-weight:600}
+
+.hint-pill{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:8000;background:rgba(20,40,25,.85);color:#eafff0;font-size:12px;padding:7px 14px;border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.4);opacity:0;transition:opacity .4s;max-width:80vw;text-align:center}
+.hint-pill.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="desktop">
+
+  <div class="icons">
+    <div class="dicon" id="ic-kxp" title="Kliknij dwukrotnie, aby uruchomić">
+      <div class="glyph kxp">🏥</div><div class="lbl">System Informatyczny</div></div>
+    <div class="dicon" id="ic-opis"><div class="glyph opis">Op</div><div class="lbl">OpisAI</div></div>
+    <div class="dicon" id="ic-bin"><div class="glyph bin">🗑</div><div class="lbl">Kosz</div></div>
+  </div>
+
+  <!-- OKNO SYSTEMU INFORMATYCZNEGO -->
+  <div class="win" id="kxp">
+    <div class="kxp-title" id="kxp-title">
+      <div class="ti-ico">🏥</div>
+      <div class="ti-txt">System Informatyczny — Rejestracja wizyty: Wywiad – Badanie – Diagnoza</div>
+      <div class="wbtns">
+        <div class="wbtn" title="Minimalizuj" data-w="min">─</div>
+        <div class="wbtn" title="Maksymalizuj" data-w="max">▢</div>
+        <div class="wbtn close" title="Zamknij" data-w="close">✕</div>
+      </div>
+    </div>
+    <div class="kxp-menu">
+      <div class="m">OPCJE</div><div class="m hot">PRZEBIEG WIZYTY</div><div class="m">ZWIERZĘTA</div>
+      <div class="m">KLIENCI</div><div class="m">WIZYTY</div><div class="m">Apteka</div>
+      <div class="m">Finanse</div><div class="m">Leczenie</div><div class="m">Profilaktyka</div><div class="m">Administrator</div>
+    </div>
+    <div class="kxp-tools">
+      <button class="primary" data-act="zapis">💾 Zapisz wizytę</button>
+      <button data-act="wydruk">🖨 Wydruki</button>
+      <button data-act="oper">⚙ Operacje</button>
+      <button data-act="nowa">➕ Nowa</button>
+      <button data-act="anuluj">✖ Anuluj</button>
+    </div>
+    <div class="kxp-head">
+      <div class="pcard">
+        <h4>Właściciel</h4>
+        <div class="prow"><b>Imię/nazw.</b><span>Marta Wiśniewska</span></div>
+        <div class="prow"><b>Telefon</b><span>512-688-450</span></div>
+        <div class="prow"><b>Adres</b><span>Wrocław, ul. Klonowa 14</span></div>
+        <div class="prow"><b>Płatnik VAT</b><span>nie</span></div>
+      </div>
+      <div class="pcard">
+        <h4>Zwierzę (pacjent)</h4>
+        <div class="prow"><b>Imię</b><span>Fistaszek &nbsp;<span style="color:#888">ID 012345678</span></span></div>
+        <div class="prow"><b>Rasa</b><span>szczur — odm. hodowlana (fancy rat)</span></div>
+        <div class="prow"><b>Płeć / maść</b><span>samiec / kapturowa (czarno-biała)</span></div>
+        <div class="prow"><b>Wiek</b><span>1 rok 9 mies. (15/09/2024)</span></div>
+        <div class="prow"><b>Waga / temp.</b><span>420 g &nbsp;·&nbsp; 37,8 °C</span></div>
+      </div>
+      <div class="photo"><div class="pic">🐀</div><div style="font-size:10px">[ foto ]</div></div>
+    </div>
+    <div class="kxp-tabs">
+      <div class="tab active">1. Badanie</div><div class="tab">2. Szybka diagnoza</div>
+      <div class="tab">3. Profilaktyka</div><div class="tab">4. Diagnostyka</div><div class="tab">5. Kont. leczenia</div>
+    </div>
+    <div class="kxp-body">
+      <div class="field"><label>Wywiad:</label><div class="memo wywiad" id="f-wywiad" contenteditable="true" spellcheck="false"></div></div>
+      <div class="field"><label>Badanie kliniczne:</label><div class="memo badanie" id="f-badanie" contenteditable="true" spellcheck="false"></div></div>
+      <div class="field"><label>Diagnoza:</label><div class="memo diagnoza" id="f-diagnoza" contenteditable="true" spellcheck="false"></div></div>
+    </div>
+    <div class="kxp-status">
+      <span><span class="dot"></span>Połączono z bazą</span>
+      <span>Wizyta nr &lt;NOWA&gt;</span>
+      <span>Zarejestrowała: lek. wet. Anna Nowak</span>
+    </div>
+  </div>
+
+  <!-- BĄBELEK -->
+  <div id="bubble" title="OpisAI — lewy klik: generuj · prawy klik: menu · przeciągnij: przenieś">
+    <canvas id="blob" width="192" height="192"></canvas>
+    <div class="coach-ring"></div>
+    <div class="bubble-status" id="bstatus"><span class="t"></span><span class="d"></span></div>
+    <div class="bubble-toast" id="btoast">✓ Epikryza wpisana</div>
+  </div>
+</div>
+
+<!-- RODO -->
+<div id="scrim"><div id="rodo">
+  <div class="grip"></div><div class="x" id="rodo-x">✕</div>
+  <h3>Wyślij treść do AI?</h3>
+  <div class="sub">Ta treść zostanie wysłana na zewnętrzne serwery AI (Claude / ChatGPT / Gemini). Możesz ją tu jeszcze poprawić przed wysłaniem.</div>
+  <textarea class="note" id="rodo-note" spellcheck="false"></textarea>
+  <label class="confirm"><input type="checkbox" id="rodo-chk" checked>
+    <span>Potwierdzam: w treści <b>NIE</b> ma danych właściciela (imię, nazwisko, adres, telefon, e-mail, PESEL).</span></label>
+  <div class="matrix" id="rodo-matrix"></div>
+  <div class="rodo-foot"><button id="rodo-cancel">Anuluj</button></div>
+</div></div>
+
+<div class="ctx" id="ctx"></div>
+
+<div class="about" id="about">
+  <div class="hd"><div class="b">Op</div><div>
+    <div style="font-weight:700;font-size:16px">OpisAI</div>
+    <div style="font-size:12px;opacity:.9">Asystent dokumentacji weterynaryjnej</div></div></div>
+  <div class="bd">Jednym kliknięciem przekształca <b>surowe notatki</b> z wizyty w gotową, profesjonalną <b>epikryzę</b> — czyta je wprost z Twojego systemu i wpisuje wynik z powrotem. Działa z <b>Twoim systemem gabinetowym</b> i innymi programami. Z bramką <b>RODO</b> i zgodnością z <b>EU AI Act</b>.
+    <div style="margin-top:10px;font-size:12px;color:#567">To jest demonstracja interaktywna.</div></div>
+  <div class="ft"><button id="about-ok">Zamknij</button></div>
+</div>
+
+<div id="startmenu">
+  <div class="tb-search" style="width:100%;margin-bottom:14px">🔎 Wyszukaj aplikacje, ustawienia i dokumenty</div>
+  <h5>PRZYPIĘTE</h5>
+  <div class="sm-grid">
+    <div class="sm-app" id="sm-kxp"><div class="g" style="background:linear-gradient(160deg,#3aa85a,#1f7a39)">🏥</div><div class="nm">System Informatyczny</div></div>
+    <div class="sm-app" id="sm-opis"><div class="g" style="background:radial-gradient(circle at 33% 30%,#6fd07f,#27ae60 60%,#1f8038);color:#fff;font-weight:700;font-size:12px">Op</div><div class="nm">OpisAI</div></div>
+    <div class="sm-app"><div class="g" style="background:#2b6fd6">📧</div><div class="nm">Poczta</div></div>
+    <div class="sm-app"><div class="g" style="background:#3f8edb">🌐</div><div class="nm">Edge</div></div>
+    <div class="sm-app"><div class="g" style="background:#1f9f63">📊</div><div class="nm">Excel</div></div>
+    <div class="sm-app"><div class="g" style="background:#444">⚙</div><div class="nm">Ustawienia</div></div>
+    <div class="sm-app"><div class="g" style="background:#6b4fc4">🗂</div><div class="nm">Eksplorator</div></div>
+    <div class="sm-app"><div class="g" style="background:#c0392b">🧮</div><div class="nm">Kalkulator</div></div>
+  </div>
+</div>
+
+<div id="taskbar">
+  <div class="tb-center">
+    <div class="tb-btn" id="tb-start" title="Start"><div class="g start"><div class="win-logo"><i></i><i></i><i></i><i></i></div></div></div>
+    <div class="tb-search" id="tb-search">🔎 Szukaj</div>
+    <div class="tb-btn active" id="tb-kxp" title="System Informatyczny"><div class="g kxp">🏥</div><div class="lbl">System Informatyczny</div></div>
+  </div>
+  <div class="tray">
+    <div class="ic opis" title="OpisAI działa" id="tray-opis"><div class="b"></div></div>
+    <div class="ic" title="Sieć" id="tray-net">📶</div>
+    <div class="ic" title="Głośność" id="tray-vol">🔊</div>
+    <div class="clock" id="clock"><div class="t">—</div><div class="d">—</div></div>
+  </div>
+</div>
+
+<div class="hint-pill" id="hint"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   KOLORY — odwzorowanie Qt QColor.lighter()/darker() (model HSV).
+   BRAND = fallback OpisAI green z opisai.py: QColor(46,204,113) — tu nieco
+   ciemniejszy odcień akcentu z materiałów (biały napis OpisAI).
+   ===================================================================== */
+const BRAND=[39,174,96];
+function rgb2hsv(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;
+  if(d){if(mx===r)h=((g-b)/d)%6;else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360;}
+  return[h,mx?d/mx:0,mx];}
+function hsv2rgb(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;let r,g,b;
+  if(h<60)[r,g,b]=[c,x,0];else if(h<120)[r,g,b]=[x,c,0];else if(h<180)[r,g,b]=[0,c,x];
+  else if(h<240)[r,g,b]=[0,x,c];else if(h<300)[r,g,b]=[x,0,c];else[r,g,b]=[c,0,x];
+  return[Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];}
+function lighter(rgb,f){const[h,s,v]=rgb2hsv(rgb[0],rgb[1],rgb[2]);return hsv2rgb(h,s,Math.min(1,v*f/100));}
+function darker(rgb,f){const[h,s,v]=rgb2hsv(rgb[0],rgb[1],rgb[2]);return hsv2rgb(h,s,v*100/f);}
+const rs=a=>`rgb(${a[0]},${a[1]},${a[2]})`;
+
+/* =====================================================================
+   DANE PRZYPADKU + warianty enrichmentu (Bogato/Wiernie ± panel ± rozpoznanie)
+   ===================================================================== */
+const RAW={
+  wywiad:"Szczur, samiec, fancy rat, 1 rok 9 mies., ok. 420 g. Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych.",
+  badanie:"Stan ogólny obniżony, postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. BCS 2/5. T 37,8°C, HR ok. 360/min.",
+  diagnoza:"Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych."};
+const ENRICH={
+  wywiad:{
+    bogato:"Pacjent — samiec szczura (odmiana hodowlana, tzw. fancy rat) w wieku 1 roku i 9 miesięcy, o masie ciała około 420 g — przyprowadzony z powodu utrzymujących się od około dwóch tygodni i stopniowo nasilających się objawów ze strony układu oddechowego: częstego kichania oraz świszczącego, „chrapliwego” oddechu. Właściciel zaobserwował czerwonobrązową wydzielinę (porfirynę) gromadzącą się wokół nozdrzy oraz w przyśrodkowych kątach oczu, a także postępującą apatię, zmniejszone pobieranie pokarmu i chudnięcie. Zwierzę utrzymywane na ściółce z trocin sosnowych. Dotychczas nieleczony.",
+    wiernie:"Szczur, samiec, odmiana hodowlana (fancy rat), 1 rok 9 mies., ok. 420 g. Od ok. 2 tygodni nasilające się kichanie i świszczący oddech oraz czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatia, gorszy apetyt, chudnięcie. Utrzymywany na ściółce z trocin sosnowych. Dotychczas nieleczony."},
+  badanie:{
+    bogato:"Stan ogólny obniżony — zwierzę przytomne, lecz apatyczne, przyjmujące zgarbioną postawę. Sierść nastroszona, matowa. Wokół nozdrzy oraz w przyśrodkowych kątach oczu zaschnięta czerwonobrązowa wydzielina porfirynowa (chromodakryorrhea). Oddech wyraźnie przyspieszony, z zaznaczonym wysiłkiem brzusznym i świstami słyszalnymi bez osłuchiwania. Osłuchowo nad polami płucnymi obustronnie rzężenia i świsty. Kondycja ciała obniżona (BCS 2/5). Błony śluzowe jamy ustnej różowe. Temperatura wewnętrzna 37,8 °C. Czynność serca przyspieszona, trudna do dokładnego zliczenia osłuchowo (ok. 360/min).",
+    wiernie:"Stan ogólny obniżony, postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym, słyszalne świsty. Osłuchowo nad polami płucnymi rzężenia i świsty obustronnie. BCS 2/5. Błony śluzowe różowe. Temperatura 37,8 °C, czynność serca ok. 360/min."},
+  panel:"\n\nParametry życiowe:\n• Stan ogólny: obniżony, przytomny, apatyczny (postawa zgarbiona)\n• Temperatura: 37,8 °C (w normie)\n• Błony śluzowe: różowe\n• Czynność serca: ok. 360/min (przyspieszona)\n• Oddech: przyspieszony, z wysiłkiem brzusznym; świsty\n• Drogi oddechowe (osłuchowo): rzężenia i świsty obustronnie\n• Wydzielina porfirynowa: obecna wokół nozdrzy i oczu\n• Sierść / powłoki: nastroszona, matowa\n• Masa ciała / kondycja: ok. 420 g (BCS 2/5)",
+  diagnoza:{
+    bogato:"DANE (z wizyty): od ok. 2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina porfirynowa wokół nozdrzy i oczu, apatia, spadek apetytu i masy ciała; w badaniu zgarbiona postawa, nastroszona sierść, oddech przyspieszony z wysiłkiem brzusznym, osłuchowo rzężenia i świsty obustronnie, BCS 2/5.\n\nWNIOSKOWANIE: obraz kliniczny odpowiada przewlekłemu zakażeniu układu oddechowego, typowemu dla mykoplazmozy szczurów (Mycoplasma pulmonis, MRM), często z wtórnym zakażeniem bakteryjnym. Wydzielina porfirynowa jest niespecyficznym wskaźnikiem choroby/stresu, a nie krwawieniem. Różnicowo należy uwzględnić inne pierwotne i wtórne zakażenia dróg oddechowych oraz — z uwagi na przewlekłość — proces rozrostowy w klatce piersiowej; drażniąca ściółka z trocin sosnowych mogła nasilać objawy. Rozpoznanie ostateczne wymaga potwierdzenia.\n\nZALECENIA: antybiotykoterapia obejmująca mykoplazmy (np. doksycyklina, ewentualnie w skojarzeniu z enrofloksacyną) dawkowana wg masy ciała, leczenie wspomagające — lek rozszerzający oskrzela, nebulizacja/nawilżanie, wsparcie odżywienia i nawodnienia. Zmiana ściółki na bezpyłową (papierową) oraz poprawa wentylacji. Kontrola za 7–10 dni; przy braku poprawy lub nasileniu duszności — RTG klatki piersiowej i poszerzona diagnostyka.",
+    wiernie:"DANE: ~2 tyg. nasilające się kichanie i świszczący oddech, porfiryna wokół nozdrzy i oczu, apatia, spadek masy ciała; w badaniu zgarbiona postawa, oddech przyspieszony z wysiłkiem brzusznym, osłuchowo rzężenia i świsty, BCS 2/5.\nWNIOSKOWANIE: obraz odpowiada przewlekłemu zakażeniu układu oddechowego typowemu dla mykoplazmozy szczurów (Mycoplasma pulmonis); możliwe wtórne zakażenie bakteryjne; różnicowo inne zakażenia dróg oddechowych oraz proces rozrostowy w klatce piersiowej.\nZALECENIA: antybiotykoterapia obejmująca mykoplazmy (doksycyklina ± enrofloksacyna) wg masy ciała, leczenie wspomagające (lek rozszerzający oskrzela, nebulizacja, wsparcie odżywienia), zmiana ściółki na papierową. Kontrola za 7–10 dni; przy braku poprawy — RTG klatki piersiowej."}};
+function buildOutputs(style,panel,rozp){
+  const o={wywiad:ENRICH.wywiad[style], badanie:ENRICH.badanie[style]+(panel?ENRICH.panel:"")};
+  if(rozp)o.diagnoza=ENRICH.diagnoza[style];
+  return o;}
+
+/* POLA */
+const F={wywiad:document.getElementById('f-wywiad'),badanie:document.getElementById('f-badanie'),diagnoza:document.getElementById('f-diagnoza')};
+function resetCase(){F.wywiad.textContent=RAW.wywiad;F.badanie.textContent=RAW.badanie;F.diagnoza.textContent=RAW.diagnoza;}
+resetCase();
+
+/* =====================================================================
+   BĄBELEK — silnik 1:1 wg opisai.py (Bubble._tick / paintEvent).
+   ===================================================================== */
+const bubbleEl=document.getElementById('bubble');
+const canvas=document.getElementById('blob');
+const ctx=canvas.getContext('2d');
+const DPR=Math.min(window.devicePixelRatio||1,2);
+canvas.width=192*DPR;canvas.height=192*DPR;ctx.scale(DPR,DPR);
+
+let state='idle';                       // idle | processing | success
+let scale=1.0, scaleTarget=1.0, scaleVel=0;
+let hoverAmp=0, hoverAmpTarget=0, hoverPhase=0, hoverPhase2=0;
+let posX=0, posY=0, vx=0, vy=0;
+let dragTargetX=null, dragTargetY=null;
+let dragOffX=null, dragOffY=null, wasDragged=false, dragReady=false;
+
+function placeBubble(x,y){posX=x;posY=y;bubbleEl.style.left=x+'px';bubbleEl.style.top=y+'px';}
+placeBubble(Math.min(window.innerWidth-150,1010), 300);
+
+/* ---- jeden krok fizyki (taktowany co 33 ms, jak _anim_timer 30 FPS) ---- */
+function tick(){
+  scaleVel+=(scaleTarget-scale)*0.25; scaleVel*=0.72; scale+=scaleVel;     // sprężyna skali (hover bounce)
+  hoverAmp+=(hoverAmpTarget-hoverAmp)*0.18;                                // amplituda falowania
+  if(hoverAmp>0.01){                                                       // fazy morphu (niewspółmierne)
+    hoverPhase+=0.09; hoverPhase2+=0.061;
+    if(hoverPhase>Math.PI*200)hoverPhase-=Math.PI*200;
+    if(hoverPhase2>Math.PI*200)hoverPhase2-=Math.PI*200;}
+  if(dragTargetX!==null){                                                  // podążanie za kursorem (guma)
+    const dx=(dragTargetX-posX)*0.20, dy=(dragTargetY-posY)*0.20;
+    vx+=(dx-vx)*0.18; vy+=(dy-vy)*0.18;                                    // wygładzona prędkość = inercja
+    if(Math.abs(dx)>0.05||Math.abs(dy)>0.05){posX+=dx;posY+=dy;}
+  }else{                                                                   // po puszczeniu — rzut z tłumieniem
+    if(Math.abs(vx)>0.05||Math.abs(vy)>0.05){posX+=vx;posY+=vy;}
+    vx*=0.82; vy*=0.82;}
+  posX=Math.max(-12,Math.min(window.innerWidth-108,posX));
+  posY=Math.max(-12,Math.min(window.innerHeight-108,posY));
+  bubbleEl.style.left=posX+'px'; bubbleEl.style.top=posY+'px';
+}
+
+/* ---- kontur bloba: Catmull-Rom -> Beziery (z opcj. przesunięciem cienia) ---- */
+function traceBlob(pts,ox,oy){
+  ox=ox||0; oy=oy||0; const N=pts.length;
+  ctx.beginPath(); ctx.moveTo(pts[0][0]+ox,pts[0][1]+oy);
+  for(let i=0;i<N;i++){
+    const p0=pts[(i-1+N)%N],p1=pts[i],p2=pts[(i+1)%N],p3=pts[(i+2)%N];
+    ctx.bezierCurveTo(p1[0]+(p2[0]-p0[0])/6+ox,p1[1]+(p2[1]-p0[1])/6+oy,
+                      p2[0]-(p3[0]-p1[0])/6+ox,p2[1]-(p3[1]-p1[1])/6+oy, p2[0]+ox,p2[1]+oy);}
+  ctx.closePath();
+}
+
+let T0=performance.now();
+function draw(){
+  const t=(performance.now()-T0)/1000, cx=96, cy=96, base_r=50*scale, amp=hoverAmp;
+  ctx.clearRect(0,0,192,192);
+
+  // squash-and-stretch z prędkości ruchu (elipsa zachowująca pole + leading bump)
+  const vmag=Math.hypot(vx,vy), blend=Math.max(0,Math.min(1,(vmag-0.1)/1.9));
+  let dragA=0,stretch=0,aA=base_r,bA=base_r;
+  if(vmag>0.01){dragA=Math.atan2(vy,vx);const raw=Math.min(vmag*0.022,0.45);stretch=raw*blend;
+    const comp=stretch/(1+stretch);aA=base_r*(1+stretch);bA=base_r*(1-comp);}
+
+  const N=56, pts=[];
+  for(let i=0;i<N;i++){
+    const a=2*Math.PI*i/N;
+    const d1=Math.sin(a*3+0.8+hoverPhase)*3.5;
+    const d2=Math.sin(a*5+2.1+hoverPhase2*1.3)*2.5;
+    const d3=Math.sin(a*2+1.3+hoverPhase*0.4-hoverPhase2*0.8)*2.0;
+    const d4=Math.sin(a*4+0.5+hoverPhase2*0.6+hoverPhase*0.2)*2.0;
+    let deform=(d1+d2+d3+d4)*amp, rD=base_r;
+    if(stretch>0.001){
+      const rel=a-dragA, cr=Math.cos(rel), sr=Math.sin(rel);
+      const den=Math.sqrt((bA*cr)**2+(aA*sr)**2);
+      rD=den>1e-6?(aA*bA/den):base_r;
+      rD+=Math.max(0,cr)*base_r*0.25*stretch;
+      if(cr>0){deform*=Math.max(0.15,1-0.85*cr*(stretch/0.45));}}
+    const r=rD+deform;
+    pts.push([cx+r*Math.cos(a), cy+r*Math.sin(a)]);
+  }
+
+  // kolor stanu: processing = tęczowy cykl HSV; success = ciemniejszy brand; idle = brand
+  let bg;
+  if(state==='processing'){bg=hsv2rgb(((t*0.35)%1)*360,0.7,0.95);}
+  else if(state==='success'){bg=darker(BRAND,115);}
+  else bg=BRAND.slice();
+
+  // cień (3 warstwy przesunięte w dół)
+  ctx.fillStyle='rgba(0,0,0,0.118)'; traceBlob(pts,0,8); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.176)'; traceBlob(pts,0,5); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.255)'; traceBlob(pts,0,2); ctx.fill();
+
+  // korpus — radialny gradient ze światłem w lewym-górnym
+  traceBlob(pts);
+  const g=ctx.createRadialGradient(cx-base_r*0.32,cy-base_r*0.38,0,cx-base_r*0.32,cy-base_r*0.38,base_r*1.6);
+  g.addColorStop(0,rs(lighter(bg,175)));g.addColorStop(0.45,rs(lighter(bg,105)));
+  g.addColorStop(0.80,rs(bg));g.addColorStop(1.0,rs(darker(bg,140)));
+  ctx.fillStyle=g; ctx.fill();
+  ctx.lineWidth=1.2; ctx.strokeStyle=rs(darker(bg,170)); ctx.stroke();
+
+  // połysk — przycięty do konturu
+  ctx.save(); traceBlob(pts); ctx.clip();
+  const glow=ctx.createRadialGradient(cx-base_r*0.15,cy-base_r*0.55,0,cx-base_r*0.15,cy-base_r*0.55,base_r*0.95);
+  glow.addColorStop(0,'rgba(255,255,255,0.43)');glow.addColorStop(0.4,'rgba(255,255,255,0.216)');
+  glow.addColorStop(0.8,'rgba(255,255,255,0.059)');glow.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=glow; ctx.fillRect(0,0,192,192);
+  const sx=cx-base_r*0.38, sy=cy-base_r*0.5;
+  const spec=ctx.createRadialGradient(sx-base_r*0.02,sy-base_r*0.02,0,sx,sy,base_r*0.22);
+  spec.addColorStop(0,'rgba(255,255,255,0.90)');spec.addColorStop(0.4,'rgba(255,255,255,0.51)');spec.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=spec; ctx.beginPath(); ctx.ellipse(sx,sy,base_r*0.18,base_r*0.12,0,0,2*Math.PI); ctx.fill();
+  const rim=ctx.createRadialGradient(cx,cy+base_r*0.65,0,cx,cy+base_r*0.65,base_r*0.7);
+  rim.addColorStop(0,'rgba(255,255,255,0.216)');rim.addColorStop(0.6,'rgba(255,255,255,0.078)');rim.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle=rim; ctx.fillRect(0,0,192,192);
+  ctx.restore();
+
+  // tekst / 3 skaczące kropki (processing)
+  if(state==='processing'){
+    const dr=Math.max(3,base_r*0.10), gap=dr*2.6, bamp=base_r*0.18, tn=t*4;
+    ctx.fillStyle='rgba(40,40,40,1)';
+    for(let i=0;i<3;i++){const bo=Math.max(0,Math.sin(tn-i*0.5));
+      ctx.beginPath(); ctx.arc(cx+(i-1)*gap, cy-bo*bamp, dr,0,2*Math.PI); ctx.fill();}
+  }else{
+    const label=state==='success'?'OK':'OpisAI';
+    ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font='600 '+(label==='OpisAI'?17:18)+'px "Segoe UI",system-ui,sans-serif';
+    ctx.shadowColor='rgba(0,40,15,0.5)'; ctx.shadowBlur=3; ctx.shadowOffsetY=1;
+    ctx.fillStyle='#fff'; ctx.fillText(label,cx,cy+1); ctx.restore();
+  }
+}
+
+/* pętla: render co klatkę (rAF), fizyka stałym krokiem 33 ms */
+let lastT=performance.now(), acc=0;
+function frame(now){acc+=now-lastT;lastT=now;if(acc>200)acc=200;while(acc>=33){tick();acc-=33;}draw();requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+
+/* ---- hover: kula -> falujący blob (scale 1.18, hoverAmp 1.0) ---- */
+bubbleEl.addEventListener('pointerenter',()=>{scaleTarget=1.18;hoverAmpTarget=1.0;});
+bubbleEl.addEventListener('pointerleave',()=>{if(dragOffX===null){scaleTarget=1.0;hoverAmpTarget=0.0;}});
+
+/* ---- drag (180 ms zwłoki, próg 8 px) + klik ---- */
+bubbleEl.addEventListener('pointerdown',(e)=>{
+  if(e.button!==0)return;
+  bubbleEl.setPointerCapture(e.pointerId);
+  dragOffX=e.clientX-posX; dragOffY=e.clientY-posY;
+  wasDragged=false; dragReady=false; dragTargetX=null; dragTargetY=null; vx=0; vy=0;
+  setTimeout(()=>{dragReady=true;},180); e.preventDefault();
+});
+bubbleEl.addEventListener('pointermove',(e)=>{
+  if(dragOffX===null||!dragReady)return;
+  const tx=e.clientX-dragOffX, ty=e.clientY-dragOffY;
+  if(!wasDragged){if(Math.abs(tx-posX)+Math.abs(ty-posY)<8)return; wasDragged=true; hideCoach();}
+  dragTargetX=tx; dragTargetY=ty;
+});
+bubbleEl.addEventListener('pointerup',(e)=>{
+  if(dragOffX===null)return;
+  const clicked=!wasDragged;
+  dragOffX=null; dragOffY=null; dragReady=false; dragTargetX=null; dragTargetY=null;
+  if(!bubbleEl.matches(':hover')){scaleTarget=1.0;hoverAmpTarget=0.0;}
+  if(clicked)onBubbleClick();
+});
+
+/* =====================================================================
+   PRZEPŁYW: klik -> RODO -> generacja
+   ===================================================================== */
+const scrim=document.getElementById('scrim'), bstatus=document.getElementById('bstatus'), btoast=document.getElementById('btoast');
+function onBubbleClick(){if(bubbleClosed||state==='processing')return;hideCoach();openRodo();}
+
+const MATRIX=[
+  {style:'bogato',panel:false,rozp:false,main:'Bogato',heat:0.15},
+  {style:'bogato',panel:true,rozp:false,main:'Bogato + parametry życiowe',heat:0.40},
+  {style:'bogato',panel:true,rozp:true,main:'Bogato + parametry + rozpoznanie',heat:1.00},
+  {style:'wiernie',panel:false,rozp:false,main:'Wiernie',heat:0.05},
+  {style:'wiernie',panel:true,rozp:false,main:'Wiernie + parametry życiowe',heat:0.20},
+  {style:'wiernie',panel:true,rozp:true,main:'Wiernie + parametry + rozpoznanie',heat:0.58}];
+function heatColor(h){
+  if(h>=0.95)return{bg:'linear-gradient(180deg,#f0742f,#e2561f)',hot:true};
+  const c=[206,232,200],w=[233,201,143];
+  return{bg:`rgb(${Math.round(c[0]+(w[0]-c[0])*h)},${Math.round(c[1]+(w[1]-c[1])*h)},${Math.round(c[2]+(w[2]-c[2])*h)})`,hot:false};}
+function openRodo(){
+  document.getElementById('rodo-note').value=
+    "Wywiad: "+F.wywiad.textContent+"\n\nBadanie i ocena: "+F.badanie.textContent+"\n\nDiagnoza: "+F.diagnoza.textContent;
+  const m=document.getElementById('rodo-matrix'); m.innerHTML='';
+  MATRIX.forEach(opt=>{const c=heatColor(opt.heat);const b=document.createElement('button');
+    b.className='mbtn'+(c.hot?' hot':'');b.style.background=c.bg;
+    b.innerHTML='<div class="t">Potwierdzam, wygeneruj:</div><div class="m">'+opt.main+'</div><div class="e">Edytuj ▸</div>';
+    b.onclick=()=>{closeRodo();startGeneration(opt);};m.appendChild(b);});
+  scrim.classList.add('show');
+}
+function closeRodo(){scrim.classList.remove('show');}
+document.getElementById('rodo-x').onclick=closeRodo;
+document.getElementById('rodo-cancel').onclick=closeRodo;
+scrim.addEventListener('mousedown',e=>{if(e.target===scrim)closeRodo();});
+
+function setStatus(txt,dots){bstatus.querySelector('.t').textContent=txt;bstatus.querySelector('.d').style.display=dots?'inline':'none';bstatus.classList.add('show');}
+function clearStatus(){bstatus.classList.remove('show');}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+function flash(els,cls){els.forEach(e=>e.classList.add(cls));}
+function clearFlash(cls){document.querySelectorAll('.'+cls).forEach(e=>e.classList.remove(cls));}
+function showToast(){btoast.classList.add('show');setTimeout(()=>btoast.classList.remove('show'),2600);}
+
+async function startGeneration(opt){
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  state='processing';
+  const out=buildOutputs(opt.style,opt.panel,opt.rozp);
+  setStatus('Czytam pole opisu',true); flash([F.wywiad,F.badanie,F.diagnoza],'reading'); await wait(900); clearFlash('reading');
+  setStatus('Wołam Claude (claude-sonnet-4-6)',true); await wait(1500);
+  setStatus('Wpisuję epikryzę',true);
+  for(const k of ['wywiad','badanie','diagnoza']){ if(out[k]==null)continue; await typeInto(F[k],out[k]); await wait(160); }
+  clearStatus(); state='success'; showToast();
+  setTimeout(()=>{if(state==='success')state='idle';},1800);
+}
+async function typeInto(el,text){
+  el.classList.add('writing'); el.textContent='';
+  const tnode=document.createTextNode(''), caret=document.createElement('span'); caret.className='caret';
+  el.appendChild(tnode); el.appendChild(caret);
+  let i=0; const speed=3;
+  return new Promise(resolve=>{function step(){
+    i=Math.min(text.length,i+speed+Math.floor(Math.random()*2));
+    tnode.data=text.slice(0,i); el.scrollTop=el.scrollHeight;
+    if(i<text.length)requestAnimationFrame(step);
+    else{caret.remove();el.classList.remove('writing');resolve();}}
+    requestAnimationFrame(step);});
+}
+
+/* =====================================================================
+   MENU KONTEKSTOWE (bąbelek / pulpit / tray)
+   ===================================================================== */
+const ctxEl=document.getElementById('ctx'), aboutEl=document.getElementById('about');
+function showMenu(x,y,items){
+  ctxEl.innerHTML='';
+  items.forEach(it=>{
+    if(it.sep){const s=document.createElement('div');s.className='sep';ctxEl.appendChild(s);return;}
+    const d=document.createElement('div');d.className='it';
+    d.innerHTML='<span>'+(it.icon||'')+'</span><span>'+it.label+'</span>';
+    d.onclick=()=>{closeCtx();it.action&&it.action();};ctxEl.appendChild(d);});
+  ctxEl.style.display='block';
+  const w=ctxEl.offsetWidth, h=ctxEl.offsetHeight;       // zmierz po renderze i przytnij do ekranu
+  ctxEl.style.left=Math.max(6,Math.min(x,window.innerWidth-w-6))+'px';
+  ctxEl.style.top=Math.max(6,Math.min(y,window.innerHeight-h-6))+'px';
+}
+function closeCtx(){ctxEl.style.display='none';}
+/* Menu prawego przycisku = to samo co tray (wg opisai.py _setup_tray). */
+const demoCfg=()=>flashHint('Konfiguracja dostępna w pełnej wersji OpisAI (tu: wersja demo).');
+const bubbleMenu=()=>[
+  {icon:'🖥',label:'Wybierz okno główne…',action:demoCfg},
+  {icon:'🪟',label:'Wybierz podokno opisu…',action:demoCfg},
+  {icon:'🔤',label:'Wskaż pole tekstowe: „Wywiad”…',action:demoCfg},
+  {icon:'🔤',label:'Wskaż pole tekstowe: „Badanie kliniczne”…',action:demoCfg},
+  {icon:'🔤',label:'Wskaż pole tekstowe: „Diagnoza:”…',action:demoCfg},
+  {icon:'🧩',label:'Skonfiguruj rączki (main)…',action:demoCfg},
+  {sep:true},
+  {icon:'🗂',label:'Historia generowań…',action:()=>flashHint('Historia generowań — dostępna w pełnej wersji OpisAI.')},
+  {icon:'⚙',label:'Konfiguracja…',action:demoCfg},
+  {sep:true},
+  {icon:'ℹ',label:'O aplikacji…',action:()=>aboutEl.classList.add('show')},
+  {sep:true},
+  {icon:'↺',label:'Resetuj wizytę (demo)',action:()=>{resetCase();flashHint('Wizyta przywrócona do stanu wyjściowego.');}},
+  {icon:'⏻',label:'Zamknij',action:closeBubble}];
+const desktopMenu=()=>[
+  {icon:'🔄',label:'Odśwież',action:()=>flashHint('Odświeżono pulpit.')},
+  {icon:'🎨',label:'Personalizuj',action:()=>flashHint('Motyw systemu: Zielony (akcent) — bąbelek i pasek zadań dziedziczą kolor.')},
+  {sep:true},
+  {icon:'🏥',label:'Uruchom System Informatyczny',action:openKxp},
+  {icon:'🟢',label:'Pokaż / uruchom bąbelek OpisAI',action:()=>{if(bubbleClosed)launchBubble();else showBubble();}}];
+document.addEventListener('contextmenu',(e)=>{
+  e.preventDefault();
+  if(e.target.closest('#bubble')||e.target.closest('#tray-opis'))showMenu(e.clientX,e.clientY,bubbleMenu());
+  else if(e.target.closest('.win')||e.target.closest('#taskbar')||e.target.closest('#startmenu')){}
+  else showMenu(e.clientX,e.clientY,desktopMenu());
+});
+document.addEventListener('pointerdown',(e)=>{if(!ctxEl.contains(e.target))closeCtx();},true);
+aboutEl.querySelector('#about-ok').onclick=()=>aboutEl.classList.remove('show');
+document.getElementById('tray-opis').onclick=(e)=>{if(bubbleClosed){launchBubble();return;}showMenu(e.clientX-210,window.innerHeight-250,bubbleMenu());};
+function showBubble(){placeBubble(Math.max(40,window.innerWidth-260),300);vx=vy=0;flashHint('Bąbelek OpisAI 🟢');}
+/* Zamknij / uruchom bąbelek — odpowiednik trigger_exit_animation (pyk) + relaunch */
+let bubbleClosed=false;
+function closeBubble(){
+  if(bubbleClosed)return; bubbleClosed=true; hoverAmpTarget=0; scaleTarget=1.0;
+  bubbleEl.classList.add('popping');
+  bubbleEl.addEventListener('animationend',function h(){bubbleEl.classList.remove('popping');bubbleEl.style.display='none';bubbleEl.removeEventListener('animationend',h);},{once:true});
+  flashHint('OpisAI zamknięty — uruchom go ikoną „OpisAI” na pulpicie, z menu Start lub z zasobnika.');
+}
+function launchBubble(){
+  bubbleClosed=false; bubbleEl.style.display=''; placeBubble(Math.max(40,window.innerWidth-260),300); vx=vy=0;
+  bubbleEl.classList.add('emerging');
+  bubbleEl.addEventListener('animationend',function h(){bubbleEl.classList.remove('emerging');bubbleEl.removeEventListener('animationend',h);},{once:true});
+  flashHint('OpisAI uruchomiony 🟢');
+}
+
+/* =====================================================================
+   OKNO SYSTEMU: drag, min/max/close/open, taskbar, ikony
+   ===================================================================== */
+const kxp=document.getElementById('kxp'), tbKxp=document.getElementById('tb-kxp'), icKxp=document.getElementById('ic-kxp');
+let zTop=120, kxpClosed=false, kxpMin=false, kxpMax=false, savedGeom=null;
+function focusKxp(){kxp.style.zIndex=(++zTop);}
+function applyTb(){tbKxp.style.display=kxpClosed?'none':'';tbKxp.classList.toggle('active',!kxpMin&&!kxpClosed);}
+function openKxp(){kxpClosed=false;kxpMin=false;kxp.classList.remove('min');focusKxp();applyTb();}
+function minimizeKxp(){kxpMin=true;kxp.classList.add('min');applyTb();}
+function restoreKxp(){kxpMin=false;kxp.classList.remove('min');focusKxp();applyTb();}
+function closeKxp(){if(kxpMax)toggleMax(true);kxpClosed=true;kxpMin=false;kxp.classList.add('min');applyTb();
+  flashHint('System zamknięty — uruchom go ikoną „System Informatyczny” na pulpicie, z menu Start lub PPM na pulpicie.');}
+function toggleMax(forceRestore){
+  if(kxpMax||forceRestore){
+    if(savedGeom){kxp.style.left=savedGeom.l;kxp.style.top=savedGeom.t;kxp.style.width=savedGeom.w;kxp.style.height=savedGeom.h;}
+    kxp.classList.remove('maxed');kxpMax=false;
+  }else{
+    savedGeom={l:kxp.offsetLeft+'px',t:kxp.offsetTop+'px',w:kxp.offsetWidth+'px',h:kxp.offsetHeight+'px'};
+    kxp.style.left='8px';kxp.style.top='8px';kxp.style.width=(window.innerWidth-16)+'px';kxp.style.height=(window.innerHeight-48-16)+'px';
+    kxp.classList.add('maxed');kxpMax=true;focusKxp();}
+}
+kxp.addEventListener('pointerdown',()=>focusKxp());
+document.querySelectorAll('#kxp .wbtn').forEach(b=>{b.onclick=(e)=>{e.stopPropagation();
+  const a=b.dataset.w; if(a==='min')minimizeKxp(); else if(a==='max')toggleMax(); else closeKxp();};});
+
+/* drag tytułu (z obsługą wyjścia z maksymalizacji) */
+(function(){const handle=document.getElementById('kxp-title');let d=null;
+  handle.addEventListener('pointerdown',(e)=>{
+    if(e.target.closest('.wbtn'))return;
+    if(kxpMax){toggleMax(true);const w=kxp.offsetWidth;
+      kxp.style.left=Math.max(0,Math.min(window.innerWidth-160,e.clientX-w/2))+'px';
+      kxp.style.top=Math.max(0,e.clientY-16)+'px';}
+    handle.setPointerCapture(e.pointerId);
+    d={sx:e.clientX,sy:e.clientY,ox:kxp.offsetLeft,oy:kxp.offsetTop};focusKxp();});
+  handle.addEventListener('pointermove',(e)=>{if(!d)return;
+    kxp.style.left=Math.max(-300,Math.min(window.innerWidth-160,d.ox+e.clientX-d.sx))+'px';
+    kxp.style.top=Math.max(0,Math.min(window.innerHeight-100,d.oy+e.clientY-d.sy))+'px';});
+  handle.addEventListener('pointerup',()=>{d=null;});
+  handle.addEventListener('dblclick',(e)=>{if(!e.target.closest('.wbtn'))toggleMax();});
+})();
+
+tbKxp.onclick=()=>{if(kxpMin)restoreKxp();else minimizeKxp();};
+icKxp.addEventListener('dblclick',openKxp);
+icKxp.addEventListener('click',()=>{if(kxpClosed||kxpMin)openKxp();else selectIcon(icKxp);});
+document.getElementById('ic-opis').addEventListener('click',function(){if(bubbleClosed)launchBubble();else selectIcon(this);});
+document.getElementById('ic-opis').addEventListener('dblclick',()=>{if(bubbleClosed)launchBubble();else onBubbleClick();});
+document.getElementById('ic-bin').addEventListener('click',function(){selectIcon(this);});
+function selectIcon(el){document.querySelectorAll('.dicon').forEach(d=>d.classList.remove('sel'));el.classList.add('sel');}
+document.getElementById('desktop').addEventListener('pointerdown',(e)=>{if(e.target.id==='desktop')document.querySelectorAll('.dicon').forEach(d=>d.classList.remove('sel'));});
+
+/* start menu */
+const startMenu=document.getElementById('startmenu');
+document.getElementById('tb-start').onclick=(e)=>{e.stopPropagation();startMenu.classList.toggle('show');};
+document.addEventListener('pointerdown',(e)=>{if(!startMenu.contains(e.target)&&!e.target.closest('#tb-start'))startMenu.classList.remove('show');});
+document.getElementById('sm-kxp').onclick=()=>{openKxp();startMenu.classList.remove('show');};
+document.getElementById('sm-opis').onclick=()=>{startMenu.classList.remove('show');if(bubbleClosed)launchBubble();else onBubbleClick();};
+
+/* =====================================================================
+   DODATKOWA INTERAKTYWNOŚĆ
+   ===================================================================== */
+document.querySelectorAll('.kxp-tabs .tab').forEach(t=>{t.onclick=()=>{
+  document.querySelectorAll('.kxp-tabs .tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');};});
+document.querySelectorAll('.kxp-tools button').forEach(b=>{b.onclick=()=>{const a=b.dataset.act;
+  if(a==='zapis')flashHint('✔ Wizyta zapisana.');
+  else if(a==='nowa'){resetCase();flashHint('Przywrócono wizytę demonstracyjną.');}
+  else if(a==='anuluj')flashHint('Anulowano edycję (demo).');
+  else flashHint('Funkcja niedostępna w wersji demo.');};});
+document.querySelectorAll('.kxp-menu .m').forEach(m=>{m.onclick=()=>flashHint('Moduł „'+m.textContent.trim()+'” — niedostępny w wersji demo.');});
+document.getElementById('tray-net').onclick=()=>flashHint('📶 Połączono — sieć gabinetu');
+document.getElementById('tray-vol').onclick=()=>flashHint('🔊 Głośność: 60%');
+document.getElementById('clock').onclick=()=>flashHint(fullDate());
+document.getElementById('tb-search').onclick=()=>flashHint('Wyszukiwanie niedostępne w wersji demo.');
+
+/* zegar */
+const PLDAYS=['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
+const PLMON=['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+function fullDate(){const n=new Date();return PLDAYS[n.getDay()]+', '+n.getDate()+' '+PLMON[n.getMonth()]+' '+n.getFullYear();}
+function tickClock(){const n=new Date(),hh=String(n.getHours()).padStart(2,'0'),mm=String(n.getMinutes()).padStart(2,'0');
+  const c=document.getElementById('clock');c.querySelector('.t').textContent=hh+':'+mm;
+  c.querySelector('.d').textContent=n.getDate()+'.'+String(n.getMonth()+1).padStart(2,'0')+'.'+n.getFullYear();}
+tickClock();setInterval(tickClock,1000);
+
+/* coachmark + podpowiedzi — pierścień znika sam po 6 s lub przy 1. interakcji */
+function hideCoach(){bubbleEl.classList.add('coached');}
+setTimeout(hideCoach,6000);
+document.addEventListener('pointerdown',hideCoach,{capture:true,once:true});
+const hintEl=document.getElementById('hint');let hintTimer=null;
+function flashHint(t){hintEl.textContent=t;hintEl.classList.add('show');clearTimeout(hintTimer);hintTimer=setTimeout(()=>hintEl.classList.remove('show'),2800);}
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape'){closeRodo();closeCtx();startMenu.classList.remove('show');aboutEl.classList.remove('show');}});
+setTimeout(()=>flashHint('Witaj w demie OpisAI — najedź na bąbelek (zafaluje), przeciągnij go, albo kliknij, by wygenerować epikryzę.'),700);
+</script>
+</body>
+</html>
