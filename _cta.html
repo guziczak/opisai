@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pl">
 <head>
 <meta charset="utf-8">
@@ -1032,5 +1032,14 @@ function flashHint(t){hintEl.textContent=t;hintEl.classList.add('show');clearTim
 document.addEventListener('keydown',(e)=>{if(e.key==='Escape'){closeRodo();closeCtx();startMenu.classList.remove('show');aboutEl.classList.remove('show');}});
 setTimeout(()=>flashHint('Witaj w demie OpisAI — najedź na bąbelek (zafaluje), przeciągnij go, albo kliknij, by wygenerować epikryzę.'),700);
 </script>
+<script>
+addEventListener('load',function(){
+  var h=location.hash;
+  if(h.indexOf('ctaform')>=0){ setTimeout(function(){ window.showCTA(); document.getElementById('cta-form').classList.add('show'); }, 60); }
+  else if(h.indexOf('cta')>=0){ setTimeout(function(){ window.showCTA(); }, 60); }
+  else if(h.indexOf('about')>=0){ setTimeout(function(){ document.getElementById('about').classList.add('show'); }, 60); }
+});
+</script>
 </body>
 </html>
+
