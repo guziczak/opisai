@@ -325,8 +325,7 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
   <div class="bd">Jednym kliknięciem przekształca <b>surowe notatki</b> z wizyty w gotową, profesjonalną <b>epikryzę</b> — czyta je wprost z Twojego systemu i wpisuje wynik z powrotem. Działa z <b>Twoim systemem gabinetowym</b> i innymi programami. Z bramką <b>RODO</b> i zgodnością z <b>EU AI Act</b>.
     <div style="margin-top:10px;font-size:12px;color:#567">To jest demonstracja interaktywna.</div></div>
   <div class="about-cta">
-    <a id="ab-demo" class="ab-primary" target="_blank" rel="noopener">📅 Umów demo</a>
-    <a id="ab-mail" class="ab-ic" title="Napisz e-mail">✉</a>
+    <a id="ab-mail" class="ab-primary">✉ Napisz do nas</a>
   </div>
   <div class="ft"><button id="about-ok">Zamknij</button></div>
 </div>
@@ -336,10 +335,7 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
   <div class="cta-x" id="cta-x">✕</div>
   <div class="cta-hd"><div class="b"></div><b>OpisAI</b></div>
   <div class="cta-txt">Epikryza gotowa w kilka sekund — czytana i wpisywana wprost w Twoim systemie. Chcesz tak w swoim gabinecie?</div>
-  <a class="cta-primary" id="cta-demo" target="_blank" rel="noopener">📅 Umów bezpłatne demo</a>
-  <div class="cta-row">
-    <a id="cta-mail">✉ Napisz e-mail</a>
-  </div>
+  <a class="cta-primary" id="cta-mail">✉ Napisz do nas</a>
   <div class="cta-alt" id="cta-toggle">albo zostaw kontakt — oddzwonimy ▾</div>
   <form class="cta-form" id="cta-form" method="post">
     <input type="text" name="name" placeholder="Imię i nazwisko / nazwa gabinetu" required>
@@ -387,8 +383,7 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
    wpisz endpoint Formspree/Tally, by realnie zbierać zgłoszenia.
    ===================================================================== */
 const CONTACT={
-  demoUrl:   "https://cal.com/opisai/demo",   /* TODO: Twój link rezerwacji (Calendly/cal.com) */
-  email:     "kontakt@opisai.pl",             /* TODO: Twój e-mail */
+  email:     "guziczak@proton.me",            /* Twój e-mail */
   formAction:""                               /* TODO: endpoint Formspree/Tally (puste = tryb demo) */
 };
 /* =====================================================================
@@ -794,9 +789,7 @@ const ctaEl=document.getElementById('cta');
 (function wireCTA(){
   const mail='mailto:'+CONTACT.email+'?subject='+encodeURIComponent('OpisAI — zapytanie z dema')
     +'&body='+encodeURIComponent('Dzień dobry, chciał(a)bym dowiedzieć się więcej o OpisAI dla mojego gabinetu.');
-  document.getElementById('cta-demo').href=CONTACT.demoUrl;
   document.getElementById('cta-mail').href=mail;
-  document.getElementById('ab-demo').href=CONTACT.demoUrl;
   document.getElementById('ab-mail').href=mail;
 })();
 function showCTA(){
