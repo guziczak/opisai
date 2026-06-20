@@ -395,6 +395,21 @@ let exiting=false, exitStart=0, exitPhase='', exitScale=1, exitBodyAlpha=1;
 let sheenAmp=0, sheenPhase=0, exitFlash=0, puddle=0, puddleAlpha=0, soak=0, ruptureFx=0;
 let rings=[], droplets=[], exitDone=null;
 const EXIT_THIN=0.12, EXIT_POP=0.34, EXIT_COAL=0.52, EXIT_SOAK=0.86;   // granice faz [s]
+window.__dbg=()=>[exiting,exitPhase,exitScale.toFixed(3),exitBodyAlpha.toFixed(3),puddle.toFixed(3),soak.toFixed(3)].join(' | ');
+window.__frozen=false;
+window.__simExit=function(ms){            // deterministyczny zrzut klatki exitu po `ms` (krok 16 ms)
+  window.__frozen=true;
+  exiting=true; exitDone=function(){}; exitPhase='thin';
+  rings=[]; droplets=[]; soak=0; sheenAmp=0; sheenPhase=0; exitFlash=0;
+  puddle=0; puddleAlpha=0; exitBodyAlpha=1; exitScale=1;
+  ruptureFx=0; hoverAmp=0; hoverAmpTarget=0; scale=1; scaleTarget=1; scaleVel=0; vx=0; vy=0;
+  var saved=performance.now, base=saved.call(performance), cur=0;
+  exitStart=base/1000; performance.now=function(){return base+cur;};
+  var steps=Math.max(1,Math.round(ms/16));
+  for(var i=1;i<=steps;i++){ cur=i*16; if(exiting) updateExit(); }
+  window.__noUpdate=true; draw(); window.__noUpdate=false;
+  performance.now=saved;
+};
 
 function placeBubble(x,y){posX=x;posY=y;bubbleEl.style.left=x+'px';bubbleEl.style.top=y+'px';}
 placeBubble(Math.min(window.innerWidth-150,1010), 300);
@@ -432,7 +447,7 @@ function traceBlob(pts,ox,oy){
 
 let T0=performance.now();
 function draw(){
-  if(exiting) updateExit();
+  if(exiting && !window.__noUpdate) updateExit();
   const t=(performance.now()-T0)/1000, cx=120, cy=120;
   const sc=exiting?exitScale:scale, base_r=50*sc, amp=exiting?0:hoverAmp;
   ctx.clearRect(0,0,240,240);
@@ -656,7 +671,7 @@ function drawExitFX(cx,cy){
 
 /* pętla: render co klatkę (rAF), fizyka stałym krokiem 33 ms */
 let lastT=performance.now(), acc=0;
-function frame(now){acc+=now-lastT;lastT=now;if(acc>200)acc=200;while(acc>=33){tick();acc-=33;}draw();requestAnimationFrame(frame);}
+function frame(now){if(window.__frozen)return;acc+=now-lastT;lastT=now;if(acc>200)acc=200;while(acc>=33){tick();acc-=33;}draw();requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 
 /* ---- hover: kula -> falujący blob (scale 1.18, hoverAmp 1.0) ---- */
