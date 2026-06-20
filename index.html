@@ -327,7 +327,6 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
   <div class="about-cta">
     <a id="ab-demo" class="ab-primary" target="_blank" rel="noopener">📅 Umów demo</a>
     <a id="ab-mail" class="ab-ic" title="Napisz e-mail">✉</a>
-    <a id="ab-wa" class="ab-ic" target="_blank" rel="noopener" title="Napisz na WhatsApp">💬</a>
   </div>
   <div class="ft"><button id="about-ok">Zamknij</button></div>
 </div>
@@ -339,8 +338,7 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
   <div class="cta-txt">Epikryza gotowa w kilka sekund — czytana i wpisywana wprost w Twoim systemie. Chcesz tak w swoim gabinecie?</div>
   <a class="cta-primary" id="cta-demo" target="_blank" rel="noopener">📅 Umów bezpłatne demo</a>
   <div class="cta-row">
-    <a id="cta-mail">✉ E-mail</a>
-    <a id="cta-wa" target="_blank" rel="noopener">💬 WhatsApp</a>
+    <a id="cta-mail">✉ Napisz e-mail</a>
   </div>
   <div class="cta-alt" id="cta-toggle">albo zostaw kontakt — oddzwonimy ▾</div>
   <form class="cta-form" id="cta-form" method="post">
@@ -391,7 +389,6 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
 const CONTACT={
   demoUrl:   "https://cal.com/opisai/demo",   /* TODO: Twój link rezerwacji (Calendly/cal.com) */
   email:     "kontakt@opisai.pl",             /* TODO: Twój e-mail */
-  whatsapp:  "48600700800",                   /* TODO: nr WhatsApp — same cyfry z kierunkowym, bez + */
   formAction:""                               /* TODO: endpoint Formspree/Tally (puste = tryb demo) */
 };
 /* =====================================================================
@@ -797,13 +794,10 @@ const ctaEl=document.getElementById('cta');
 (function wireCTA(){
   const mail='mailto:'+CONTACT.email+'?subject='+encodeURIComponent('OpisAI — zapytanie z dema')
     +'&body='+encodeURIComponent('Dzień dobry, chciał(a)bym dowiedzieć się więcej o OpisAI dla mojego gabinetu.');
-  const wa='https://wa.me/'+CONTACT.whatsapp+'?text='+encodeURIComponent('Dzień dobry, piszę w sprawie OpisAI (z dema).');
   document.getElementById('cta-demo').href=CONTACT.demoUrl;
   document.getElementById('cta-mail').href=mail;
-  document.getElementById('cta-wa').href=wa;
   document.getElementById('ab-demo').href=CONTACT.demoUrl;
   document.getElementById('ab-mail').href=mail;
-  document.getElementById('ab-wa').href=wa;
 })();
 function showCTA(){
   if(ctaEl.classList.contains('show'))return;
