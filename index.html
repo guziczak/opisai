@@ -404,10 +404,10 @@ const CONTACT={
 };
 /* =====================================================================
    KOLORY — odwzorowanie Qt QColor.lighter()/darker() (model HSV).
-   BRAND = fallback OpisAI green z opisai.py: QColor(46,204,113) — tu nieco
-   ciemniejszy odcień akcentu z materiałów (biały napis OpisAI).
+   wizyta-bubble-rework: bąbelek przerobiony na FLAT design Wizyty
+   (niebieski) z logo torby medycznej + „OpisAI". Kolory 1:1 z opisai.py.
    ===================================================================== */
-const BRAND=[39,174,96];
+const WB=[37,99,235], WC=[14,165,233], WG=[34,197,94];  /* #2563eb #0ea5e9 #22c55e */
 function rgb2hsv(r,g,b){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;
   if(d){if(mx===r)h=((g-b)/d)%6;else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360;}
   return[h,mx?d/mx:0,mx];}
@@ -463,11 +463,10 @@ let posX=0, posY=0, vx=0, vy=0;
 let dragTargetX=null, dragTargetY=null;
 let dragOffX=null, dragOffY=null, wasDragged=false, dragReady=false;
 
-/* ---- stan animacji zamykania (exit) — 1:1 wg opisai.py trigger_exit_animation ---- */
-let exiting=false, exitStart=0, exitPhase='', exitScale=1, exitBodyAlpha=1;
-let sheenAmp=0, sheenPhase=0, exitFlash=0, puddle=0, puddleAlpha=0, soak=0, ruptureFx=0;
-let rings=[], droplets=[], exitDone=null;
-const EXIT_THIN=0.12, EXIT_POP=0.34, EXIT_COAL=0.52, EXIT_SOAK=0.86;   // granice faz [s]
+let pressed=false, pressDip=0;   // wciśnięcie (press_dip): base_r *= 1 - 0.07*pressDip
+/* ---- animacja zamykania (FLAT exit) — 1:1 wg opisai.py _update_exit ---- */
+let exiting=false, exitStart=0, exitPhase='', exitScale=1, exitBodyAlpha=1, exitRipple=0, exitDone=null;
+const EXIT_COLLAPSE=0.22, EXIT_RIPPLE=0.38;   // granice faz [s]
 
 function placeBubble(x,y){posX=x;posY=y;bubbleEl.style.left=x+'px';bubbleEl.style.top=y+'px';}
 placeBubble(Math.min(window.innerWidth-150,1010), 300);
@@ -476,6 +475,7 @@ placeBubble(Math.min(window.innerWidth-150,1010), 300);
 function tick(){
   scaleVel+=(scaleTarget-scale)*0.25; scaleVel*=0.72; scale+=scaleVel;     // sprężyna skali (hover bounce)
   hoverAmp+=(hoverAmpTarget-hoverAmp)*0.18;                                // amplituda falowania
+  pressDip+=((pressed?1:0)-pressDip)*0.35;                                 // wciśnięcie (eased)
   if(hoverAmp>0.01){                                                       // fazy morphu (niewspółmierne)
     hoverPhase+=0.09; hoverPhase2+=0.061;
     if(hoverPhase>Math.PI*200)hoverPhase-=Math.PI*200;
@@ -503,14 +503,28 @@ function traceBlob(pts,ox,oy){
   ctx.closePath();
 }
 
-let T0=performance.now();
+/* ---- logo Wizyty: biała torba medyczna + krzyż w kolorze orbu (1:1 _paint_logo) ---- */
+function rrect(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
+function paintLogo(cx,cy,s,orb,alpha){
+  if(alpha<=0.01)return;
+  ctx.save(); ctx.globalAlpha=alpha;
+  const bag_w=s*1.12, bag_h=s*0.84, bx=cx-bag_w/2, by=cy-bag_h/2+s*0.10, br=s*0.20;
+  const hw=s*0.46, hh=s*0.27, hy=by-hh*0.60;                   // rączka
+  ctx.fillStyle='#fff'; rrect(cx-hw/2,hy,hw,hh,hh*0.45);
+  const ihw=hw*0.54, ihh=hh*0.46;                              // „dziura" rączki w kolorze orbu
+  ctx.fillStyle=orb; rrect(cx-ihw/2,hy+hh*0.26,ihw,ihh,ihh*0.4);
+  ctx.fillStyle='#fff'; rrect(bx,by,bag_w,bag_h,br);           // korpus torby
+  const arm=bag_h*0.58, th=arm*0.32, ccy=by+bag_h/2;           // krzyż medyczny
+  ctx.fillStyle=orb; rrect(cx-th/2,ccy-arm/2,th,arm,th*0.3); rrect(cx-arm/2,ccy-th/2,arm,th,th*0.3);
+  ctx.restore();
+}
+
 function draw(){
   if(exiting) updateExit();
-  const t=(performance.now()-T0)/1000, cx=120, cy=120;
-  const sc=exiting?exitScale:scale, base_r=50*sc, amp=exiting?0:hoverAmp;
+  const cx=120, cy=120, sc=exiting?exitScale:scale;
+  const base_r=50*sc*(1-0.07*pressDip), amp=exiting?0:hoverAmp;  // press_dip wciska orb
   ctx.clearRect(0,0,240,240);
 
-  // Korpus rysujemy gdy widoczny (poza fazami coalesce/soak, gdy bąbelek już pyknął).
   const drawBody = !exiting || (exitScale>0.002 && exitBodyAlpha>0.002);
   if(drawBody){
     // squash-and-stretch z prędkości ruchu (elipsa zachowująca pole + leading bump)
@@ -519,14 +533,13 @@ function draw(){
     if(vmag>0.01){dragA=Math.atan2(vy,vx);const raw=Math.min(vmag*0.022,0.45);stretch=raw*blend;
       const comp=stretch/(1+stretch);aA=base_r*(1+stretch);bA=base_r*(1-comp);}
 
+    // kontur: 56 pkt, 2-sinusowy „spokojny oddech" (1:1 _build_contour_path)
     const N=56, pts=[];
     for(let i=0;i<N;i++){
       const a=2*Math.PI*i/N;
-      const d1=Math.sin(a*3+0.8+hoverPhase)*3.5;
-      const d2=Math.sin(a*5+2.1+hoverPhase2*1.3)*2.5;
-      const d3=Math.sin(a*2+1.3+hoverPhase*0.4-hoverPhase2*0.8)*2.0;
-      const d4=Math.sin(a*4+0.5+hoverPhase2*0.6+hoverPhase*0.2)*2.0;
-      let deform=(d1+d2+d3+d4)*amp, rD=base_r;
+      const d1=Math.sin(a*2+0.8+hoverPhase)*1.7;
+      const d2=Math.sin(a*3+2.1+hoverPhase2*1.3)*1.0;
+      let deform=(d1+d2)*amp, rD=base_r;
       if(stretch>0.001){
         const rel=a-dragA, cr=Math.cos(rel), sr=Math.sin(rel);
         const den=Math.sqrt((bA*cr)**2+(aA*sr)**2);
@@ -537,68 +550,56 @@ function draw(){
       pts.push([cx+r*Math.cos(a), cy+r*Math.sin(a)]);
     }
 
-    // kolor stanu: processing = tęczowy cykl HSV; success = ciemniejszy brand; idle/exit = brand
+    // kolor stanu: processing = shimmer blue<->cyan; success = green; idle/exit = blue
     let bg;
-    if(state==='processing'&&!exiting){bg=hsv2rgb(((t*0.35)%1)*360,0.7,0.95);}
-    else if(state==='success'&&!exiting){bg=darker(BRAND,115);}
-    else bg=BRAND.slice();
+    if(state==='processing'&&!exiting){const tt=(Math.sin(performance.now()/1000*2.2)+1)*0.5;
+      bg=[Math.round(WB[0]+(WC[0]-WB[0])*tt),Math.round(WB[1]+(WC[1]-WB[1])*tt),Math.round(WB[2]+(WC[2]-WB[2])*tt)];}
+    else if(state==='success'&&!exiting){bg=WG.slice();}
+    else bg=WB.slice();
 
-    const bodyAlpha=exiting?exitBodyAlpha:1;
-    ctx.globalAlpha=bodyAlpha;
+    ctx.globalAlpha=exiting?exitBodyAlpha:1;
 
-    // cień (3 warstwy przesunięte w dół)
-    ctx.fillStyle='rgba(0,0,0,0.118)'; traceBlob(pts,0,8); ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.176)'; traceBlob(pts,0,5); ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.255)'; traceBlob(pts,0,2); ctx.fill();
+    // cień FLAT: ink #0f172a, 3 miękkie warstwy (offset 16/10/4, alpha 7/12/18)
+    ctx.fillStyle='rgba(15,23,42,0.027)'; traceBlob(pts,0,16); ctx.fill();
+    ctx.fillStyle='rgba(15,23,42,0.047)'; traceBlob(pts,0,10); ctx.fill();
+    ctx.fillStyle='rgba(15,23,42,0.071)'; traceBlob(pts,0,4);  ctx.fill();
 
-    // korpus — radialny gradient ze światłem w lewym-górnym
+    // korpus FLAT: prawie płaski radial (lighter116 -> bg -> darker110)
     traceBlob(pts);
-    const g=ctx.createRadialGradient(cx-base_r*0.32,cy-base_r*0.38,0,cx-base_r*0.32,cy-base_r*0.38,base_r*1.6);
-    g.addColorStop(0,rs(lighter(bg,175)));g.addColorStop(0.45,rs(lighter(bg,105)));
-    g.addColorStop(0.80,rs(bg));g.addColorStop(1.0,rs(darker(bg,140)));
+    const g=ctx.createRadialGradient(cx-base_r*0.22,cy-base_r*0.28,0,cx-base_r*0.22,cy-base_r*0.28,base_r*1.7);
+    g.addColorStop(0,rs(lighter(bg,116)));g.addColorStop(0.55,rs(bg));g.addColorStop(1.0,rs(darker(bg,110)));
     ctx.fillStyle=g; ctx.fill();
-    ctx.lineWidth=1.2; ctx.strokeStyle=rs(darker(bg,170)); ctx.stroke();
+    ctx.lineWidth=1.0; ctx.strokeStyle=rs(darker(bg,120)); ctx.stroke();
 
-    // exit „thin/pop”: wirujący tęczowy sheen (interferencja cienkowarstwowa) — clip do konturu
-    if(exiting && sheenAmp>0.01){
-      ctx.save(); traceBlob(pts); ctx.clip();
-      const cg=ctx.createConicGradient(sheenPhase, cx, cy);
-      for(let i=0;i<7;i++){const c=hsv2rgb(((i/6)%1)*360,0.55,1.0);
-        cg.addColorStop(i/6, `rgba(${c[0]},${c[1]},${c[2]},${0.32*sheenAmp})`);}
-      ctx.fillStyle=cg; ctx.fillRect(0,0,240,240); ctx.restore();
-    }
+    // cienki jasny inner ring (material, nie szkło)
+    traceBlob(pts); ctx.lineWidth=1.2; ctx.strokeStyle='rgba(255,255,255,0.102)'; ctx.stroke();
 
-    // połysk — przycięty do konturu
+    // flat sheen — delikatny górny linear, BEZ szklanego specular/rim/glow
     ctx.save(); traceBlob(pts); ctx.clip();
-    const glow=ctx.createRadialGradient(cx-base_r*0.15,cy-base_r*0.55,0,cx-base_r*0.15,cy-base_r*0.55,base_r*0.95);
-    glow.addColorStop(0,'rgba(255,255,255,0.43)');glow.addColorStop(0.4,'rgba(255,255,255,0.216)');
-    glow.addColorStop(0.8,'rgba(255,255,255,0.059)');glow.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=glow; ctx.fillRect(0,0,240,240);
-    const sx=cx-base_r*0.38, sy=cy-base_r*0.5;
-    const spec=ctx.createRadialGradient(sx-base_r*0.02,sy-base_r*0.02,0,sx,sy,base_r*0.22);
-    spec.addColorStop(0,'rgba(255,255,255,0.90)');spec.addColorStop(0.4,'rgba(255,255,255,0.51)');spec.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=spec; ctx.beginPath(); ctx.ellipse(sx,sy,base_r*0.18,base_r*0.12,0,0,2*Math.PI); ctx.fill();
-    const rim=ctx.createRadialGradient(cx,cy+base_r*0.65,0,cx,cy+base_r*0.65,base_r*0.7);
-    rim.addColorStop(0,'rgba(255,255,255,0.216)');rim.addColorStop(0.6,'rgba(255,255,255,0.078)');rim.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=rim; ctx.fillRect(0,0,240,240);
-    ctx.restore();
+    const sheen=ctx.createLinearGradient(cx,cy-base_r,cx,cy+base_r*0.15);
+    sheen.addColorStop(0,'rgba(255,255,255,0.188)');sheen.addColorStop(0.5,'rgba(255,255,255,0.055)');sheen.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=sheen; ctx.fillRect(0,0,240,240); ctx.restore();
     ctx.globalAlpha=1;
 
-    // tekst / 3 skaczące kropki (processing). Podczas exitu napis tylko w fazie „thin” (gaśnie z sheenem).
-    const showText = !exiting || exitPhase==='thin';
+    // środek: logo torby (idle) / 3 kropki (processing) / „Gotowe" (success)
+    const showText = !exiting || exitPhase==='collapse';
     if(showText){
+      const ta=exiting?Math.max(0,exitBodyAlpha):1;
       if(state==='processing'&&!exiting){
-        const dr=Math.max(3,base_r*0.10), gap=dr*2.6, bamp=base_r*0.18, tn=t*4;
-        ctx.fillStyle='rgba(40,40,40,1)';
+        const dr=Math.max(3,base_r*0.10), gap=dr*2.6, bamp=base_r*0.18, tn=performance.now()/1000*4;
+        ctx.fillStyle='#fff';
         for(let i=0;i<3;i++){const bo=Math.max(0,Math.sin(tn-i*0.5));
           ctx.beginPath(); ctx.arc(cx+(i-1)*gap, cy-bo*bamp, dr,0,2*Math.PI); ctx.fill();}
+      }else if(state==='success'&&!exiting){
+        ctx.save(); ctx.globalAlpha=ta; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.font='600 14px "Segoe UI",system-ui,sans-serif'; ctx.fillStyle='#fff';
+        ctx.fillText('Gotowe',cx,cy+1); ctx.restore();
       }else{
-        const label=state==='success'?'OK':'OpisAI';
-        ctx.save(); ctx.globalAlpha=exiting?Math.max(0,1-sheenAmp*0.9):1;
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.font='600 '+(label==='OpisAI'?17:18)+'px "Segoe UI",system-ui,sans-serif';
-        ctx.shadowColor='rgba(0,40,15,0.5)'; ctx.shadowBlur=3; ctx.shadowOffsetY=1;
-        ctx.fillStyle='#fff'; ctx.fillText(label,cx,cy+1); ctx.restore();
+        // IDLE: torba medyczna (krzyż w kolorze orbu) + wordmark „OpisAI"
+        paintLogo(cx, cy-base_r*0.22, base_r*0.78, rs(bg), ta);
+        ctx.save(); ctx.globalAlpha=ta; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.font='600 '+Math.max(8,Math.round(base_r*0.19))+'px "Segoe UI",system-ui,sans-serif';
+        ctx.fillStyle='#fff'; ctx.fillText('OpisAI',cx,cy+base_r*0.46); ctx.restore();
       }
     }
   }
@@ -607,124 +608,44 @@ function draw(){
 }
 
 /* =====================================================================
-   ANIMACJA ZAMYKANIA (pop banki mydlanej -> wsiąknięcie) — 1:1 wg
-   opisai.py: trigger_exit_animation / _update_exit / _spawn_pop / paintEvent.
-   Fazy: thin (napięcie+sheen) -> pop (PYK: kolaps + pierścienie + korona kropel
-   + błysk) -> coalesce (resztka zlewa się w kropelkę) -> soak (wsiąka w pulpit).
+   ANIMACJA ZAMYKANIA (FLAT exit) — 1:1 wg opisai.py _update_exit:
+   collapse (puff 1.05 -> kolaps do 0 + fade) -> niebieski ripple -> done.
+   Zastąpiło dawny tęczowy „PYK" banki (pierścienie + korona kropel + kałuża).
    ===================================================================== */
 function triggerExit(onDone){
   if(exiting)return;
-  exiting=true; exitDone=onDone; exitStart=performance.now()/1000; exitPhase='thin';
-  rings=[]; droplets=[]; soak=0; sheenAmp=0; sheenPhase=0; exitFlash=0;
-  puddle=0; puddleAlpha=0; exitBodyAlpha=1; exitScale=1;
-  ruptureFx=Math.random()*0.36-0.18;
-  // exit przejmuje pełną kontrolę — zerujemy zwykłe deformacje
-  hoverAmp=0; hoverAmpTarget=0; scale=1; scaleTarget=1; scaleVel=0; vx=0; vy=0;
-}
-function spawnPop(){
-  const base_r=50, hsv=rgb2hsv(BRAND[0],BRAND[1],BRAND[2]);
-  let baseHue=hsv[0]/360; if(baseHue<0)baseHue=0.33;
-  const baseSat=hsv[1]>0?hsv[1]:0.6, baseVal=hsv[2];
-  // 2 rozszerzające się tęczowe pierścienie błony (podpis pęku)
-  rings.push({r:base_r*0.85,max_r:base_r*2.4,alpha:0.95,thickness:4.5,hue:baseHue});
-  rings.push({r:base_r*0.55,max_r:base_r*1.9,alpha:0.70,thickness:2.5,hue:(baseHue+0.12)%1});
-  // 54 korona drobnych, iryzujących kropel z grawitacją + mgiełka
-  function emit(n,size,speed,decay,shrink,grav,alpha){
-    alpha=(alpha==null)?1:alpha;
-    for(let k=0;k<n;k++){
-      const ang=Math.random()*2*Math.PI, sp=speed[0]+Math.random()*(speed[1]-speed[0]);
-      const hue=((baseHue+(Math.random()*0.2-0.1))%1+1)%1;
-      const sat=Math.max(0.3,Math.min(1,baseSat*0.85)), val=Math.min(1,baseVal*1.12);
-      const sr=base_r*(0.7+Math.random()*0.3);
-      droplets.push({x:Math.cos(ang)*sr,y:Math.sin(ang)*sr,
-        vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,alpha:alpha,
-        size:size[0]+Math.random()*(size[1]-size[0]),aspect:0.55+Math.random()*0.35,
-        decay:decay,shrink:shrink,grav:grav,color:hsv2rgb(hue*360,sat,val)});
-    }
-  }
-  emit(10,[4,8],     [3.0,6.0],  0.028,0.990, 0.18);        // shardy błony
-  emit(20,[2,4.5],   [4.5,9.0],  0.040,0.984, 0.12);        // film drops
-  emit(24,[0.8,2.2], [5.0,11.0], 0.060,0.978,-0.02, 0.55);  // mgiełka (unosi się)
+  exiting=true; exitDone=onDone; exitStart=performance.now()/1000;
+  exitPhase='collapse'; exitScale=1; exitBodyAlpha=1; exitRipple=0;
+  hoverAmp=0; hoverAmpTarget=0; scale=1; scaleTarget=1; scaleVel=0; vx=0; vy=0; pressed=false;
 }
 function updateExit(){
   const t=performance.now()/1000-exitStart;
-  sheenPhase+=0.16;
-  // cząstki: korona kropel + mgiełka
-  for(const d of droplets){d.x+=d.vx;d.y+=d.vy;d.vx*=0.93;d.vy*=0.93;d.vy+=d.grav;d.alpha-=d.decay;d.size*=d.shrink;}
-  droplets=droplets.filter(d=>d.alpha>0.02);
-  // pierścienie błony: rozszerzają się i gasną
-  for(const r of rings){r.r+=(r.max_r-r.r)*0.16;r.alpha-=0.05;r.thickness*=0.95;r.hue=(r.hue+0.015)%1;}
-  rings=rings.filter(r=>r.alpha>0.02);
-  if(exitFlash>0)exitFlash=Math.max(0,exitFlash-0.12);
-  // fazy (czas-bazowe, easing per faza)
-  if(t<EXIT_THIN){
-    exitPhase='thin'; const u=t/EXIT_THIN;
-    sheenAmp=1-(1-u)**2; exitScale=1+0.07*u;                 // leciutko inflate'uje
-  }else if(t<EXIT_POP){
-    if(exitPhase!=='pop'){exitPhase='pop'; spawnPop(); exitFlash=1;}
-    const u=(t-EXIT_THIN)/(EXIT_POP-EXIT_THIN);
-    exitScale=1.07*(1-u)**2;                                 // SZYBKI kolaps błony
-    exitBodyAlpha=Math.max(0,1-u*1.6); sheenAmp=Math.max(0,1-u*2.5);
-  }else if(t<EXIT_COAL){
-    exitPhase='coalesce'; const u=(t-EXIT_POP)/(EXIT_COAL-EXIT_POP);
-    exitScale=0; exitBodyAlpha=0;
-    puddle=1-(1-u)**2; puddleAlpha=Math.min(1,u*1.6);        // kropelka rośnie
-  }else if(t<EXIT_SOAK){
-    exitPhase='soak'; const u=(t-EXIT_COAL)/(EXIT_SOAK-EXIT_COAL), e=u*u;
-    soak=e; puddle=1-0.7*e; puddleAlpha=1-e;                 // kurczy się + gaśnie
+  exitRipple=Math.max(0,Math.min(1,t/EXIT_RIPPLE));         // ripple przez cały czas
+  if(t<EXIT_COLLAPSE){
+    exitPhase='collapse'; const u=t/EXIT_COLLAPSE;
+    if(u<0.25){exitScale=1.0+0.05*(u/0.25);}                // antycypacja (puff do 1.05)
+    else{const k=(u-0.25)/0.75; exitScale=1.05*(1-k*k);}    // ease-in kolaps do 0
+    exitBodyAlpha=Math.max(0,1-u*u);                         // gaśnie (ease-in)
+  }else if(t<EXIT_RIPPLE){
+    exitPhase='ripple'; exitScale=0; exitBodyAlpha=0;
   }else{
-    exitPhase='done'; puddleAlpha=0; exiting=false;
+    exitPhase='done'; exitRipple=1; exiting=false;
     const cb=exitDone; exitDone=null; if(cb)cb();
   }
 }
 function drawExitFX(cx,cy){
-  const base_r0=50;
+  if(exitRipple<=0.001)return;
+  const base_r0=50, rp=exitRipple;
+  const ease=1-(1-rp)**2, rr=base_r0*(0.45+1.7*ease), fade=(1-rp)**1.5;
   ctx.globalAlpha=1;
-  // centralny błysk
-  if(exitFlash>0.001){
-    const fa=exitFlash, fr=base_r0*(1.15+0.7*(1-fa));
-    const fg=ctx.createRadialGradient(cx,cy,0,cx,cy,fr);
-    fg.addColorStop(0,`rgba(255,255,255,${0.82*fa})`);
-    fg.addColorStop(0.4,`rgba(255,255,255,${0.35*fa})`);
-    fg.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=fg; ctx.beginPath(); ctx.arc(cx,cy,fr,0,2*Math.PI); ctx.fill();
-  }
-  // tęczowe pierścienie błony
-  for(const r of rings){
-    const ra=Math.max(0,Math.min(1,r.alpha)), c=hsv2rgb(r.hue*360,0.5,1.0);
-    ctx.lineWidth=Math.max(0.6,r.thickness);
-    ctx.strokeStyle=`rgba(${c[0]},${c[1]},${c[2]},${ra})`;
-    ctx.beginPath(); ctx.arc(cx,cy,r.r,0,2*Math.PI); ctx.stroke();
-    ctx.lineWidth=Math.max(0.5,r.thickness*0.4);
-    ctx.strokeStyle=`rgba(255,255,255,${0.47*ra})`;
-    ctx.beginPath(); ctx.arc(cx,cy,r.r,0,2*Math.PI); ctx.stroke();
-  }
-  // korona kropel — elipsy wydłużone wzdłuż kierunku ruchu
-  for(const d of droplets){
-    const a=Math.max(0,Math.min(1,d.alpha)), sp=Math.hypot(d.vx,d.vy), vs=Math.min(0.5,sp*0.08);
-    const lo=Math.max(0.1,d.size*(1+vs)), sh=Math.max(0.1,d.size*d.aspect*(1-vs*0.4));
-    const ang=(d.vx||d.vy)?Math.atan2(d.vy,d.vx):0;
-    ctx.save(); ctx.translate(cx+d.x,cy+d.y); ctx.rotate(ang);
-    ctx.fillStyle=`rgba(${d.color[0]},${d.color[1]},${d.color[2]},${a})`;
-    ctx.beginPath(); ctx.ellipse(0,0,lo,sh,0,0,2*Math.PI); ctx.fill(); ctx.restore();
-  }
-  // resztka cieczy -> płaska kropelka u dołu -> wsiąka w pulpit (+ wilgotny pierścień)
-  if(puddle>0.001 && puddleAlpha>0.001){
-    const pa=Math.max(0,Math.min(1,puddleAlpha));
-    const pw=Math.max(0.1,base_r0*0.5*puddle), ph=Math.max(0.1,pw*0.34);
-    const pcx=cx+ruptureFx*base_r0*0.4, pcy=cy+base_r0*0.6;
-    const ringA=0.275*pa*(1-soak);
-    if(ringA>0.002){ctx.lineWidth=1.6; ctx.strokeStyle=`rgba(190,210,220,${ringA})`;
-      ctx.beginPath(); ctx.ellipse(pcx,pcy,pw*1.18,ph*1.3,0,0,2*Math.PI); ctx.stroke();}
-    const gp=ctx.createRadialGradient(pcx,pcy-ph*0.4,0,pcx,pcy-ph*0.4,pw*1.3);
-    const c0=lighter(BRAND,150),c1=BRAND,c2=darker(BRAND,130);
-    gp.addColorStop(0,`rgba(${c0[0]},${c0[1]},${c0[2]},${0.95*pa})`);
-    gp.addColorStop(0.6,`rgba(${c1[0]},${c1[1]},${c1[2]},${0.85*pa})`);
-    gp.addColorStop(1,`rgba(${c2[0]},${c2[1]},${c2[2]},0)`);
-    ctx.fillStyle=gp; ctx.beginPath(); ctx.ellipse(pcx,pcy,pw,ph,0,0,2*Math.PI); ctx.fill();
-    ctx.fillStyle=`rgba(255,255,255,${0.59*pa})`;
-    ctx.beginPath(); ctx.ellipse(pcx-pw*0.25,pcy-ph*0.35,pw*0.22,ph*0.30,0,0,2*Math.PI); ctx.fill();
-  }
+  // jeden niebieski pierścień (kolor orbu) rozchodzi się ease-out i gaśnie
+  ctx.lineWidth=Math.max(1,3.5*fade);
+  ctx.strokeStyle=`rgba(${WB[0]},${WB[1]},${WB[2]},${180*fade/255})`;
+  ctx.beginPath(); ctx.arc(cx,cy,rr,0,2*Math.PI); ctx.stroke();
+  // cieniutki jasny rdzeń tuż w środku
+  ctx.lineWidth=Math.max(0.8,1.6*fade);
+  ctx.strokeStyle=`rgba(255,255,255,${90*fade/255})`;
+  ctx.beginPath(); ctx.arc(cx,cy,rr*0.62,0,2*Math.PI); ctx.stroke();
 }
 
 /* pętla: render co klatkę (rAF), fizyka stałym krokiem 33 ms */
@@ -732,15 +653,15 @@ let lastT=performance.now(), acc=0;
 function frame(now){acc+=now-lastT;lastT=now;if(acc>200)acc=200;while(acc>=33){tick();acc-=33;}draw();requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 
-/* ---- hover: kula -> falujący blob (scale 1.18, hoverAmp 1.0) ---- */
-bubbleEl.addEventListener('pointerenter',()=>{if(exiting)return;scaleTarget=1.18;hoverAmpTarget=1.0;});
+/* ---- hover: kula -> falujący blob (scale 1.10, hoverAmp 1.0 — 1:1 z opisai.py) ---- */
+bubbleEl.addEventListener('pointerenter',()=>{if(exiting)return;scaleTarget=1.10;hoverAmpTarget=1.0;});
 bubbleEl.addEventListener('pointerleave',()=>{if(exiting)return;if(dragOffX===null){scaleTarget=1.0;hoverAmpTarget=0.0;}});
 
 /* ---- drag (180 ms zwłoki, próg 8 px) + klik ---- */
 bubbleEl.addEventListener('pointerdown',(e)=>{
   if(e.button!==0||exiting)return;
   bubbleEl.setPointerCapture(e.pointerId);
-  dragOffX=e.clientX-posX; dragOffY=e.clientY-posY;
+  dragOffX=e.clientX-posX; dragOffY=e.clientY-posY; pressed=true;
   wasDragged=false; dragReady=false; dragTargetX=null; dragTargetY=null; vx=0; vy=0;
   setTimeout(()=>{dragReady=true;},180); e.preventDefault();
 });
@@ -752,7 +673,7 @@ bubbleEl.addEventListener('pointermove',(e)=>{
 });
 bubbleEl.addEventListener('pointerup',(e)=>{
   if(dragOffX===null)return;
-  const clicked=!wasDragged;
+  const clicked=!wasDragged; pressed=false;
   dragOffX=null; dragOffY=null; dragReady=false; dragTargetX=null; dragTargetY=null;
   if(!bubbleEl.matches(':hover')){scaleTarget=1.0;hoverAmpTarget=0.0;}
   if(clicked)onBubbleClick();
@@ -925,8 +846,8 @@ function closeBubble(){
   });
 }
 function launchBubble(){
-  bubbleClosed=false; exiting=false; exitDone=null; rings=[]; droplets=[];
-  exitScale=1; exitBodyAlpha=1; sheenAmp=0; exitFlash=0; puddle=0; puddleAlpha=0; soak=0;
+  bubbleClosed=false; exiting=false; exitDone=null;
+  exitScale=1; exitBodyAlpha=1; exitRipple=0; exitPhase=''; pressed=false; pressDip=0;
   scale=1; scaleTarget=1; scaleVel=0; hoverAmp=0; hoverAmpTarget=0;
   bubbleEl.style.display=''; placeBubble(Math.max(40,window.innerWidth-260),300); vx=vy=0;
   bubbleEl.classList.add('emerging');
