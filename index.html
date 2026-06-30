@@ -4,6 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OpisAI — demonstracja</title>
+<meta name="description" content="OpisAI — asystent dokumentacji weterynaryjnej. Jednym kliknięciem zamienia surowe notatki z wizyty w gotową epikryzę: czyta je wprost z Twojego systemu gabinetowego i wpisuje wynik z powrotem. Z bramką RODO i zgodnością z EU AI Act.">
+<meta name="theme-color" content="#27ae60">
+<meta name="author" content="OpisAI">
+<link rel="canonical" href="https://guziczak.github.io/opisai/">
+<!-- Open Graph / podgląd przy udostępnianiu (Messenger, WhatsApp, LinkedIn…) -->
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pl_PL">
+<meta property="og:site_name" content="OpisAI">
+<meta property="og:url" content="https://guziczak.github.io/opisai/">
+<meta property="og:title" content="OpisAI — asystent dokumentacji weterynaryjnej">
+<meta property="og:description" content="Jednym kliknięciem: surowe notatki z wizyty → gotowa epikryza, czytana i wpisywana wprost w Twoim systemie. Z bramką RODO i zgodnością z EU AI Act.">
+<!-- TODO: podgląd graficzny 1200×630 — dodaj plik og.png do repo i odkomentuj:
+<meta property="og:image" content="https://guziczak.github.io/opisai/og.png"> -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpisAI — asystent dokumentacji weterynaryjnej">
+<meta name="twitter:description" content="Surowe notatki → gotowa epikryza w kilka sekund, wpisana wprost w Twoim systemie. Z bramką RODO i EU AI Act.">
 <style>
 /* ===================================================================
    OpisAI — interaktywne demo (symulacja pulpitu Windows + system
@@ -213,14 +229,15 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
 #cta .cta-row{display:flex;gap:8px;margin-top:8px}
 #cta .cta-row a{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;color:#eafff0;font-size:12px;padding:8px;border-radius:9px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);cursor:pointer}
 #cta .cta-row a:hover{background:rgba(120,220,150,.18)}
-#cta .cta-alt{margin-top:11px;font-size:11.5px;text-align:center;opacity:.82;cursor:pointer}
-#cta .cta-alt:hover{opacity:1;text-decoration:underline}
-#cta .cta-form{display:none;margin-top:10px;flex-direction:column;gap:8px}
-#cta .cta-form.show{display:flex}
-#cta .cta-form input{font:inherit;font-size:12.5px;padding:9px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.96);color:#16240f}
-#cta .cta-form input:focus{outline:none;box-shadow:0 0 0 2px rgba(70,178,98,.6)}
-#cta .cta-form button{font:inherit;font-weight:700;font-size:13px;padding:9px;border-radius:9px;border:none;cursor:pointer;color:#fff;background:linear-gradient(180deg,#46b262,#2f8f4a)}
-#cta .cta-form button:hover{filter:brightness(1.05)}
+/* kopiowalny adres e-mail (klik = kopiuj do schowka) */
+#cta .cta-copy{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:9px;font:inherit;font-size:12.5px;padding:8px 10px;border-radius:10px;cursor:pointer;color:#eafff0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);transition:background .15s,border-color .15s}
+#cta .cta-copy:hover{background:rgba(120,220,150,.18)}
+#cta .cta-copy .m{font-weight:600;letter-spacing:.2px}
+#cta .cta-copy .ic{opacity:.72;font-size:12px}
+#cta .cta-copy.copied{background:rgba(70,178,98,.30);border-color:rgba(120,235,160,.55)}
+.about-mail{padding:2px 20px 16px;text-align:center;font-size:12.5px;color:#567}
+.about-mail .m{color:var(--op-green-3);font-weight:700;cursor:pointer}
+.about-mail .m:hover{text-decoration:underline}
 
 .hint-pill{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:8000;background:rgba(20,40,25,.85);color:#eafff0;font-size:12px;padding:7px 14px;border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.4);opacity:0;transition:opacity .4s;max-width:80vw;text-align:center}
 .hint-pill.show{opacity:1}
@@ -326,7 +343,9 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
     <div style="margin-top:10px;font-size:12px;color:#567">To jest demonstracja interaktywna.</div></div>
   <div class="about-cta">
     <a id="ab-mail" class="ab-primary">✉ Napisz do nas</a>
+    <button type="button" class="ab-ic" id="ab-copy" title="Skopiuj adres e-mail">⧉</button>
   </div>
+  <div class="about-mail">albo napisz wprost na <span class="m js-mail-text" id="ab-copy-text" title="Kliknij, aby skopiować">guziczak@proton.me</span></div>
   <div class="ft"><button id="about-ok">Zamknij</button></div>
 </div>
 
@@ -336,12 +355,10 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
   <div class="cta-hd"><div class="b"></div><b>OpisAI</b></div>
   <div class="cta-txt">Epikryza gotowa w kilka sekund — czytana i wpisywana wprost w Twoim systemie. Chcesz tak w swoim gabinecie?</div>
   <a class="cta-primary" id="cta-mail">✉ Napisz do nas</a>
-  <div class="cta-alt" id="cta-toggle">albo zostaw kontakt — oddzwonimy ▾</div>
-  <form class="cta-form" id="cta-form" method="post">
-    <input type="text" name="name" placeholder="Imię i nazwisko / nazwa gabinetu" required>
-    <input type="text" name="contact" placeholder="Telefon lub e-mail" required>
-    <button type="submit">Wyślij — odezwiemy się</button>
-  </form>
+  <button type="button" class="cta-copy" id="cta-copy" title="Kliknij, aby skopiować adres e-mail">
+    <span class="m js-mail-text">guziczak@proton.me</span>
+    <span class="ic">⧉ kopiuj</span>
+  </button>
 </div>
 
 <div id="startmenu">
@@ -378,13 +395,12 @@ body{font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-ser
 <script>
 "use strict";
 /* =====================================================================
-   DANE KONTAKTOWE — EDYTUJ TUTAJ (jedno miejsce). Podmień placeholdery
-   na swoje. `formAction` puste = formularz tylko dziękuje (tryb demo);
-   wpisz endpoint Formspree/Tally, by realnie zbierać zgłoszenia.
+   DANE KONTAKTOWE — EDYTUJ TUTAJ (jedno miejsce). Klik „Napisz do nas”
+   otwiera gotowy e-mail (mailto → Outlook / domyślny klient poczty),
+   a adres jest też pokazany jako tekst do skopiowania jednym kliknięciem.
    ===================================================================== */
 const CONTACT={
-  email:     "guziczak@proton.me",            /* Twój e-mail */
-  formAction:""                               /* TODO: endpoint Formspree/Tally (puste = tryb demo) */
+  email:"guziczak@proton.me"                  /* Twój e-mail (równoważnie: guziczak@pm.me) */
 };
 /* =====================================================================
    KOLORY — odwzorowanie Qt QColor.lighter()/darker() (model HSV).
@@ -786,11 +802,31 @@ function showToast(){btoast.classList.add('show');setTimeout(()=>btoast.classLis
    Wszystkie linki budowane z obiektu CONTACT (góra skryptu).
    ===================================================================== */
 const ctaEl=document.getElementById('cta');
+/* kopiowanie adresu e-mail do schowka (z fallbackiem dla file://) + feedback */
+function fallbackCopy(txt){
+  const ta=document.createElement('textarea'); ta.value=txt;
+  ta.style.position='fixed'; ta.style.top='-1000px'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
+}
+function copyEmail(srcBtn){
+  const txt=CONTACT.email;
+  const done=()=>{ if(srcBtn){srcBtn.classList.add('copied'); setTimeout(()=>srcBtn.classList.remove('copied'),1400);} flashHint('Skopiowano adres: '+txt); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(()=>{fallbackCopy(txt);done();}); }
+  else { fallbackCopy(txt); done(); }
+}
 (function wireCTA(){
   const mail='mailto:'+CONTACT.email+'?subject='+encodeURIComponent('OpisAI — zapytanie z dema')
     +'&body='+encodeURIComponent('Dzień dobry, chciał(a)bym dowiedzieć się więcej o OpisAI dla mojego gabinetu.');
   document.getElementById('cta-mail').href=mail;
   document.getElementById('ab-mail').href=mail;
+  // adres e-mail z jednego źródła (CONTACT.email) → wszystkie widoczne etykiety
+  document.querySelectorAll('.js-mail-text').forEach(el=>el.textContent=CONTACT.email);
+  // klik = kopiuj (karta CTA + przycisk i tekst w „O aplikacji”)
+  document.getElementById('cta-copy').onclick=function(){copyEmail(this);};
+  document.getElementById('ab-copy').onclick=function(){copyEmail(this);};
+  document.getElementById('ab-copy-text').onclick=function(){copyEmail(this);};
 })();
 function showCTA(){
   if(ctaEl.classList.contains('show'))return;
@@ -800,13 +836,8 @@ function showCTA(){
   let top=Math.max(m, Math.min(r.top+r.height/2-ch/2, window.innerHeight-48-ch-m));      // wyśrodkuj w pionie, nad paskiem zadań
   ctaEl.style.left=left+'px'; ctaEl.style.top=top+'px';
 }
-function hideCTA(){ctaEl.classList.remove('show');document.getElementById('cta-form').classList.remove('show');}
+function hideCTA(){ctaEl.classList.remove('show');}
 document.getElementById('cta-x').onclick=hideCTA;
-document.getElementById('cta-toggle').onclick=()=>document.getElementById('cta-form').classList.toggle('show');
-document.getElementById('cta-form').addEventListener('submit',(e)=>{
-  if(!CONTACT.formAction){ e.preventDefault(); hideCTA(); flashHint('Dziękujemy! Odezwiemy się najszybciej, jak to możliwe.'); }
-  else { e.target.action=CONTACT.formAction; }    // realny endpoint (Formspree/Tally) — wyśle POST
-});
 
 async function startGeneration(opt){
   if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
