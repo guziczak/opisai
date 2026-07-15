@@ -72,6 +72,7 @@ body::after{content:"";position:fixed;inset:0;z-index:20000;pointer-events:none;
   display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(0,0,0,.25)}
 .win.min{display:none !important}
 .win.maxed{border-radius:0}
+#kxp.mobile-fit{left:0!important;top:0!important;width:940px!important;height:636px!important;transform:translate3d(var(--kxp-fit-x,8px),var(--kxp-fit-y,8px),0) scale(var(--kxp-fit-scale,1));transform-origin:top left;border-radius:10px 10px 8px 8px;will-change:transform}
 
 /* ---------- SYSTEM GABINETOWY ---------- */
 #kxp{left:60px;top:62px;width:940px;height:636px;z-index:120}
@@ -81,6 +82,7 @@ body::after{content:"";position:fixed;inset:0;z-index:20000;pointer-events:none;
 .wbtns{display:flex;gap:2px}
 .wbtn{width:42px;height:28px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;color:#fff;border-radius:4px;font:inherit;font-size:13px;cursor:pointer}
 .wbtn:hover{background:rgba(255,255,255,.18)}
+.wbtn:disabled{opacity:.48;cursor:default;background:transparent}
 .wbtn.close:hover{background:#e23b3b}
 .kxp-menu{display:flex;background:#2c8a46;color:#fff;font-size:11.5px;padding:0 4px;height:26px;align-items:stretch}
 .kxp-menu .m{padding:0 9px;display:flex;align-items:center;cursor:default;white-space:nowrap}
@@ -169,7 +171,7 @@ body::after{content:"";position:fixed;inset:0;z-index:20000;pointer-events:none;
 .rodo-foot button:hover{background:#fff}
 
 /* ---------- PASEK ZADAŃ (zielony — akcent motywu) ---------- */
-#taskbar{position:fixed;left:0;right:0;bottom:0;height:48px;z-index:9000;background:rgba(17,46,27,.82);backdrop-filter:blur(22px) saturate(1.5);border-top:1px solid rgba(150,230,170,.14);display:flex;align-items:center;padding:0 10px}
+#taskbar{position:fixed;left:0;right:0;bottom:0;height:calc(48px + env(safe-area-inset-bottom));z-index:9000;background:rgba(17,46,27,.82);backdrop-filter:blur(22px) saturate(1.5);border-top:1px solid rgba(150,230,170,.14);display:flex;align-items:center;padding:0 max(10px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(10px,env(safe-area-inset-left))}
 .tb-center{position:absolute;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center}
 .tb-btn{height:38px;min-width:40px;padding:0 9px;border:0;border-radius:7px;display:flex;align-items:center;gap:8px;cursor:pointer;color:#eaf0f6;position:relative;background:transparent;font:inherit;text-decoration:none}
 .tb-btn:hover{background:rgba(120,220,150,.18)}
@@ -207,7 +209,7 @@ body::after{content:"";position:fixed;inset:0;z-index:20000;pointer-events:none;
 .notification-dot.show{display:block}
 
 /* ---------- START MENU ---------- */
-#startmenu{position:fixed;left:50%;transform:translateX(-50%);bottom:56px;width:520px;max-width:94vw;z-index:9700;background:rgba(16,44,26,.94);backdrop-filter:blur(26px);border:1px solid rgba(150,230,170,.14);border-radius:14px;padding:18px;display:none;box-shadow:0 24px 70px rgba(0,0,0,.5);color:#eef3f8}
+#startmenu{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(56px + env(safe-area-inset-bottom));width:520px;max-width:94vw;z-index:9700;background:rgba(16,44,26,.94);backdrop-filter:blur(26px);border:1px solid rgba(150,230,170,.14);border-radius:14px;padding:18px;display:none;box-shadow:0 24px 70px rgba(0,0,0,.5);color:#eef3f8}
 #startmenu.show{display:block}
 #startmenu h5{margin:2px 4px 12px;font-size:12px;opacity:.7;font-weight:600}
 .sm-search{width:100%;height:40px;margin-bottom:16px;display:flex;align-items:center;gap:9px;padding:0 13px;border-radius:8px;background:rgba(255,255,255,.12);border-bottom:2px solid #6fd07f;color:#cdd6e0}
@@ -233,7 +235,7 @@ body::after{content:"";position:fixed;inset:0;z-index:20000;pointer-events:none;
 @keyframes shellIn{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
 #startmenu.shell-panel.show{animation:startIn .18s cubic-bezier(.2,.85,.2,1)}
 @keyframes startIn{from{opacity:0;transform:translateX(-50%) translateY(8px) scale(.985)}to{opacity:1;transform:translateX(-50%)}}
-#quickpanel{position:fixed;right:94px;bottom:58px;width:356px;max-width:calc(100vw - 24px);border-radius:14px;padding:16px;display:none}
+#quickpanel{position:fixed;right:94px;bottom:calc(58px + env(safe-area-inset-bottom));width:356px;max-width:calc(100vw - 24px);border-radius:14px;padding:16px;display:none}
 #quickpanel.show{display:block}
 .quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
 .quick-tile{min-height:74px;border:0;border-radius:10px;padding:9px 8px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;background:rgba(255,255,255,.09);color:#eef6f0;font:inherit;cursor:pointer;text-align:left}
@@ -241,14 +243,14 @@ body::after{content:"";position:fixed;inset:0;z-index:20000;pointer-events:none;
 .quick-tile .qi{font-size:18px}.quick-tile .ql{font-size:12px;font-weight:600}.quick-tile small{font-size:9.5px;opacity:.76;max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .quick-slider{display:grid;grid-template-columns:24px 1fr 38px;gap:8px;align-items:center;margin:12px 2px;font-size:12px}.quick-slider output{text-align:right;font-variant-numeric:tabular-nums;color:#d8e7dc}.quick-slider input{width:100%;accent-color:#55c873}
 .quick-foot{display:flex;justify-content:space-between;align-items:center;margin:15px -16px -16px;padding:11px 16px;border-top:1px solid rgba(255,255,255,.09);font-size:11px;color:#d3dfd6}.quick-foot button{border:0;background:transparent;color:#e9f4eb;font-size:16px;cursor:pointer}
-#calendarpanel{position:fixed;right:10px;bottom:58px;width:368px;max-width:calc(100vw - 20px);max-height:calc(100vh - 76px);overflow:auto;border-radius:14px;padding:0;display:none}
+#calendarpanel{position:fixed;right:10px;bottom:calc(58px + env(safe-area-inset-bottom));width:368px;max-width:calc(100vw - 20px);max-height:calc(100dvh - 76px - env(safe-area-inset-bottom));overflow:auto;border-radius:14px;padding:0;display:none}
 #calendarpanel.show{display:block}
 .notify-head,.calendar-head{display:flex;align-items:center;justify-content:space-between;padding:15px 17px 10px}.notify-head h4,.calendar-head h4{margin:0;font-size:13px}.notify-head button,.calendar-head button{border:0;border-radius:6px;background:transparent;color:#dfeae2;font:inherit;font-size:11px;padding:5px 7px;cursor:pointer}.notify-head button:hover,.calendar-head button:hover{background:rgba(255,255,255,.1)}
 .notification-list{padding:0 10px 10px;display:grid;gap:7px}.notification-card{display:grid;grid-template-columns:32px 1fr auto;gap:9px;padding:10px;border-radius:10px;background:rgba(255,255,255,.08)}.notification-card .ni{width:32px;height:32px;border-radius:8px;display:grid;place-items:center;background:radial-gradient(circle at 33% 30%,#8ee59b,#27ae60 60%,#1f8038);font-size:10px;font-weight:700}.notification-card b{display:block;font-size:12px;margin-bottom:2px}.notification-card p{margin:0;font-size:11px;line-height:1.35;color:#d3ded6}.notification-card time{font-size:9px;color:#aebdb2}.notification-empty{padding:8px 8px 14px;text-align:center;color:#aebdb2;font-size:11px}
 .calendar-wrap{border-top:1px solid rgba(255,255,255,.09);padding-bottom:13px}.calendar-nav{display:flex;gap:4px}.calendar-nav button{width:28px;height:28px;padding:0;font-size:16px}.cal-week,.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 12px}.cal-week span{text-align:center;padding:4px 0;color:#9fb0a3;font-size:9px;text-transform:uppercase}.cal-day{height:35px;border:0;border-radius:50%;display:grid;place-items:center;background:transparent;color:#edf4ef;font:inherit;font-size:11px}.cal-day.muted{opacity:.3}.cal-day.today{background:#3aa85a;font-weight:700;box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
 
 /* ---------- RZADKIE POWIADOMIENIE PROMOCYJNE ---------- */
-.shell-toast{position:fixed;right:16px;bottom:64px;z-index:9750;width:344px;max-width:calc(100vw - 24px);display:none;padding:13px;border:1px solid rgba(190,235,200,.19);border-radius:12px;background:rgba(22,42,31,.97);color:#eff7f1;box-shadow:0 24px 65px rgba(0,0,0,.58);backdrop-filter:blur(24px)}
+.shell-toast{position:fixed;right:16px;bottom:calc(64px + env(safe-area-inset-bottom));z-index:9750;width:344px;max-width:calc(100vw - 24px);display:none;padding:13px;border:1px solid rgba(190,235,200,.19);border-radius:12px;background:rgba(22,42,31,.97);color:#eff7f1;box-shadow:0 24px 65px rgba(0,0,0,.58);backdrop-filter:blur(24px)}
 .shell-toast.show{display:grid;grid-template-columns:40px 1fr auto;gap:10px;animation:toastIn .3s cubic-bezier(.16,.86,.28,1)}
 @keyframes toastIn{from{opacity:0;transform:translateX(22px) scale(.98)}to{opacity:1;transform:none}}
 .shell-toast .promo-icon{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 33% 30%,#bff0c8,#35bc5b 58%,#1c7334);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35);font-size:11px;font-weight:800}.shell-toast .promo-app{font-size:10px;color:#a9b8ad;margin-bottom:4px}.shell-toast h4{font-size:13px;margin:0 0 4px}.shell-toast p{font-size:11.5px;line-height:1.4;margin:0 0 9px;color:#d6e2d9}.shell-toast .promo-actions{display:flex;gap:6px}.shell-toast .promo-actions button{border:0;border-radius:6px;padding:6px 9px;background:rgba(255,255,255,.1);color:#eef7f0;font:inherit;font-size:11px;cursor:pointer}.shell-toast .promo-actions button.primary{background:#2f9f50;font-weight:600}.shell-toast .promo-close{width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:#b8c6bc;cursor:pointer}.shell-toast .promo-close:hover{background:rgba(255,255,255,.1);color:#fff}
@@ -295,15 +297,15 @@ body::after{content:"";position:fixed;inset:0;z-index:20000;pointer-events:none;
 .about-mail .m{color:var(--op-green-3);font-weight:700;cursor:pointer}
 .about-mail .m:hover{text-decoration:underline}
 
-.hint-pill{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:8000;background:rgba(20,40,25,.85);color:#eafff0;font-size:12px;padding:7px 14px;border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.4);opacity:0;transition:opacity .4s;max-width:80vw;text-align:center}
+.hint-pill{position:fixed;bottom:calc(60px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:8000;background:rgba(20,40,25,.85);color:#eafff0;font-size:12px;padding:7px 14px;border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.4);opacity:0;transition:opacity .4s;max-width:80vw;text-align:center}
 .hint-pill.show{opacity:1}
 @media(max-width:1050px){
   #tb-kxp{width:40px;min-width:40px;padding:0;justify-content:center}#tb-kxp .lbl{display:none}
 }
 @media(max-width:820px){
-  #tb-search{display:none}.tb-center{gap:4px}
-  #kxp{left:8px;top:8px;width:calc(100vw - 16px);height:calc(100vh - 64px)}
+  #tb-search{display:none}.tb-center{gap:4px}.icons{display:none}
 }
+@media(max-width:820px),(max-height:700px){#scrim{padding:12px}#rodo{max-height:calc(100dvh - 24px);overflow:auto;border-radius:24px}#rodo .note,.sm-search input{font-size:16px}}
 @media(max-width:560px){
   .tb-center{left:8px;transform:none}#tray-hidden,#tray-battery,.clock .d{display:none}.tray{gap:2px;padding-right:0}.tray-cluster{gap:5px;padding:0 5px!important}.clock{padding:3px 5px}
   #quickpanel{right:8px}.sm-grid{grid-template-columns:repeat(3,1fr)}#startmenu{padding:14px}.sm-footer{margin:14px -14px -14px;padding:10px 14px}
@@ -605,9 +607,30 @@ let pressed=false, pressDip=0;   // wciśnięcie (press_dip): base_r *= 1 - 0.07
 /* ---- animacja zamykania (FLAT exit) — 1:1 wg opisai.py _update_exit ---- */
 let exiting=false, exitStart=0, exitPhase='', exitScale=1, exitBodyAlpha=1, exitRipple=0, exitDone=null;
 const EXIT_COLLAPSE=0.22, EXIT_RIPPLE=0.38;   // granice faz [s]
+const KXP_BASE_W=940,KXP_BASE_H=636;
+const shellTaskbar=document.getElementById('taskbar');
 
 function placeBubble(x,y){posX=x;posY=y;bubbleEl.style.left=x+'px';bubbleEl.style.top=y+'px';}
-placeBubble(Math.min(window.innerWidth-150,1010), 300);
+function visibleViewport(){const vv=window.visualViewport;return{left:vv?vv.offsetLeft:0,top:vv?vv.offsetTop:0,width:vv?vv.width:window.innerWidth,height:vv?vv.height:window.innerHeight};}
+function compactKxpViewport(){const w=document.documentElement.clientWidth||window.innerWidth,h=window.innerHeight;return w<KXP_BASE_W+16||h<KXP_BASE_H+shellTaskbar.getBoundingClientRect().height+16;}
+function fittedKxpScale(){
+  const w=document.documentElement.clientWidth||window.innerWidth,h=window.innerHeight,widthScale=(w-16)/KXP_BASE_W;
+  const heightScale=(h-shellTaskbar.getBoundingClientRect().height-16)/KXP_BASE_H;
+  return Math.max(.25,Math.min(1,widthScale,w>h?heightScale:1));
+}
+function bubbleHome(){
+  const viewport=visibleViewport();
+  if(!compactKxpViewport())return{x:Math.min(viewport.left+viewport.width-150,1010),y:300};
+  const fit=fittedKxpScale(),windowBottom=viewport.top+8+KXP_BASE_H*fit,maxY=viewport.top+viewport.height-shellTaskbar.getBoundingClientRect().height-120;
+  return{x:Math.max(viewport.left+12,viewport.left+viewport.width-132),y:Math.max(viewport.top+12,Math.min(maxY,windowBottom+14))};
+}
+function sendBubbleHome(){const home=bubbleHome();placeBubble(home.x,home.y);vx=vy=0;}
+function clampBubble(){
+  const viewport=visibleViewport(),taskbarHeight=shellTaskbar.getBoundingClientRect().height;
+  posX=Math.max(viewport.left-12,Math.min(viewport.left+viewport.width-108,posX));
+  posY=Math.max(viewport.top-12,Math.min(viewport.top+viewport.height-taskbarHeight-108,posY));
+}
+sendBubbleHome();
 
 /* ---- jeden krok fizyki (taktowany co 33 ms, jak _anim_timer 30 FPS) ---- */
 function tick(){
@@ -625,8 +648,7 @@ function tick(){
   }else{                                                                   // po puszczeniu — rzut z tłumieniem
     if(Math.abs(vx)>0.05||Math.abs(vy)>0.05){posX+=vx;posY+=vy;}
     vx*=0.82; vy*=0.82;}
-  posX=Math.max(-12,Math.min(window.innerWidth-108,posX));
-  posY=Math.max(-12,Math.min(window.innerHeight-108,posY));
+  clampBubble();
   bubbleEl.style.left=posX+'px'; bubbleEl.style.top=posY+'px';
 }
 
@@ -986,7 +1008,7 @@ document.addEventListener('contextmenu',(e)=>{
 document.addEventListener('pointerdown',(e)=>{if(!ctxEl.contains(e.target))closeCtx();},true);
 aboutEl.querySelector('#about-ok').onclick=()=>aboutEl.classList.remove('show');
 document.getElementById('tray-opis').onclick=(e)=>{if(bubbleClosed){launchBubble();return;}showMenu(e.clientX-210,window.innerHeight-250,bubbleMenu());};
-function showBubble(){placeBubble(Math.max(40,window.innerWidth-260),300);vx=vy=0;flashHint('Bąbelek OpisAI 🟢');}
+function showBubble(){sendBubbleHome();flashHint('Bąbelek OpisAI 🟢');}
 /* Zamknij / uruchom bąbelek — odpowiednik trigger_exit_animation (pyk) + relaunch */
 let bubbleClosed=false;
 function closeBubble(){
@@ -1001,7 +1023,7 @@ function launchBubble(){
   bubbleClosed=false; exiting=false; exitDone=null;
   exitScale=1; exitBodyAlpha=1; exitRipple=0; exitPhase=''; pressed=false; pressDip=0;
   scale=1; scaleTarget=1; scaleVel=0; hoverAmp=0; hoverAmpTarget=0;
-  bubbleEl.style.display=''; placeBubble(Math.max(40,window.innerWidth-260),300); vx=vy=0;
+  bubbleEl.style.display=''; sendBubbleHome();
   bubbleEl.classList.add('emerging');
   bubbleEl.addEventListener('animationend',function h(){bubbleEl.classList.remove('emerging');bubbleEl.removeEventListener('animationend',h);},{once:true});
   flashHint('OpisAI uruchomiony 🟢');
@@ -1011,21 +1033,30 @@ function launchBubble(){
    OKNO SYSTEMU: drag, min/max/close/open, taskbar, ikony
    ===================================================================== */
 const kxp=document.getElementById('kxp'), tbKxp=document.getElementById('tb-kxp'), icKxp=document.getElementById('ic-kxp');
+const kxpMaxButton=kxp.querySelector('[data-w="max"]'),kxpMemos=[...kxp.querySelectorAll('.memo')];
 let zTop=120, kxpClosed=false, kxpMin=false, kxpMax=false, savedGeom=null;
 function focusKxp(){kxp.style.zIndex=(++zTop);}
 function applyTb(){const visible=!kxpMin&&!kxpClosed;tbKxp.classList.toggle('active',visible);tbKxp.setAttribute('aria-pressed',String(visible));}
-function openKxp(){kxpClosed=false;kxpMin=false;kxp.classList.remove('min');focusKxp();applyTb();}
+function layoutKxp(){
+  const mobile=compactKxpViewport();kxp.classList.toggle('mobile-fit',mobile);kxpMaxButton.disabled=mobile;kxpMaxButton.setAttribute('aria-disabled',String(mobile));
+  kxpMemos.forEach(memo=>{memo.contentEditable=String(!mobile);memo.setAttribute('aria-readonly',String(mobile));});
+  if(!mobile){kxp.style.removeProperty('--kxp-fit-scale');kxp.style.removeProperty('--kxp-fit-x');kxp.style.removeProperty('--kxp-fit-y');return;}
+  const viewportWidth=document.documentElement.clientWidth||window.innerWidth,fit=fittedKxpScale(),visualWidth=KXP_BASE_W*fit;
+  kxp.style.setProperty('--kxp-fit-scale',fit.toFixed(4));kxp.style.setProperty('--kxp-fit-x',Math.max(8,(viewportWidth-visualWidth)/2)+'px');kxp.style.setProperty('--kxp-fit-y','8px');
+}
+function openKxp(){kxpClosed=false;kxpMin=false;kxp.classList.remove('min');layoutKxp();focusKxp();applyTb();}
 function minimizeKxp(){kxpMin=true;kxp.classList.add('min');applyTb();}
 function restoreKxp(){kxpMin=false;kxp.classList.remove('min');focusKxp();applyTb();}
 function closeKxp(){if(kxpMax)toggleMax(true);kxpClosed=true;kxpMin=false;kxp.classList.add('min');applyTb();
   flashHint('System zamknięty — uruchom go ikoną „System Informatyczny” na pulpicie, z menu Start lub PPM na pulpicie.');}
 function toggleMax(forceRestore){
+  if(kxp.classList.contains('mobile-fit')&&!forceRestore){flashHint('Okno jest już dopasowane do ekranu telefonu.');return;}
   if(kxpMax||forceRestore){
     if(savedGeom){kxp.style.left=savedGeom.l;kxp.style.top=savedGeom.t;kxp.style.width=savedGeom.w;kxp.style.height=savedGeom.h;}
     kxp.classList.remove('maxed');kxpMax=false;
   }else{
     savedGeom={l:kxp.offsetLeft+'px',t:kxp.offsetTop+'px',w:kxp.offsetWidth+'px',h:kxp.offsetHeight+'px'};
-    kxp.style.left='8px';kxp.style.top='8px';kxp.style.width=(window.innerWidth-16)+'px';kxp.style.height=(window.innerHeight-48-16)+'px';
+    kxp.style.left='8px';kxp.style.top='8px';kxp.style.width=(window.innerWidth-16)+'px';kxp.style.height=(window.innerHeight-shellTaskbar.getBoundingClientRect().height-16)+'px';
     kxp.classList.add('maxed');kxpMax=true;focusKxp();}
 }
 kxp.addEventListener('pointerdown',()=>focusKxp());
@@ -1036,6 +1067,7 @@ document.querySelectorAll('#kxp .wbtn').forEach(b=>{b.onclick=(e)=>{e.stopPropag
 (function(){const handle=document.getElementById('kxp-title');let d=null;
   handle.addEventListener('pointerdown',(e)=>{
     if(e.target.closest('.wbtn'))return;
+    if(kxp.classList.contains('mobile-fit'))return;
     if(kxpMax){toggleMax(true);const w=kxp.offsetWidth;
       kxp.style.left=Math.max(0,Math.min(window.innerWidth-160,e.clientX-w/2))+'px';
       kxp.style.top=Math.max(0,e.clientY-16)+'px';}
@@ -1044,9 +1076,11 @@ document.querySelectorAll('#kxp .wbtn').forEach(b=>{b.onclick=(e)=>{e.stopPropag
   handle.addEventListener('pointermove',(e)=>{if(!d)return;
     kxp.style.left=Math.max(-300,Math.min(window.innerWidth-160,d.ox+e.clientX-d.sx))+'px';
     kxp.style.top=Math.max(0,Math.min(window.innerHeight-100,d.oy+e.clientY-d.sy))+'px';});
-  handle.addEventListener('pointerup',()=>{d=null;});
-  handle.addEventListener('dblclick',(e)=>{if(!e.target.closest('.wbtn'))toggleMax();});
+  const endDrag=()=>{d=null;};
+  handle.addEventListener('pointerup',endDrag);handle.addEventListener('pointercancel',endDrag);handle.addEventListener('lostpointercapture',endDrag);
+  handle.addEventListener('dblclick',(e)=>{if(!e.target.closest('.wbtn')&&!kxp.classList.contains('mobile-fit'))toggleMax();});
 })();
+layoutKxp();
 
 tbKxp.onclick=()=>{if(kxpClosed)openKxp();else if(kxpMin)restoreKxp();else minimizeKxp();};
 icKxp.addEventListener('dblclick',openKxp);
@@ -1208,7 +1242,17 @@ document.addEventListener('keydown',()=>{lastShellInteraction=Date.now();},{capt
   if(!promoRecentlySeen()&&Math.random()<.2)setTimeout(()=>tryPromo(),55000+Math.random()*35000);
 })();
 
-window.addEventListener('resize',()=>{if(kxpMax){kxp.style.width=(window.innerWidth-16)+'px';kxp.style.height=(window.innerHeight-48-16)+'px';}});
+let viewportLayoutFrame=0;
+function scheduleViewportLayout(rehomeBubble=false){
+  cancelAnimationFrame(viewportLayoutFrame);viewportLayoutFrame=requestAnimationFrame(()=>{
+    layoutKxp();
+    if(!kxp.classList.contains('mobile-fit')&&kxpMax){kxp.style.width=(window.innerWidth-16)+'px';kxp.style.height=(window.innerHeight-shellTaskbar.getBoundingClientRect().height-16)+'px';}
+    if(rehomeBubble)sendBubbleHome();else clampBubble();
+  });
+}
+window.addEventListener('resize',()=>scheduleViewportLayout());
+window.addEventListener('orientationchange',()=>scheduleViewportLayout(true));
+if(window.visualViewport)window.visualViewport.addEventListener('resize',()=>scheduleViewportLayout());
 
 /* coachmark + podpowiedzi — pierścień znika sam po 6 s lub przy 1. interakcji */
 function hideCoach(){bubbleEl.classList.add('coached');}
