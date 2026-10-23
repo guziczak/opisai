@@ -29,7 +29,7 @@
   function setRect(win,r){Object.assign(win.el.style,{left:r.x+'px',top:r.y+'px',width:r.width+'px',height:r.height+'px'});}
   function fitRect(r,minWidth=300,minHeight=180){const a=workArea();const width=Math.min(Math.max(r.width,minWidth),a.width-8),height=Math.min(Math.max(r.height,minHeight),a.height-8);return {x:Math.max(4,Math.min(r.x,a.width-width-4)),y:Math.max(4,Math.min(r.y,a.height-height-4)),width,height};}
   function desktopById(id=currentDesktopId){return virtualDesktops.find(desktop=>desktop.id===id);}
-  function applyDesktopVisibility(win){win.el.dataset.desktopId=win.desktopId;win.el.style.display=win.desktopId===currentDesktopId?'':'none';}
+  function applyDesktopVisibility(win){const visible=win.desktopId===currentDesktopId;if(visible&&win.el.style.display==='none'&&!win.el.hidden)win.el.classList.add('opening');else if(!visible)win.el.classList.remove('opening');win.el.dataset.desktopId=win.desktopId;win.el.style.display=visible?'':'none';}
   function focusDesktop(){const surface=$('#desktop');if(surface){surface.tabIndex=-1;surface.focus({preventScroll:true});}}
   function focusTopWindow(preferredId){
     const preferred=windows.get(preferredId),next=preferred?.visible?preferred:[...windows.values()].filter(win=>win.visible).sort((a,b)=>+b.el.style.zIndex-+a.el.style.zIndex)[0];
@@ -54,7 +54,7 @@
     if(virtualDesktops.length<2)return false;
     const index=virtualDesktops.findIndex(desktop=>desktop.id===id);if(index<0)return false;
     const removed=virtualDesktops[index],target=virtualDesktops[index>0?index-1:1];
-    for(const win of removed.peekWindows){if(!win.closed&&win.desktopId===id){win.el.hidden=false;win.el.classList.remove('minimizing');}}
+    for(const win of removed.peekWindows){if(!win.closed&&win.desktopId===id){win.el.hidden=false;win.el.classList.remove('minimizing');win.el.classList.add('opening');}}
     for(const win of windows.values())if(win.desktopId===id){
       win.desktopId=target.id;win.options.desktopId=target.id;
       if(target.peek&&!win.el.hidden&&!win.el.classList.contains('minimizing')){target.peekWindows.push(win);win.el.hidden=true;}
@@ -86,20 +86,22 @@
     const a=workArea(), width=Math.min(o.width,a.width-16),height=Math.min(o.height,a.height-16);
     const offset=windows.size%4*18;
     const r=fitRect({x:o.x??(a.width-width)/2+offset,y:o.y??Math.max(12,(a.height-height)/2)+offset,width,height},o.minWidth,o.minHeight);
-    const el=document.createElement('section');el.className='desktop-window '+(o.className||'');el.id='window-'+o.id;el.dataset.window=o.id;el.tabIndex=-1;el.setAttribute('role','dialog');el.setAttribute('aria-label',o.title||'Okno');
+    const el=document.createElement('section');el.className='desktop-window opening '+(o.className||'');el.id='window-'+o.id;el.dataset.window=o.id;el.tabIndex=-1;el.setAttribute('role','dialog');el.setAttribute('aria-label',o.title||'Okno');
     el.innerHTML=`<header class="titlebar"><button class="window-icon" aria-label="Menu okna">${icon(o.icon||'document',16)}</button><span class="window-title">${esc(o.title)}</span><div class="caption-buttons"><button class="caption-button ${o.minimizable?'':'caption-unavailable'}" data-caption="min" ${o.minimizable?'':'disabled'} aria-label="Minimalizuj" title="Minimalizuj">${icon('minimize',10)}</button><button class="caption-button" data-caption="max" aria-label="Maksymalizuj" title="Maksymalizuj" ${!o.maximizable?'disabled':''}>${icon('maximize',10)}</button><button class="caption-button close-caption" data-caption="close" aria-label="Zamknij" title="Zamknij">${icon('close',10)}</button></div></header><div class="window-content"></div>`;
     const body=$('.window-content',el);if(o.content instanceof Node)body.append(o.content);else body.innerHTML=o.content||'';
     const win={id:o.id,desktopId:o.desktopId,el,content:body,titleEl:$('.window-title',el),options:o,closed:false,maximized:false,normalRect:r,lastFocusedElement:null,
       get visible(){return this.desktopId===currentDesktopId&&!el.hidden&&!this.closed&&!el.classList.contains('minimizing');},
-      show(){if(!desktopById(this.desktopId)){this.desktopId=currentDesktopId;o.desktopId=currentDesktopId;}switchDesktop(this.desktopId);const desktop=desktopById();desktop.peekWindows=desktop.peekWindows.filter(win=>win!==this);if(!desktop.peekWindows.length)desktop.peek=false;this.closed=false;el.hidden=false;el.classList.remove('minimizing');if(!el.isConnected)$('#windows').append(el);windows.set(o.id,this);applyDesktopVisibility(this);focus(this);return this;},
+      show(){const opening=this.closed||el.hidden||el.classList.contains('minimizing')||!el.isConnected;if(!desktopById(this.desktopId)){this.desktopId=currentDesktopId;o.desktopId=currentDesktopId;}switchDesktop(this.desktopId);const desktop=desktopById();desktop.peekWindows=desktop.peekWindows.filter(win=>win!==this);if(!desktop.peekWindows.length)desktop.peek=false;this.closed=false;el.hidden=false;el.classList.remove('minimizing');if(opening)el.classList.add('opening');if(!el.isConnected)$('#windows').append(el);windows.set(o.id,this);applyDesktopVisibility(this);focus(this);return this;},
       focus(){this.show();return this;},
-      minimize(force=false){if(!this.visible||(!o.minimizable&&!force))return;el.classList.add('minimizing');setTimeout(()=>{if(el.classList.contains('minimizing')){el.hidden=true;el.classList.remove('minimizing');}},125);if(active===this){active=null;focusTopWindow();}o.onMinimize?.();renderTaskbar();},
+      minimize(force=false){if(!this.visible||(!o.minimizable&&!force))return;stopOpening(this);el.classList.add('minimizing');setTimeout(()=>{if(el.classList.contains('minimizing')){el.hidden=true;el.classList.remove('minimizing');}},125);if(active===this){active=null;focusTopWindow();}o.onMinimize?.();renderTaskbar();},
       close(){if(o.onClose?.()===false)return false;this.closed=true;el.remove();windows.delete(o.id);const desktop=desktopById(this.desktopId);if(desktop){desktop.peekWindows=desktop.peekWindows.filter(win=>win!==this);if(!desktop.peekWindows.length)desktop.peek=false;if(desktop.lastActiveId===this.id)desktop.lastActiveId=null;}if(active===this){active=null;focusTopWindow();}closePopups();renderTaskbar();return true;},
-      maximize(){if(!o.maximizable)return;this.maximized=!this.maximized;if(this.maximized){this.normalRect=rect(this);setRect(this,{x:0,y:0,...workArea()});}else setRect(this,fitRect(this.normalRect,o.minWidth,o.minHeight));el.classList.toggle('maximized',this.maximized);const b=$('[data-caption=max]',el);b.innerHTML=icon(this.maximized?'restore':'maximize',10);b.title=this.maximized?'Przywróć w dół':'Maksymalizuj';b.setAttribute('aria-label',b.title);focus(this);window.dispatchEvent(new CustomEvent('shell:resize',{detail:{id:this.id}}));},
+      maximize(){if(!o.maximizable)return;stopOpening(this);this.maximized=!this.maximized;if(this.maximized){this.normalRect=rect(this);setRect(this,{x:0,y:0,...workArea()});}else setRect(this,fitRect(this.normalRect,o.minWidth,o.minHeight));el.classList.toggle('maximized',this.maximized);const b=$('[data-caption=max]',el);b.innerHTML=icon(this.maximized?'restore':'maximize',10);b.title=this.maximized?'Przywróć w dół':'Maksymalizuj';b.setAttribute('aria-label',b.title);focus(this);window.dispatchEvent(new CustomEvent('shell:resize',{detail:{id:this.id}}));},
       setTitle(title){o.title=title;this.titleEl.textContent=title;el.setAttribute('aria-label',title);renderTaskbar();},
       setContent(content){if(content instanceof Node)body.replaceChildren(content);else body.innerHTML=content;},
       setBounds(bounds){setRect(this,fitRect({...rect(this),...bounds},o.minWidth,o.minHeight));}
     };
+    const opened=event=>{if(event.target===el&&event.animationName==='window-open')stopOpening(win);};
+    el.addEventListener('animationend',opened);el.addEventListener('animationcancel',opened);
     setRect(win,r);windows.set(o.id,win);$('#windows').append(el);applyDesktopVisibility(win);
     el.addEventListener('focusin',event=>{if(event.target!==el&&!event.target.closest('.titlebar'))win.lastFocusedElement=event.target;});
     el.addEventListener('pointerdown',()=>{if(active!==win)focus(win);},true);
@@ -114,24 +116,35 @@
     focus(win);return win;
   }
   function systemMenu(win,x,y){menu([{label:'Przywróć',icon:'restore',disabled:!win.maximized,onClick:()=>win.maximize()},{label:'Przenieś',icon:'view',disabled:win.maximized,onClick:()=>keyboardPosition(win,false)},{label:'Rozmiar',icon:'fullScreen',disabled:win.maximized||!win.options.resizable,onClick:()=>keyboardPosition(win,true)},{label:'Minimalizuj',icon:'minimize',disabled:!win.options.minimizable,onClick:()=>win.minimize()},{label:'Maksymalizuj',icon:'maximize',disabled:win.maximized||!win.options.maximizable,onClick:()=>win.maximize()},{separator:true},{label:'Zamknij',icon:'close',shortcut:'Alt+F4',onClick:()=>win.close()}],x,y);}
-  function keyboardPosition(win,resize){const before=rect(win);toast(resize?'Strzałki zmieniają rozmiar. Enter zatwierdza, Esc cofa.':'Strzałki przenoszą okno. Enter zatwierdza, Esc cofa.');const handler=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter','Escape'].includes(e.key))return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Enter'||e.key==='Escape'){if(e.key==='Escape')setRect(win,before);document.removeEventListener('keydown',handler,true);return;}const r=rect(win),step=e.shiftKey?1:10,dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;setRect(win,fitRect(resize?{...r,width:r.width+dx,height:r.height+dy}:{...r,x:r.x+dx,y:r.y+dy},win.options.minWidth,win.options.minHeight));};document.addEventListener('keydown',handler,true);}
+  function keyboardPosition(win,resize){stopOpening(win);const before=rect(win);toast(resize?'Strzałki zmieniają rozmiar. Enter zatwierdza, Esc cofa.':'Strzałki przenoszą okno. Enter zatwierdza, Esc cofa.');const handler=e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter','Escape'].includes(e.key))return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Enter'||e.key==='Escape'){if(e.key==='Escape')setRect(win,before);document.removeEventListener('keydown',handler,true);return;}const r=rect(win),step=e.shiftKey?1:10,dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;setRect(win,fitRect(resize?{...r,width:r.width+dx,height:r.height+dy}:{...r,x:r.x+dx,y:r.y+dy},win.options.minWidth,win.options.minHeight));};document.addEventListener('keydown',handler,true);}
+  function stopOpening(win){win.el.classList.remove('opening');}
+  function trackWindowPointer(event,onMove,onEnd){
+    const target=event.currentTarget,id=event.pointerId;let ended=false;
+    const move=next=>{if(next.pointerId===id)onMove(next);};
+    const end=next=>{
+      if(ended||(next?.pointerId!==undefined&&next.pointerId!==id))return;ended=true;
+      target.removeEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])target.removeEventListener(type,end);window.removeEventListener('blur',end);
+      try{if(target.hasPointerCapture(id))target.releasePointerCapture(id);}catch{}
+      onEnd(next?.type==='pointerup');
+    };
+    target.addEventListener('pointermove',move);for(const type of ['pointerup','pointercancel','lostpointercapture'])target.addEventListener(type,end);window.addEventListener('blur',end);
+    try{target.setPointerCapture(id);}catch{end();}
+  }
   function dragWindow(e,win){
-    if(e.button!==0||e.target.closest('button,input'))return;e.preventDefault();closePopups();const start={x:e.clientX,y:e.clientY},before=rect(win);let moved=false,lastSnap=null;
-    const target=e.currentTarget;target.setPointerCapture(e.pointerId);
+    if(e.button!==0||e.isPrimary===false||e.target.closest('button,input'))return;e.preventDefault();closePopups();stopOpening(win);const start={x:e.clientX,y:e.clientY},before=rect(win);let moved=false,lastSnap=null;
     const move=ev=>{if(!moved&&Math.hypot(ev.clientX-start.x,ev.clientY-start.y)<4)return;if(!moved){moved=true;win.el.classList.add('dragging');if(win.maximized){const ratio=ev.clientX/innerWidth;win.maximize();win.normalRect.x=ev.clientX-win.normalRect.width*ratio;before.x=win.normalRect.x;before.y=0;before.width=win.normalRect.width;}}
       const a=workArea();setRect(win,{...rect(win),x:Math.max(-before.width+100,Math.min(before.x+ev.clientX-start.x,a.width-100)),y:Math.max(0,Math.min(before.y+ev.clientY-start.y,a.height-32))});
       lastSnap=ev.clientY<8?'full':ev.clientX<8?'left':ev.clientX>a.width-8?'right':null;previewSnap(lastSnap);
     };
-    const end=()=>{target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',end);target.removeEventListener('pointercancel',end);win.el.classList.remove('dragging');previewSnap(null);if(lastSnap)snap(win,lastSnap);};
-    target.addEventListener('pointermove',move);target.addEventListener('pointerup',end);target.addEventListener('pointercancel',end);
+    trackWindowPointer(e,move,commit=>{win.el.classList.remove('dragging');previewSnap(null);if(commit&&lastSnap)snap(win,lastSnap);});
   }
-  function resizeWindow(e,win,dir){if(e.button!==0||win.maximized)return;e.preventDefault();e.stopPropagation();focus(win);closePopups();const before=rect(win),sx=e.clientX,sy=e.clientY,target=e.currentTarget;target.setPointerCapture(e.pointerId);win.el.classList.add('resizing');
+  function resizeWindow(e,win,dir){if(e.button!==0||e.isPrimary===false||win.maximized)return;e.preventDefault();e.stopPropagation();focus(win);closePopups();stopOpening(win);const before=rect(win),sx=e.clientX,sy=e.clientY;win.el.classList.add('resizing');
     const move=ev=>{let {x,y,width,height}=before;const dx=ev.clientX-sx,dy=ev.clientY-sy,a=workArea(),mw=Math.min(win.options.minWidth,a.width-8),mh=Math.min(win.options.minHeight,a.height-8);if(dir.includes('e'))width=Math.max(mw,Math.min(before.width+dx,a.width-x));if(dir.includes('s'))height=Math.max(mh,Math.min(before.height+dy,a.height-y));if(dir.includes('w')){width=Math.max(mw,before.width-dx);x=before.x+before.width-width;if(x<0){width+=x;x=0;}}if(dir.includes('n')){height=Math.max(mh,before.height-dy);y=before.y+before.height-height;if(y<0){height+=y;y=0;}}setRect(win,{x,y,width,height});};
-    const end=()=>{target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',end);target.removeEventListener('pointercancel',end);win.el.classList.remove('resizing');window.dispatchEvent(new CustomEvent('shell:resize',{detail:{id:win.id}}));};target.addEventListener('pointermove',move);target.addEventListener('pointerup',end);target.addEventListener('pointercancel',end);
+    trackWindowPointer(e,move,()=>{win.el.classList.remove('resizing');window.dispatchEvent(new CustomEvent('shell:resize',{detail:{id:win.id}}));});
   }
   function snapRect(where){const a=workArea(),g=6;return where==='full'?{x:0,y:0,...a}:where==='left'?{x:g,y:g,width:a.width/2-g*1.5,height:a.height-2*g}:where==='right'?{x:a.width/2+g/2,y:g,width:a.width/2-g*1.5,height:a.height-2*g}:where==='third'?{x:g,y:g,width:a.width/3-g*1.5,height:a.height-2*g}:{x:a.width/3+g/2,y:g,width:a.width*2/3-g*1.5,height:a.height-2*g};}
   function previewSnap(where){const el=$('#snap-preview');el.hidden=!where;if(where){const r=snapRect(where);Object.assign(el.style,{left:r.x+'px',top:r.y+'px',width:r.width+'px',height:r.height+'px'});}}
-  function snap(win,where){if(!win.options.maximizable)return;if(where==='full'){if(!win.maximized)win.maximize();return;}if(win.maximized)win.maximize();win.normalRect=rect(win);setRect(win,snapRect(where));focus(win);}
+  function snap(win,where){if(!win.options.maximizable)return;stopOpening(win);if(where==='full'){if(!win.maximized)win.maximize();return;}if(win.maximized)win.maximize();win.normalRect=rect(win);setRect(win,snapRect(where));focus(win);}
   function showSnapLayouts(win,target){closeMenu();const r=target.getBoundingClientRect();const el=document.createElement('div');el.className='shell-menu snap-layout';el.innerHTML='<div class="snap-choice"><button class="snap-cell" data-snap="left" aria-label="Przypnij do lewej połowy"></button><button class="snap-cell" data-snap="right" aria-label="Przypnij do prawej połowy"></button></div><div class="snap-choice"><button class="snap-cell" data-snap="third" aria-label="Przypnij do lewej trzeciej"></button><button class="snap-cell" style="flex:2" data-snap="two-thirds" aria-label="Przypnij do prawej części"></button></div>';$('#shell-popups').append(el);menuEl=el;positionPopup(el,r.right-270,r.bottom+5);$$('[data-snap]',el).forEach(b=>b.onclick=()=>{snap(win,b.dataset.snap);closeMenu();});el.onpointerleave=()=>closeMenu();}
   function registerApp(app){apps.set(app.id,app);if($('#taskbar .taskbar-button'))renderTaskbar();}
   function openApp(id){closePopups();const a=apps.get(id);if(a)a.open();}
@@ -174,7 +187,7 @@
       desktop.peek=desktop.peekWindows.length>0;desktop.lastActiveId=previousActive||desktop.lastActiveId;
     }else{
       const restore=desktop.peekWindows.slice();desktop.peekWindows=[];desktop.peek=false;
-      for(const win of restore)if(!win.closed&&win.desktopId===desktop.id){win.el.hidden=false;win.el.classList.remove('minimizing');applyDesktopVisibility(win);}
+      for(const win of restore)if(!win.closed&&win.desktopId===desktop.id){win.el.hidden=false;win.el.classList.remove('minimizing');win.el.classList.add('opening');applyDesktopVisibility(win);}
       focusTopWindow(desktop.lastActiveId);
     }
   }

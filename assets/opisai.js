@@ -12,7 +12,9 @@
   if(!Array.isArray(preferences.clinicalSections)||preferences.clinicalSections.length!==3)preferences.clinicalSections=[...defaults.clinicalSections];
   if(!preferences.panelRows||typeof preferences.panelRows!=='object')preferences.panelRows={...defaults.panelRows};
   if(!['light','dark','blue'].includes(preferences.theme))preferences.theme='light';
+  preferences.orbSize=Number.isFinite(preferences.orbSize)?Math.max(72,Math.min(120,preferences.orbSize)):defaults.orbSize;
   const state = {phase:'idle',active:null,operation:null,review:null,history:[],lastWrite:null,token:0,recording:null,orb:null,orbX:0,orbY:0,orbHidden:false,activeField:null};
+  let orbMotion=null,orbFrame=0,orbFrameTime=0,orbMotionQuery=null,orbCancelDrag=()=>{};
   const windows = new Map();
   const $ = (sel,root=document) => root.querySelector(sel);
   const $$ = (sel,root=document) => [...root.querySelectorAll(sel)];
@@ -27,7 +29,16 @@
   const stamp = () => new Intl.DateTimeFormat('pl-PL',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
   const toast = message => window.Shell?.toast(message);
   function bind(root, action, callback) { $$(`[data-action="${action}"]`,root).forEach(el => el.addEventListener('click',callback)); }
-  function setPhase(phase,label) { state.phase=phase; if(state.orb){state.orb.dataset.phase=phase;$('.oa-orb-caption',state.orb).textContent=label || ({idle:'OpisAI',preparing:'Przygotuj opis',processing:'Przygotowuję opis',recording:'Słucham…',review:'Sprawdź tekst',done:'Gotowe',error:'Sprawdź komunikat'}[phase]||'OpisAI'); renderOrbActions();} }
+  function setPhase(phase,label) {
+    state.phase=phase;
+    if(state.orb){
+      state.orb.dataset.phase=phase;
+      const caption=$('.oa-orb-caption',state.orb);
+      caption.hidden=phase==='idle';
+      caption.textContent=label || ({idle:'OpisAI',preparing:'Przygotuj opis',processing:'Przygotowuję opis',recording:'Słucham…',review:'Sprawdź tekst',done:'Gotowe',error:'Sprawdź komunikat'}[phase]||'OpisAI');
+      renderOrbActions();refreshOrbBounds();
+    }
+  }
   function applyTheme(win,theme=preferences.theme) { if(!win?.el)return; win.el.classList.remove('oa-theme-light','oa-theme-dark','oa-theme-blue');win.el.classList.add('oa-host','oa-theme-'+theme); }
   function makeWindow(id,title,width,height,html,onClose) {
     let win=windows.get(id);
@@ -276,7 +287,7 @@
         area.innerHTML=`<h2>Wygląd</h2><p>Kolory i czytelność okien OpisAI.</p><fieldset class="oa-group"><legend>Motyw aplikacji</legend><div class="oa-theme-choice">${[['light','Jasny'],['dark','Ciemny'],['blue','Niebieski']].map(([value,label])=>`<button type="button" class="oa-theme-card ${draft.theme===value?'selected':''}" data-theme="${value}"><span class="oa-theme-preview ${value}"><i></i><i></i></span>${label}</button>`).join('')}</div></fieldset><fieldset class="oa-group"><legend>Tekst i podgląd</legend>${formRow('Rozmiar tekstu',`<input data-setting="fontSize" type="range" min="12" max="16" value="${draft.fontSize}"><span data-font-size>${draft.fontSize} px</span>`)}<p data-font-preview style="font-size:${draft.fontSize}px;padding:11px;border:1px solid var(--oa-line);border-radius:7px;background:var(--oa-field)">Przykładowy opis wizyty. Czytelny tekst ułatwia sprawdzenie faktów, liczb i jednostek.</p>${switchControl('livePreview','Pokaż tekst na żywo podczas generowania','Wersja robocza pozostaje oddzielona od zatwierdzanego wyniku.',draft)}${switchControl('animations','Animacje interfejsu','Ruch bąbelka i płynne przygotowywanie przykładu.',draft)}</fieldset>`;
         $$('[data-theme]',area).forEach(el=>el.addEventListener('click',()=>{draft.theme=el.dataset.theme;applyTheme(win,draft.theme);dirty();draw();}));
       } else if(page==='bubble'){
-        area.innerHTML=`<h2>Bąbelek</h2><p>Mały pomocnik zawsze pod ręką.</p><fieldset class="oa-group"><legend>Obsługa</legend><table class="oa-options-table"><tbody><tr><td>Kliknięcie</td><td>Przygotuj opis wizyty</td></tr><tr><td>Przytrzymanie</td><td>Rozpocznij lub zakończ dyktowanie</td></tr><tr><td>Prawy przycisk</td><td>Menu OpisAI</td></tr><tr><td>Przeciągnięcie na pole</td><td>Opracuj wybrane pole</td></tr></tbody></table></fieldset><fieldset class="oa-group"><legend>Położenie i wygląd</legend>${formRow('Wielkość',`<input type="range" min="72" max="120" step="8" data-setting="orbSize" value="${draft.orbSize}"><span data-orb-size>${draft.orbSize}%</span>`)}${switchControl('animations','Animuj bąbelek','Delikatny ruch w spoczynku i reakcja na najechanie.',draft)}<div class="oa-inline-controls">${button('Przywróć położenie','reset-orb','','undo')}${button(state.orbHidden?'Pokaż bąbelek':'Ukryj bąbelek','toggle-orb','','eye')}</div></fieldset><div style="margin-top:16px">${notice('Po najechaniu pojawiają się przyciski „Opisz” i „Dyktuj”. Nie musisz pamiętać gestów.')}</div>`;
+        area.innerHTML=`<h2>Bąbelek</h2><p>Mały pomocnik zawsze pod ręką.</p><fieldset class="oa-group"><legend>Obsługa</legend><table class="oa-options-table"><tbody><tr><td>Kliknięcie</td><td>Przygotuj opis wizyty</td></tr><tr><td>Przytrzymanie</td><td>Rozpocznij lub zakończ dyktowanie</td></tr><tr><td>Prawy przycisk</td><td>Menu OpisAI</td></tr><tr><td>Przeciągnięcie na pole</td><td>Opracuj wybrane pole</td></tr></tbody></table></fieldset><fieldset class="oa-group"><legend>Położenie i wygląd</legend>${formRow('Wielkość',`<input type="range" min="72" max="120" step="8" data-setting="orbSize" value="${draft.orbSize}"><span data-orb-size>${Math.round(draft.orbSize/96*100)}%</span>`)}${switchControl('animations','Animuj bąbelek','Sprężyste przeciąganie i łagodne wyhamowanie po puszczeniu.',draft)}<div class="oa-inline-controls">${button('Przywróć położenie','reset-orb','','undo')}${button(state.orbHidden?'Pokaż bąbelek':'Ukryj bąbelek','toggle-orb','','eye')}</div></fieldset><div style="margin-top:16px">${notice('Po najechaniu pojawiają się przyciski „Opisz” i „Dyktuj”. Nie musisz pamiętać gestów.')}</div>`;
         bind(area,'reset-orb',()=>{resetOrbPosition();showBubble();toast('Przywrócono położenie bąbelka.');});bind(area,'toggle-orb',()=>{state.orbHidden?showBubble():hideBubble();draw();});
       } else if(page==='history'){
         area.innerHTML=`<h2>Historia</h2><p>Potwierdzone wpisy wykonane w tej demonstracji.</p><fieldset class="oa-group"><legend>Historia generowań</legend>${switchControl('history','Zapisuj historię tej sesji','Treść pozostaje w bieżącej karcie. Zamknięcie lub odświeżenie strony usuwa wpisy.',draft)}<div class="oa-inline-controls">${button('Otwórz historię','open-history','','history')}${button('Wyczyść historię','clear-history','','close',state.history.length?'':'disabled')}</div><div class="oa-setting-state">W tej sesji: ${state.history.length} ${state.history.length===1?'operacja':'operacji'}.</div></fieldset><fieldset class="oa-group"><legend>Cofanie</legend><p class="oa-form-help">Możesz cofnąć ostatni potwierdzony wpis, jeśli od tego czasu pola nie zostały zmienione.</p>${button('Cofnij ostatni wpis','last-undo','','undo',state.lastWrite?'':'disabled')}</fieldset>`;
@@ -293,7 +304,7 @@
           if(key==='provider'){draft.transport=draft.provider==='Lokalny'?'Lokalnie (offline)':'Przeglądarka';draw();}
           if(key==='transcriber')draw();
           if(key==='fontSize'){const text=$('[data-font-size]',area);if(text)text.textContent=draft.fontSize+' px';const preview=$('[data-font-preview]',area);if(preview)preview.style.fontSize=draft.fontSize+'px';}
-          if(key==='orbSize'){const size=$('[data-orb-size]',area);if(size)size.textContent=draft.orbSize+'%';}
+          if(key==='orbSize'){const size=$('[data-orb-size]',area);if(size)size.textContent=Math.round(draft.orbSize/96*100)+'%';}
         });
       });
     }
@@ -342,43 +353,101 @@
     $$('[data-about]',root).forEach(el=>el.addEventListener('click',()=>{page=el.dataset.about;draw();}));bind(root,'close',()=>win.close());bind(root,'copy-about',()=>copyText(`OpisAI ${VERSION}\nAsystent dokumentacji weterynaryjnej\nInteraktywna demonstracja interfejsu Windows\nhttps://guziczak.github.io/opisai/\nguziczak@proton.me`,$('[data-action="copy-about"]',root)));draw();
   }
 
-  /* The floating orb uses the source application's blue medical-bag identity. */
+  /* The floating orb follows the native app's size, identity and spring drag. */
   function createOrb(){
     const host=document.getElementById('overlay-layer')||document.body;
     const wrap=document.createElement('div');wrap.className='oa-orb-wrap';wrap.dataset.phase='idle';
-    wrap.innerHTML=`<button class="oa-orb" type="button" aria-label="OpisAI. Kliknij: opisz. Przytrzymaj: dyktuj. Prawy przycisk: menu." title="OpisAI"><canvas width="224" height="224"></canvas></button><div class="oa-orb-caption">OpisAI</div><div class="oa-orb-actions"></div><div class="oa-orb-tooltip">Trzymaj: dyktowanie</div>`;
-    host.append(wrap);state.orb=wrap;resetOrbPosition();updateOrbSize();renderOrbActions();animateOrb();
-    const orb=$('.oa-orb',wrap);let pointer=null,hold=null,drag=false,held=false,dropTarget=null;
-    const clearHold=()=>{clearTimeout(hold);wrap.classList.remove('holding');};
-    function targetAt(x,y){return document.elementsFromPoint(x,y).map(el=>el.closest?.('[data-clinic-field]')).find(Boolean)?.dataset.clinicField||null;}
+    wrap.innerHTML=`<button class="oa-orb" type="button" aria-label="OpisAI. Kliknij: opisz. Przytrzymaj: dyktuj. Prawy przycisk: menu."><span class="oa-orb-face" aria-hidden="true"></span><span class="oa-orb-identity" aria-hidden="true"><svg class="oa-orb-mark" viewBox="0 0 48 44" focusable="false"><rect x="17" y="6" width="14" height="12" rx="4" fill="none" stroke="white" stroke-width="3"/><rect x="3" y="12" width="42" height="31" rx="8" fill="white"/><path class="oa-orb-cross" d="M22 19h4a1 1 0 0 1 1 1v6h6a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-6v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-6h-6a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h6v-6a1 1 0 0 1 1-1Z"/></svg><span class="oa-orb-name">OpisAI</span><span class="oa-orb-version">${VERSION}</span></span><span class="oa-orb-progress" aria-hidden="true"></span><span class="oa-orb-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button><div class="oa-orb-caption" role="status" hidden></div><div class="oa-orb-actions"></div><div class="oa-orb-tooltip">Trzymaj: dyktowanie</div>`;
+    host.append(wrap);state.orb=wrap;
+    orbMotionQuery=matchMedia('(prefers-reduced-motion: reduce)');
+    orbMotion=OpisAIOrbMotion.create({bounds:orbBounds(),reducedMotion:orbReducedMotion()});
+    updateOrbSize();resetOrbPosition();renderOrbActions();
+    const orb=$('.oa-orb',wrap);
+    let pointer=null,hold=null,drag=false,held=false,dropTarget=null;
+    const eventTime=event=>Number.isFinite(event.timeStamp)?event.timeStamp:performance.now();
+    const clearHold=()=>{clearTimeout(hold);hold=null;wrap.classList.remove('holding');};
+    const activate=()=>{stopOrb();if(['idle','done','error'].includes(state.phase))prepare();else showActive();};
+    function targetAt(x,y){
+      return document.elementsFromPoint(x,y).map(el=>el.closest?.('[data-clinic-field]')).find(Boolean)?.dataset.clinicField||null;
+    }
     function clearTarget(){if(dropTarget)Clinic.markTarget?.(dropTarget,false);dropTarget=null;}
+    function finishPointer(){
+      if(!pointer)return;
+      const id=pointer.id;
+      clearTimeout(pointer.longTimer);clearHold();pointer=null;drag=false;held=false;
+      wrap.classList.remove('dragging');clearTarget();
+      try{if(orb.hasPointerCapture(id))orb.releasePointerCapture(id);}catch(_){}
+    }
+    orbCancelDrag=()=>{finishPointer();stopOrb();};
+    function trackDrag(event){
+      if(!pointer||pointer.id!==event.pointerId)return;
+      const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;
+      if(!drag&&Math.hypot(dx,dy)>6){
+        drag=true;clearHold();clearTimeout(pointer.longTimer);wrap.classList.add('dragging');
+      }
+      if(!drag)return;
+      const bounds=orbBounds();
+      const x=Math.max(bounds.minX,Math.min(bounds.maxX,pointer.orbX+dx));
+      const y=Math.max(bounds.minY,Math.min(bounds.maxY,pointer.orbY+dy));
+      const time=eventTime(event);
+      if(x!==pointer.lastX||y!==pointer.lastY){
+        pointer.samples.push({x,y,time});pointer.lastX=x;pointer.lastY=y;pointer.lastMove=time;
+        while(pointer.samples.length>2&&(pointer.samples[1].time<time-90||pointer.samples.length>32))pointer.samples.shift();
+      }
+      orbMotion.follow(x,y);renderOrb();requestOrbFrame();
+      const key=targetAt(event.clientX,event.clientY);
+      if(key!==dropTarget){clearTarget();dropTarget=key;if(key)Clinic.markTarget?.(key,true);}
+    }
+    function releaseVelocity(event){
+      const now=eventTime(event),samples=pointer.samples;
+      if(now-pointer.lastMove>80||samples.length<2)return {velocityX:0,velocityY:0};
+      const first=samples[0],last=samples[samples.length-1];
+      const dt=Math.max(.008,(Math.max(now,last.time)-first.time)/1000);
+      return {velocityX:(last.x-first.x)/dt,velocityY:(last.y-first.y)/dt};
+    }
     orb.addEventListener('pointerdown',event=>{
-      if(event.button!==0)return;event.preventDefault();pointer={id:event.pointerId,x:event.clientX,y:event.clientY,orbX:state.orbX,orbY:state.orbY};drag=false;held=false;
-      $('.oa-orb-teach',wrap)?.remove();orb.setPointerCapture(event.pointerId);
+      if(event.button!==0||event.isPrimary===false||pointer)return;
+      event.preventDefault();stopOrb();orbMotion.begin();
+      const time=eventTime(event);
+      pointer={id:event.pointerId,x:event.clientX,y:event.clientY,orbX:state.orbX,orbY:state.orbY,lastX:state.orbX,lastY:state.orbY,lastMove:time,samples:[{x:state.orbX,y:state.orbY,time}]};
+      drag=false;held=false;
+      $('.oa-orb-teach',wrap)?.remove();
+      try{orb.setPointerCapture(event.pointerId);}catch(_){orbCancelDrag();return;}
       if(['idle','done','error','recording'].includes(state.phase)){
         $('.oa-orb-tooltip',wrap).textContent=state.recording?'Trzymaj: zakończ':'Trzymaj: dyktowanie';
         hold=setTimeout(()=>{if(pointer&&!drag)wrap.classList.add('holding');},150);
         pointer.longTimer=setTimeout(()=>{if(pointer&&!drag){held=true;clearHold();if(state.recording)finishDictation();else dictate();}},650);
       }
     });
-    orb.addEventListener('pointermove',event=>{
-      if(!pointer||pointer.id!==event.pointerId)return;
-      const dx=event.clientX-pointer.x,dy=event.clientY-pointer.y;
-      if(!drag&&Math.hypot(dx,dy)>6){drag=true;clearHold();clearTimeout(pointer.longTimer);wrap.classList.add('dragging');}
-      if(drag){positionOrb(pointer.orbX+dx,pointer.orbY+dy);const key=targetAt(event.clientX,event.clientY);if(key!==dropTarget){clearTarget();dropTarget=key;if(key)Clinic.markTarget?.(key,true);}}
-    });
+    orb.addEventListener('pointermove',trackDrag);
     orb.addEventListener('pointerup',event=>{
-      if(!pointer||pointer.id!==event.pointerId)return;const wasDrag=drag,wasHeld=held,target=dropTarget;
-      clearTimeout(pointer.longTimer);clearHold();pointer=null;wrap.classList.remove('dragging');clearTarget();try{orb.releasePointerCapture(event.pointerId);}catch(_){}
-      if(wasDrag){if(target && !['processing','recording'].includes(state.phase))prepare({field:target});return;}
-      if(!wasHeld){if(['idle','done','error'].includes(state.phase))prepare();else showActive();}
+      if(!pointer||pointer.id!==event.pointerId)return;
+      trackDrag(event);
+      const wasDrag=drag,wasHeld=held,target=dropTarget,velocity=releaseVelocity(event);
+      finishPointer();
+      if(wasDrag){
+        // Only the explicit release point can start a field action, never inertia.
+        if(target){stopOrb();if(!['processing','recording'].includes(state.phase))prepare({field:target});}
+        else{orbMotion.release(velocity);renderOrb();requestOrbFrame();}
+      }else{stopOrb();if(!wasHeld)activate();}
     });
-    orb.addEventListener('pointercancel',()=>{if(pointer)clearTimeout(pointer.longTimer);clearHold();pointer=null;wrap.classList.remove('dragging');clearTarget();});
-    orb.addEventListener('contextmenu',event=>{event.preventDefault();if(pointer)clearTimeout(pointer.longTimer);clearHold();pointer=null;orbMenu(event.clientX,event.clientY);});
-    orb.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();if(state.phase==='idle')prepare();else showActive();}else if(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10')){event.preventDefault();orbMenu(state.orbX,state.orbY+80);}});
-    window.addEventListener('resize',()=>positionOrb(state.orbX,state.orbY));
+    for(const type of ['pointercancel','lostpointercapture'])orb.addEventListener(type,event=>{
+      if(pointer?.id===event.pointerId)orbCancelDrag();
+    });
+    orb.addEventListener('contextmenu',event=>{event.preventDefault();orbCancelDrag();orbMenu(event.clientX,event.clientY);});
+    orb.addEventListener('keydown',event=>{
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();orbCancelDrag();activate();}
+      else if(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10')){event.preventDefault();orbCancelDrag();orbMenu(state.orbX,state.orbY+orbSize());}
+      else if(event.key==='Escape')orbCancelDrag();
+    });
+    // Assistive technologies can activate a button without a pointer/key sequence.
+    orb.addEventListener('click',event=>{if(event.detail===0){orbCancelDrag();activate();}});
+    window.addEventListener('blur',()=>orbCancelDrag());
+    window.addEventListener('resize',()=>{orbCancelDrag();refreshOrbBounds();});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)orbCancelDrag();});
+    orbMotionQuery.addEventListener('change',()=>{orbCancelDrag();orbMotion.setReducedMotion(orbReducedMotion());renderOrb();});
     let taught=false;try{taught=sessionStorage.getItem('opisai-orb-intro')==='1';}catch(_){}
-    if(!taught){setTimeout(()=>{if(!wrap.isConnected||state.phase!=='idle')return;const intro=document.createElement('div');intro.className='oa-orb-teach';intro.innerHTML=`<button type="button" aria-label="Zamknij podpowiedź">${icon('close',13)}</button><strong>OpisAI jest gotowe</strong>Kliknij bąbelek, aby opracować wizytę.<span class="oa-orb-keyhint">Przytrzymaj — dyktowanie · Prawy — menu</span>`;wrap.append(intro);$('button',intro).addEventListener('click',()=>intro.remove());setTimeout(()=>intro.remove(),12000);try{sessionStorage.setItem('opisai-orb-intro','1');}catch(_){}},1200);}
+    if(!taught){setTimeout(()=>{if(!wrap.isConnected||state.phase!=='idle'||state.orbHidden)return;const intro=document.createElement('div');intro.className='oa-orb-teach';intro.innerHTML=`<button type="button" aria-label="Zamknij podpowiedź">${icon('close',13)}</button><strong>OpisAI jest gotowe</strong>Kliknij bąbelek, aby opracować wizytę.<span class="oa-orb-keyhint">Przytrzymaj — dyktowanie · Prawy — menu</span>`;wrap.append(intro);$('button',intro).addEventListener('click',()=>intro.remove());setTimeout(()=>intro.remove(),12000);try{sessionStorage.setItem('opisai-orb-intro','1');}catch(_){}},1200);}
   }
   function renderOrbActions(){
     const wrap=state.orb;if(!wrap)return;const recording=!!state.recording;
@@ -406,33 +475,55 @@
     ];
     Shell.menu(menu,x,y);
   }
-  function positionOrb(x,y){
-    state.orbX=Math.max(-5,Math.min(innerWidth-117,x));state.orbY=Math.max(5,Math.min(innerHeight-205,y));
-    if(state.orb){state.orb.style.left=state.orbX+'px';state.orb.style.top=state.orbY+'px';}
+  function orbSize(){return 100*preferences.orbSize/96;}
+  function orbReducedMotion(){return !preferences.animations||!!orbMotionQuery?.matches;}
+  function orbBounds(){
+    const size=orbSize(),taskbarTop=$('#taskbar')?.getBoundingClientRect().top;
+    const bottom=Number.isFinite(taskbarTop)&&taskbarTop>0?Math.min(innerHeight,taskbarTop):innerHeight-48;
+    const controls=state.phase==='idle'?62:82;
+    return {minX:8,minY:8,maxX:Math.max(8,innerWidth-size-8),maxY:Math.max(8,bottom-size-controls)};
   }
-  function resetOrbPosition(){positionOrb(Math.max(15,innerWidth-156),Math.max(35,innerHeight*.38));}
-  function updateOrbSize(){if(state.orb){state.orb.style.transform=`scale(${preferences.orbSize/96})`;state.orb.style.transformOrigin='center top';}}
-  function showBubble(){state.orbHidden=false;state.orb?.classList.remove('hidden');}
-  function hideBubble(){state.orbHidden=true;state.orb?.classList.add('hidden');}
-  function animateOrb(){
-    const wrap=state.orb,canvas=$('canvas',wrap),ctx=canvas.getContext('2d');let old=0,hover=0;
-    const rounded=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();};
-    function frame(now){
-      if(!wrap.isConnected)return;
-      const t=preferences.animations&&!matchMedia('(prefers-reduced-motion: reduce)').matches?now/1000:0;
-      hover+=(wrap.matches(':hover')?1-hover:-hover)*.09;
-      ctx.setTransform(2,0,0,2,0,0);ctx.clearRect(0,0,112,112);
-      const color=state.phase==='done'?'#2aab70':state.phase==='error'?'#d65452':state.phase==='recording'?'#277acb':'#3271f6';
-      const radius=38+hover*3,cx=56,cy=55;
-      ctx.save();ctx.shadowColor='#133d783a';ctx.shadowBlur=10;ctx.shadowOffsetY=5;ctx.beginPath();
-      for(let i=0;i<=80;i++){const a=i/80*Math.PI*2,wave=(Math.sin(a*3+t*1.8)+Math.sin(a*5-t*.8)*.45)*(1+hover*.8),r=radius+wave;const x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.fillStyle=color;ctx.fill();ctx.restore();
-      ctx.save();ctx.translate(cx,cy-2);ctx.scale(1+hover*.035,1+hover*.035);ctx.strokeStyle='#fff';ctx.lineWidth=3.1;rounded(-8,-19,16,12,4);ctx.stroke();ctx.fillStyle='#fff';rounded(-20,-11,40,31,8);ctx.fill();ctx.fillStyle=color;rounded(-3,-5,6,20,1.5);ctx.fill();rounded(-10,2,20,6,1.5);ctx.fill();ctx.restore();
-      if(state.phase==='processing'){ctx.strokeStyle='#fff8';ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,radius-5,t*2,t*2+Math.PI*1.25);ctx.stroke();}
-      if(state.phase==='recording'){ctx.fillStyle='#b8ffe3';for(let j=0;j<5;j++){const h=3+Math.abs(Math.sin(t*5+j))*(j===2?10:7);rounded(44+j*5,83-h/2,3,h,1.5);ctx.fill();}}
-      requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
+  function renderOrb(){
+    if(!state.orb||!orbMotion)return;
+    const motion=orbMotion.snapshot(),wrap=state.orb;
+    state.orbX=motion.x;state.orbY=motion.y;
+    wrap.style.transform=`translate3d(${motion.x.toFixed(2)}px,${motion.y.toFixed(2)}px,0)`;
+    const reduced=orbReducedMotion(),speed=Math.hypot(motion.vx,motion.vy);
+    const stretch=reduced?1:1+Math.min(.075,speed/16000);
+    wrap.style.setProperty('--oa-orb-angle',`${speed>1?Math.atan2(motion.vy,motion.vx):0}rad`);
+    wrap.style.setProperty('--oa-orb-stretch',stretch.toFixed(4));
+    wrap.style.setProperty('--oa-orb-squash',(1/stretch).toFixed(4));
+    wrap.classList.toggle('reduced-motion',reduced);
+    wrap.classList.toggle('coasting',motion.mode==='coast'&&motion.moving);
+    wrap.classList.toggle('near-left',motion.x<64);
+    wrap.classList.toggle('near-right',motion.x>innerWidth-orbSize()-64);
+    wrap.classList.toggle('left-half',motion.x+orbSize()/2<innerWidth/2);
   }
+  function requestOrbFrame(){
+    if(orbFrame||state.orbHidden||document.hidden||!orbMotion?.snapshot().moving)return;
+    orbFrameTime=performance.now();
+    orbFrame=requestAnimationFrame(stepOrb);
+  }
+  function stepOrb(now){
+    orbFrame=0;
+    if(!state.orb?.isConnected||state.orbHidden||document.hidden){stopOrb();return;}
+    orbMotion.step((now-orbFrameTime)/1000);orbFrameTime=now;renderOrb();
+    if(orbMotion.snapshot().moving)orbFrame=requestAnimationFrame(stepOrb);
+  }
+  function stopOrb(){
+    if(orbFrame)cancelAnimationFrame(orbFrame);
+    orbFrame=0;orbMotion?.stop();renderOrb();
+  }
+  function refreshOrbBounds(){orbMotion?.setBounds(orbBounds());renderOrb();}
+  function positionOrb(x,y){orbMotion?.place(x,y);renderOrb();}
+  function resetOrbPosition(){orbCancelDrag();positionOrb(Math.max(8,innerWidth-orbSize()-40),Math.max(8,innerHeight*.38));}
+  function updateOrbSize(){
+    if(!state.orb)return;
+    orbCancelDrag();state.orb.style.setProperty('--oa-orb-size',orbSize()+'px');
+    orbMotion?.setReducedMotion(orbReducedMotion());refreshOrbBounds();
+  }
+  function showBubble(){state.orbHidden=false;state.orb?.classList.remove('hidden');refreshOrbBounds();}
+  function hideBubble(){orbCancelDrag();state.orbHidden=true;state.orb?.classList.add('hidden');}
   function init(){
     if(!window.Shell||!window.Icons)return;
     createOrb();
