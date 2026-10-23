@@ -1,0 +1,144 @@
+.clinic-window .window-content{overflow:hidden}
+.clinic-app{--clinic-border:#b8bdc6;--clinic-blue:#0078d4;display:flex;flex-direction:column;width:100%;height:100%;min-height:0;color:#222;font:13px/1.35 "Segoe UI",Tahoma,Arial,sans-serif;background:#f2f2f2;user-select:none}
+.clinic-app button,.clinic-app input,.clinic-app select,.clinic-app textarea,.clinic-dialog button,.clinic-dialog input,.clinic-dialog select,.clinic-dialog textarea{font:inherit;box-sizing:border-box}
+.clinic-app button,.clinic-dialog button{color:inherit}
+.clinic-app button:focus-visible,.clinic-dialog button:focus-visible{outline:2px solid #0078d4;outline-offset:1px}
+.clinic-menubar{display:flex;align-items:center;gap:0;flex:none;height:25px;padding:0 5px;background:#fafafa;border-bottom:1px solid #d7d7d7}
+.clinic-menu-button{border:1px solid transparent;background:transparent;min-height:23px;padding:2px 9px;border-radius:0;white-space:nowrap;font-size:12px!important}
+.clinic-menu-button:hover,.clinic-menu-button[aria-expanded=true]{background:#e5f0fc;border-color:#a5c6e8}
+.clinic-toolbar{display:flex;align-items:center;gap:3px;flex:none;min-height:39px;padding:3px 7px;background:linear-gradient(#fafafa,#eaeaea);border-bottom:1px solid #bfc3c9;overflow-x:auto;scrollbar-width:thin}
+.clinic-tool{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;padding:3px 8px;border:1px solid transparent;background:transparent;white-space:nowrap;border-radius:2px;font-size:12px!important;cursor:default}
+.clinic-tool:hover{border-color:#91b5da;background:linear-gradient(#f2f9ff,#ddebfa)}
+.clinic-tool:active{background:#cee4f9}
+.clinic-tool.primary{color:#0062a9;font-weight:600}
+.clinic-tool svg{flex:none;color:#315c84}
+.clinic-tool:disabled{opacity:.42;pointer-events:none}
+.clinic-tool-separator{height:24px;width:1px;flex:none;background:#c7c7c7;margin:0 5px;box-shadow:1px 0 #fff}
+.clinic-tool-spacer{flex:1;min-width:8px}
+.clinic-dirty-badge{font-size:11px;color:#865808;white-space:nowrap;display:flex;align-items:center;gap:5px;margin-right:5px}
+.clinic-dirty-badge::before{content:"";width:5px;height:5px;border-radius:50%;background:#d2971b}
+.clinic-dirty-badge.is-saved{color:#3d6c35}
+.clinic-dirty-badge.is-saved::before{background:#529548}
+.clinic-summary{display:grid;grid-template-columns:1fr 1.34fr .72fr;gap:9px;flex:none;padding:9px 10px 10px;background:#f5f5f5}
+.clinic-group{min-width:0;margin:0;padding:7px 9px 8px;border:1px solid #b9bec6;background:#fff;position:relative}
+.clinic-group legend{padding:0 5px;font-size:11px;color:#3a4e64;letter-spacing:.01em}
+.clinic-person-name{font-weight:600;font-size:14px;line-height:1.45;color:#1c344d;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clinic-summary-line{display:grid;grid-template-columns:72px 1fr;gap:4px;line-height:1.55;font-size:11px;min-width:0}
+.clinic-summary-line dt{color:#707782}
+.clinic-summary-line dd{margin:0;color:#303846;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clinic-summary dl{margin:0}
+.clinic-group .clinic-edit-link{position:absolute;right:7px;top:5px;background:none;border:0;color:#0067b9;font-size:11px;padding:2px 4px;text-decoration:underline;text-underline-offset:2px}
+.clinic-visit-label{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#737985;margin:2px 0}
+.clinic-visit-value{font-size:13px;font-weight:600;color:#33465a;line-height:1.45}
+.clinic-visit-doctor{border-top:1px solid #e2e5e8;padding-top:6px;margin-top:7px;font-size:11px;color:#656d78}
+.clinic-tabs{display:flex;flex:none;gap:2px;padding:0 10px;border-bottom:1px solid #9ba8b6;min-height:29px;overflow-x:auto;scrollbar-width:none}
+.clinic-tab{position:relative;display:flex;align-items:center;gap:5px;min-height:28px;white-space:nowrap;padding:4px 13px;border:1px solid #b7bdc5;border-bottom:0;border-radius:3px 3px 0 0;background:linear-gradient(#f9f9f9,#e2e5e9);font-size:12px!important;color:#454b54;cursor:default}
+.clinic-tab:hover{background:#edf5fe}
+.clinic-tab[aria-selected=true]{background:#fff;border-color:#92a0af;color:#174f84;box-shadow:inset 0 2px #3186c8;font-weight:600;margin-bottom:-1px;padding-bottom:5px;z-index:1}
+.clinic-tab-number{opacity:.6;font-size:10px;margin-right:2px}
+.clinic-pages{display:flex;flex:1;min-height:0;background:#fff}
+.clinic-page{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.clinic-page[hidden]{display:none!important}
+.clinic-exam-layout{display:grid;grid-template-rows:1fr 1.12fr .75fr;gap:8px;padding:10px;flex:1;min-height:240px;overflow:auto}
+.clinic-field{display:flex;flex-direction:column;min-height:75px;min-width:0;position:relative}
+.clinic-field-heading{display:flex;align-items:center;gap:7px;flex:none;min-height:21px;padding:0 1px 4px;color:#273b50}
+.clinic-field-heading label{font-weight:600;font-size:12px}
+.clinic-field-index{width:16px;height:15px;border:1px solid #bdc9d5;display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#778b9e;border-radius:2px;background:#f6f8fa}
+.clinic-field-hint{margin-left:auto;font-size:10px;color:#8a929e;font-weight:400}
+.clinic-memo{position:relative;flex:1;min-height:50px;min-width:0;overflow:auto;white-space:pre-wrap;overflow-wrap:break-word;word-break:normal;line-height:1.48;padding:7px 9px;background:#fff;border:1px solid #a5abb4;box-shadow:inset 0 1px 2px #00000008;outline:0;user-select:text;font-size:13px;caret-color:#111;scrollbar-width:thin}
+.clinic-memo:empty::before{content:attr(data-placeholder);color:#949ba3;pointer-events:none}
+.clinic-field.is-active .clinic-memo{border-color:#438ecc;box-shadow:inset 0 0 0 1px #438ecc22}
+.clinic-field.is-active .clinic-field-heading label{color:#0067b0}
+.clinic-field.is-target .clinic-memo{border-color:#057acb;box-shadow:0 0 0 3px #0078d433;background:#f6fbff}
+.clinic-field.just-applied .clinic-memo{animation:clinic-applied 1.2s ease-out}
+@keyframes clinic-applied{0%,30%{background:#e8f5eb;border-color:#36975b}100%{background:white}}
+.clinic-spell{position:relative;cursor:text;text-decoration-line:underline;text-decoration-color:#cc2b38;text-decoration-style:solid;text-decoration-thickness:1.5px;text-underline-offset:3px}
+.clinic-spell:hover{text-decoration-thickness:2.5px}
+.clinic-spell.unknown{text-decoration-color:#aa6817;text-decoration-style:dashed}
+.clinic-spell.repeat{text-decoration-color:#276fb2;text-decoration-style:dotted;text-decoration-thickness:2px}
+.clinic-statusbar{display:flex;align-items:center;min-height:24px;flex:none;border-top:1px solid #bfc4ca;background:#f0f0f0;font-size:10.5px;color:#5a6068;overflow:hidden}
+.clinic-statusbar>span{padding:2px 10px;white-space:nowrap;border-right:1px solid #d4d7db;overflow:hidden;text-overflow:ellipsis}
+.clinic-statusbar .clinic-status-main{flex:1;color:#4d5763}
+.clinic-db-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#62a05c;margin-right:5px;vertical-align:1px}
+.clinic-statusbar svg{vertical-align:-3px;margin-right:4px}
+.clinic-pane{flex:1;min-height:0;overflow:auto;padding:15px 16px;background:#fff}
+.clinic-pane h2{font-weight:600;font-size:15px;color:#263f58;margin:0 0 5px}
+.clinic-pane-subtitle{font-size:12px;color:#6f7985;margin:0 0 15px}
+.clinic-pane-tools{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+.clinic-search{display:flex;align-items:center;gap:7px;max-width:360px;width:100%;padding:5px 8px;border:1px solid #a8b0bc;background:white}
+.clinic-search svg{color:#67788b;flex:none}
+.clinic-search input{min-width:0;width:100%;outline:0;border:0;background:transparent;font-size:12px}
+.clinic-data-table{border-collapse:collapse;width:100%;font-size:12px;border:1px solid #bec5cd}
+.clinic-data-table th{text-align:left;padding:6px 9px;font-weight:400;color:#435267;background:linear-gradient(#fbfbfc,#e8ebef);border-right:1px solid #d7dce2;border-bottom:1px solid #bfc7d0;white-space:nowrap}
+.clinic-data-table td{padding:8px 9px;border-bottom:1px solid #e7eaee;vertical-align:middle}
+.clinic-data-table tbody tr:nth-child(even){background:#f8fafd}
+.clinic-data-table tbody tr:hover{background:#edf5ff}
+.clinic-data-table .clinic-empty-cell{text-align:center;padding:32px 18px;color:#7c8794;font-size:12px;background:#fff}
+.clinic-small-button,.clinic-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:27px;padding:3px 11px;border:1px solid #aeb5bf;border-radius:2px;background:linear-gradient(#fff,#ededed);font:12px "Segoe UI",sans-serif;color:#28394d;cursor:default}
+.clinic-small-button:hover,.clinic-button:hover{border-color:#7ba9d0;background:#edf6ff}
+.clinic-small-button:active,.clinic-button:active{background:#deebf7}
+.clinic-button.primary{background:#0878c5;border-color:#0668ae;color:#fff}
+.clinic-button.primary:hover{background:#006ab4}
+.clinic-small-button:disabled,.clinic-button:disabled{opacity:.45;pointer-events:none}
+.clinic-inline-link{border:0;background:none;text-decoration:underline;color:#0667aa!important;padding:0 3px;font-size:12px;cursor:pointer}
+.clinic-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin-top:14px;max-width:730px}
+.clinic-form-field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#4b5664;min-width:0}
+.clinic-form-field.full{grid-column:1/-1}
+.clinic-form-field input,.clinic-form-field select,.clinic-form-field textarea{width:100%;border:1px solid #aeb6c0;background:#fff;border-radius:1px;min-height:29px;padding:5px 7px;color:#222;font-size:12px;outline:0;user-select:text}
+.clinic-form-field input:focus,.clinic-form-field select:focus,.clinic-form-field textarea:focus{border-color:#368dce;box-shadow:0 0 0 1px #368dce33}
+.clinic-form-field textarea{height:95px;resize:vertical;line-height:1.5}
+.clinic-form-actions{display:flex;gap:7px;align-items:center;margin-top:14px}
+.clinic-subtle-message{font-size:11px;color:#7b8591;margin-top:12px}
+.clinic-saved-inline{color:#327a42;font-size:11px}
+.clinic-dialog{height:100%;box-sizing:border-box;display:flex;flex-direction:column;background:#f8f8f8;color:#25303d;font:13px/1.45 "Segoe UI",Tahoma,sans-serif;user-select:none}
+.clinic-dialog-body{padding:18px 20px;flex:1;min-height:0;overflow:auto}
+.clinic-dialog-body h2{font-size:16px;font-weight:600;margin:0 0 9px;color:#185c91}
+.clinic-dialog-body p{font-size:12px;margin:0 0 12px;color:#5d6571}
+.clinic-dialog .clinic-form-grid{margin-top:8px;gap:10px 13px}
+.clinic-dialog-footer{display:flex;justify-content:flex-end;gap:8px;flex:none;background:#efefef;padding:11px 16px;border-top:1px solid #d5d8dd}
+.clinic-dialog-footer .clinic-button{min-width:83px;min-height:29px}
+.clinic-dialog-fieldset{border:1px solid #c6ccd4;padding:10px 12px;margin:14px 0}
+.clinic-dialog-fieldset legend{font-size:11px;color:#526477}
+.clinic-dialog-pair{display:grid;grid-template-columns:115px 1fr;gap:8px;font-size:12px;padding:4px 0}
+.clinic-dialog-pair b{font-weight:400;color:#76808b}
+.clinic-dialog-pair span{user-select:text}
+.clinic-checkbox{display:flex;gap:7px;align-items:flex-start;font-size:12px;color:#4e5b69}
+.clinic-checkbox input{accent-color:#0078d4;flex:none;margin-top:3px}
+.clinic-spell-popover{position:fixed;width:286px;z-index:65000;background:#fdfdfd;border:1px solid #aeb8c5;border-radius:5px;box-shadow:0 6px 25px #0003;overflow:hidden;font:12px/1.45 "Segoe UI",sans-serif;color:#263544;user-select:none;animation:clinic-pop-in .1s ease-out}
+@keyframes clinic-pop-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.clinic-spell-popover-header{display:flex;align-items:center;padding:9px 11px 5px;font-weight:600;font-size:11px;color:#8c2934}
+.clinic-spell-popover-header.unknown{color:#956012}
+.clinic-spell-popover-header.repeat{color:#286695}
+.clinic-spell-popover-header svg{margin-right:6px}
+.clinic-spell-close{margin-left:auto;display:flex;padding:2px;border:0;background:none;color:#718092;border-radius:3px}
+.clinic-spell-close:hover{background:#e8ebef}
+.clinic-spell-explanation{padding:0 11px 8px;color:#7b8794;font-size:11px}
+.clinic-spell-suggestion{display:flex;align-items:center;gap:7px;text-align:left;width:calc(100% - 12px);padding:9px;border:0;background:#eef5fc;color:#164d7a;border-radius:3px;margin:0 6px 7px;font:13px "Segoe UI",sans-serif}
+.clinic-spell-suggestion:hover{background:#dceafb}
+.clinic-spell-suggestion s{color:#8795a3;font-size:12px;text-decoration-thickness:1px}
+.clinic-spell-suggestion b{font-weight:600;word-break:break-word}
+.clinic-spell-actions{display:flex;justify-content:space-between;align-items:center;gap:4px;border-top:1px solid #e0e5ec;padding:6px}
+.clinic-spell-action{display:flex;align-items:center;gap:4px;padding:5px;border:0;background:none;font:11px "Segoe UI",sans-serif;color:#52677d;border-radius:3px}
+.clinic-spell-action:hover{background:#edf1f5;color:#075e9d}
+.clinic-spell-source{padding:3px 11px 7px;color:#98a1ae;font-size:10px}
+.clinic-print-wrap{flex:1;overflow:auto;background:#d7d9dd;padding:22px;min-height:0}
+.clinic-print-paper{box-sizing:border-box;max-width:700px;min-height:820px;margin:0 auto;padding:44px 45px;background:#fff;box-shadow:0 2px 7px #0003;color:#222;font:12px/1.6 Georgia,serif;user-select:text}
+.clinic-print-paper header{border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:20px}
+.clinic-print-paper h1{font:bold 22px Georgia,serif;margin:0 0 4px}
+.clinic-print-paper h2{font:bold 15px Georgia,serif;margin:23px 0 6px}
+.clinic-print-paper p{font:12px/1.6 Georgia,serif;color:#333;white-space:pre-wrap}
+.clinic-print-paper .clinic-print-meta{font:11px/1.7 "Segoe UI",sans-serif;color:#666}
+.clinic-print-paper footer{margin-top:50px;padding-top:12px;border-top:1px solid #ccc;font:10px "Segoe UI",sans-serif;color:#888}
+.clinic-app.large-type .clinic-memo{font-size:15px}
+.clinic-app.large-type .clinic-summary-line{font-size:12px}
+.clinic-history-row{cursor:default}
+.clinic-history-row.selected{background:#dcecff!important}
+.clinic-status-pill{display:inline-flex;align-items:center;gap:4px;border-radius:2px;padding:2px 6px;font-size:10px;background:#edf2f8;color:#526e8d}
+.clinic-status-pill.success{background:#ebf5ee;color:#477f54}
+.clinic-record-count{font-size:11px;color:#818995;margin-left:auto;white-space:nowrap}
+.clinic-tab-caption{display:flex;gap:7px;align-items:center;padding:7px 10px;border-bottom:1px solid #e3e7ec;background:#fafbfc;font-size:11px;color:#68768a}
+.clinic-tab-caption svg{color:#617f9b}
+@media(max-width:850px){.clinic-summary{grid-template-columns:1fr 1.2fr;gap:7px}.clinic-encounter{display:none}.clinic-tool{padding-inline:6px}.clinic-tabs{padding-inline:7px}.clinic-tab{padding-inline:9px}.clinic-summary-line{grid-template-columns:64px 1fr}.clinic-statusbar>span{padding-inline:7px}.clinic-status-doctor{display:none}}
+@media(max-width:600px){.clinic-summary{grid-template-columns:1fr 1fr;padding:6px;gap:6px}.clinic-group{padding:5px 6px}.clinic-summary-line{display:block;font-size:10px}.clinic-summary-line dt{display:none}.clinic-person-name{font-size:12px}.clinic-menu-button{padding-inline:6px}.clinic-tool-label.optional{display:none}.clinic-tab{padding-inline:7px;font-size:11px!important}.clinic-exam-layout{padding:7px;gap:6px}.clinic-field-hint{display:none}.clinic-form-grid{grid-template-columns:1fr}.clinic-form-field.full{grid-column:auto}.clinic-pane{padding:12px}.clinic-memo{font-size:12px;padding:6px}.clinic-dirty-badge{display:none}.clinic-status-spelling{display:none}}
+@media(prefers-reduced-motion:reduce){.clinic-field.just-applied .clinic-memo,.clinic-spell-popover{animation:none}}
+@media print{html:has(.clinic-print-dialog),body:has(.clinic-print-dialog){height:auto!important;overflow:visible!important;background:#fff!important}body:has(.clinic-print-dialog) *{visibility:hidden!important}body:has(.clinic-print-dialog) #desktop,body:has(.clinic-print-dialog) #windows{position:static!important;height:auto!important;overflow:visible!important;isolation:auto!important;background:#fff!important}body:has(.clinic-print-dialog) #taskbar,body:has(.clinic-print-dialog) #shell-popups,body:has(.clinic-print-dialog) #overlay-layer,body:has(.clinic-print-dialog) #notification-toasts,body:has(.clinic-print-dialog) #desktop-icons{display:none!important}.clinic-print-dialog,.clinic-print-dialog *{visibility:visible!important}.clinic-print-dialog{position:relative!important;inset:auto!important;width:100%!important;max-width:none!important;height:auto!important;border:0!important;box-shadow:none!important;background:#fff!important}.clinic-print-dialog .window-content,.clinic-print-dialog .clinic-dialog{display:block!important;height:auto!important;overflow:visible!important}.clinic-print-dialog .window-titlebar,.clinic-print-dialog .titlebar,.clinic-print-dialog .clinic-dialog-footer,.clinic-print-dialog .resize-handle{display:none!important}.clinic-print-wrap{padding:0!important;overflow:visible!important;background:#fff!important}.clinic-print-paper{width:100%!important;max-width:none!important;min-height:0!important;box-shadow:none!important;padding:15mm!important}.clinic-print-paper h2{break-after:avoid}.clinic-print-paper p{orphans:3;widows:3}}
