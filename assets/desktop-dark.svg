@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1500" viewBox="0 0 2400 1500" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="12%" y1="0%" x2="88%" y2="100%">
+      <stop stop-color="#0b1830"/>
+      <stop offset=".48" stop-color="#19344f"/>
+      <stop offset="1" stop-color="#35687d"/>
+    </linearGradient>
+    <radialGradient id="nightlight" cx="0" cy="0" r="1320" gradientUnits="userSpaceOnUse" gradientTransform="translate(1820 210) scale(1 .8)">
+      <stop stop-color="#7eafc7" stop-opacity=".13"/>
+      <stop offset=".56" stop-color="#6a9ebc" stop-opacity=".045"/>
+      <stop offset="1" stop-color="#5289ac" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="haze" cx="0" cy="0" r="1120" gradientUnits="userSpaceOnUse" gradientTransform="translate(1640 720) scale(1 .34)">
+      <stop stop-color="#91c6d0" stop-opacity=".17"/>
+      <stop offset=".58" stop-color="#70aebf" stop-opacity=".065"/>
+      <stop offset="1" stop-color="#518fa9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="far" x1="36%" y1="0%" x2="64%" y2="100%">
+      <stop stop-color="#37677d"/>
+      <stop offset=".44" stop-color="#254b67"/>
+      <stop offset="1" stop-color="#18364f"/>
+    </linearGradient>
+    <linearGradient id="middle" x1="22%" y1="0%" x2="80%" y2="100%">
+      <stop stop-color="#244a66"/>
+      <stop offset=".55" stop-color="#193a55"/>
+      <stop offset="1" stop-color="#112b45"/>
+    </linearGradient>
+    <linearGradient id="near" x1="75%" y1="0%" x2="30%" y2="100%">
+      <stop stop-color="#234e66"/>
+      <stop offset=".48" stop-color="#14364f"/>
+      <stop offset="1" stop-color="#0b223b"/>
+    </linearGradient>
+    <linearGradient id="shore" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop stop-color="#14314b"/>
+      <stop offset="1" stop-color="#081b32"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0%" x2="100%">
+      <stop stop-color="#9bd0d8" stop-opacity="0"/>
+      <stop offset=".56" stop-color="#9bd0d8" stop-opacity=".15"/>
+      <stop offset="1" stop-color="#9bd0d8" stop-opacity=".24"/>
+    </linearGradient>
+    <linearGradient id="quiet-left" x1="0%" x2="100%">
+      <stop stop-color="#061429" stop-opacity=".22"/>
+      <stop offset=".34" stop-color="#061429" stop-opacity=".06"/>
+      <stop offset=".63" stop-color="#061429" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h2400v1500H0z"/>
+  <path fill="url(#nightlight)" d="M0 0h2400v1500H0z"/>
+  <path fill="url(#haze)" d="M0 0h2400v1500H0z"/>
+  <path fill="url(#far)" d="M-120 868C310 762 730 858 1170 756S2010 540 2520 646V1500H-120Z"/>
+  <path fill="none" stroke="url(#edge)" stroke-width="2" d="M-120 868C310 762 730 858 1170 756S2010 540 2520 646"/>
+  <path fill="url(#middle)" d="M-120 1092C246 1086 538 844 910 842C1304 840 1485 1064 1838 1046C2082 1034 2262 914 2520 940V1500H-120Z"/>
+  <path fill="url(#near)" d="M-120 1334C354 1330 660 1150 1096 1182C1520 1214 1930 1020 2520 1126V1500H-120Z"/>
+  <path fill="url(#shore)" d="M-120 1456C262 1280 610 1332 1000 1456C1482 1610 2010 1420 2520 1426V1500H-120Z"/>
+  <path fill="url(#quiet-left)" d="M0 0h2400v1500H0z"/>
+</svg>

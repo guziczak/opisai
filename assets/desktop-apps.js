@@ -54,7 +54,7 @@
       html+=card('fullScreen','Pełny ekran',document.fullscreenElement?'Pulpit zajmuje cały ekran. Naciśnij Esc, aby wyjść.':'Ukryj pasek adresu i karty przeglądarki',settingButton('fullscreen',document.fullscreenElement?'Opuść pełny ekran':'Włącz pełny ekran'));
       html+=card('info','Informacje','Wersja i funkcje demonstracji',settingButton('about',icon('chevronRight',12)));
     } else if(settingsPage==='personalization') {
-      html+=`<p class="setting-description">Wybierz motyw do zastosowania</p><div class="theme-swatches"><button class="theme-swatch" aria-label="Jasny motyw Bloom" aria-pressed="${p.theme==='light'&&p.wallpaper==='bloom'}" data-theme="light"></button><button class="theme-swatch dark" aria-label="Ciemny motyw Bloom" aria-pressed="${p.theme==='dark'&&p.wallpaper==='bloom'}" data-theme="dark"></button><button class="theme-swatch solid" aria-label="Niebieskie tło" aria-pressed="${p.wallpaper==='solid'}" data-theme="solid"></button></div>`;
+      html+=`<p class="setting-description">Wybierz motyw do zastosowania</p><div class="theme-swatches"><button class="theme-swatch" aria-label="Horyzont — jasny motyw" aria-pressed="${p.theme==='light'&&p.wallpaper==='horizon'}" data-theme="light"></button><button class="theme-swatch dark" aria-label="Horyzont — ciemny motyw" aria-pressed="${p.theme==='dark'&&p.wallpaper==='horizon'}" data-theme="dark"></button><button class="theme-swatch solid" aria-label="Niebieskie tło" aria-pressed="${p.wallpaper==='solid'}" data-theme="solid"></button></div>`;
       html+=card('sun','Tryb kolorów','Kolory menu Start, paska zadań i okien',`<select class="win-select" data-setting="theme" aria-label="Tryb kolorów"><option value="light" ${p.theme==='light'?'selected':''}>Jasny</option><option value="dark" ${p.theme==='dark'?'selected':''}>Ciemny</option></select>`);
       html+=card('taskview','Wyrównanie paska zadań','Położenie przycisku Start i ikon aplikacji',`<select class="win-select" data-setting="alignment" aria-label="Wyrównanie paska zadań"><option value="center" ${p.alignment==='center'?'selected':''}>Na środku</option><option value="left" ${p.alignment==='left'?'selected':''}>Po lewej</option></select>`);
       html+=card('play','Efekty animacji','Przejścia okien, menu i powiadomień',toggle('motion','Efekty animacji',p.motion));
@@ -85,14 +85,14 @@
       html+=card('history','Wyczyść dane demonstracji','Przywróć przykładową wizytę, notatki, historię i ustawienia pulpitu.',settingButton('reset','Przywróć ustawienia'));
       html+=`<p class="setting-description">Ustawienia prawdziwego programu OpisAI są niezależne od tej demonstracji. Do testów używaj przykładowych danych.</p>`;
     } else {
-      html+=`<div class="about-desktop-brand">${icon('windows',54)}<div><h2>Pulpit OpisAI</h2><p>Interaktywna demonstracja · Windows 11</p></div></div><h2>Informacje o aplikacji</h2><dl class="specification-list"><dt>OpisAI</dt><dd>0.12.0rc32</dd><dt>Środowisko</dt><dd>Przeglądarka internetowa</dd><dt>Dane</dt><dd>Lokalna przykładowa wizyta</dd><dt>Obsługa</dt><dd>Mysz, klawiatura i dotyk</dd></dl>`;
+      html+=`<div class="about-desktop-brand">${icon('opisai',54)}<div><h2>Pulpit OpisAI</h2><p>Interaktywna demonstracja gabinetu</p></div></div><h2>Informacje o aplikacji</h2><dl class="specification-list"><dt>OpisAI</dt><dd>0.12.0rc32</dd><dt>Środowisko</dt><dd>Przeglądarka internetowa</dd><dt>Dane</dt><dd>Lokalna przykładowa wizyta</dd><dt>Obsługa</dt><dd>Mysz, klawiatura i dotyk</dd></dl>`;
       html+=card('opisai','O programie OpisAI','Asystent dokumentacji weterynaryjnej',settingButton('opisai-about','Otwórz'));
       html+=card('help','Pomoc i pierwsze kroki','Przygotowanie, dyktowanie i sprawdzanie wyniku',settingButton('help','Otwórz pomoc'));
-      html+=`<p class="setting-description">Jest to samodzielna prezentacja interfejsu OpisAI, a nie produkt Microsoft. Funkcje pulpitu są odtwarzane lokalnie w przeglądarce. Windows i tapeta Bloom należą do Microsoft.</p>`;
+      html+=`<p class="setting-description">Pulpit demonstracyjny OpisAI działa lokalnie w przeglądarce. Motywy Horyzont i ikony narzędzi zostały przygotowane dla tej prezentacji. Ustawienia pulpitu dotyczą wyłącznie tej strony.</p>`;
     }
     root.innerHTML=html;
     $$('[data-setting]',root).forEach(control=>control.onchange=()=>{const key=control.dataset.setting;p[key]=control.type==='checkbox'?control.checked:control.value;Shell.applyPrefs();renderSettings();});
-    $$('[data-theme]',root).forEach(b=>b.onclick=()=>{p.wallpaper=b.dataset.theme==='solid'?'solid':'bloom';if(b.dataset.theme!=='solid')p.theme=b.dataset.theme;Shell.applyPrefs();renderSettings();});
+    $$('[data-theme]',root).forEach(b=>b.onclick=()=>{p.wallpaper=b.dataset.theme==='solid'?'solid':'horizon';if(b.dataset.theme!=='solid')p.theme=b.dataset.theme;Shell.applyPrefs();renderSettings();});
     $$('[data-range]',root).forEach(input=>input.oninput=()=>{p[input.dataset.range]=+input.value;input.nextElementSibling.textContent=input.value+'%';Shell.applyPrefs();});
     $$('[data-action]',root).forEach(b=>b.onclick=()=>action(b.dataset.action));
   }

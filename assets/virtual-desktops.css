@@ -1,4 +1,4 @@
-/* Windows Task View: browser-local desktops and their window previews. */
+/* OpisAI task view: browser-local desktops and their window previews. */
 .task-view{display:flex;flex-direction:column;flex-wrap:nowrap;padding:40px 6vw 160px;gap:20px}
 .task-view-windows{display:flex;flex:1;min-height:0;width:100%;align-items:center;justify-content:center;align-content:center;flex-wrap:wrap;gap:26px;overflow:auto;padding:8px}
 .task-view-empty{color:#fff;font-size:14px;text-shadow:0 1px 3px #0005}
@@ -7,7 +7,7 @@
 .task-view-card .task-preview-thumb{pointer-events:none;overflow:hidden}
 .task-view .virtual-desktop-bar{bottom:25px;padding:10px 24px;gap:18px;align-items:flex-start;overflow-x:auto;justify-content:safe center;scrollbar-width:thin}
 .virtual-desktop-tile{position:relative;flex:0 0 154px}
-.task-view .virtual-desktop{position:relative;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;flex:0 0 154px;width:154px;height:96px;padding:0;overflow:hidden;cursor:pointer;background-color:#164489;box-shadow:0 3px 10px #0002;text-align:left;transition:border-color .12s,transform .12s}
+.task-view .virtual-desktop{position:relative;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-end;flex:0 0 154px;width:154px;height:96px;padding:0;overflow:hidden;cursor:pointer;background-color:var(--desktop-background);box-shadow:0 3px 10px #0002;text-align:left;transition:border-color .12s,transform .12s}
 .task-view .virtual-desktop:hover{border-color:#d6eeff;transform:translateY(-2px)}
 .task-view .virtual-desktop.current{border-color:#60cdff;box-shadow:0 0 0 1px #60cdff}
 .virtual-desktop-image{display:block;position:absolute;inset:0;overflow:hidden;pointer-events:none}
@@ -19,6 +19,5 @@
 .virtual-desktop-close:hover{background:#c42b1c}.virtual-desktop-close:focus-visible{outline:2px solid white;outline-offset:2px}
 .task-view .virtual-desktop-new{justify-content:center;align-items:center;gap:2px;background:color-mix(in srgb,var(--acrylic) 35%,transparent);color:white;text-shadow:0 1px 2px #0006}
 .virtual-desktop-plus{font-size:30px;line-height:34px;font-weight:300}
-:root[data-theme=dark] .task-view .virtual-desktop:not(.virtual-desktop-new){background-image:url('./wallpaper-dark.webp')}
 @media(max-width:700px){.task-view{padding:20px 14px 150px}.task-view-windows{gap:14px;align-content:flex-start}.task-view .virtual-desktop-bar{justify-content:flex-start;padding-inline:16px;bottom:18px}.task-view-card{width:330px;padding:10px}.task-view-card .task-preview-thumb{height:175px}}
 @media(prefers-reduced-motion:reduce){.virtual-desktop,.virtual-desktop-close{transition:none!important}}

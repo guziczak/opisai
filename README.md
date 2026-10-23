@@ -2,9 +2,7 @@
 
 [Otwórz demo](https://guziczak.github.io/opisai/)
 
-Demonstracja przeglądarkowa OpisAI, dostosowana do przebiegu pracy aplikacji **0.12.0rc32**. Interfejs gabinetu jest osadzony w pulpicie wzorowanym na Windows 11.
-
-![Pulpit Windows 11 z Kliniką XP i oknem przygotowania opisu OpisAI](docs/preview-windows11-20261023.jpg)
+Demonstracja przeglądarkowa OpisAI, dostosowana do przebiegu pracy aplikacji **0.12.0rc32**. Interfejs gabinetu jest osadzony we własnym pulpicie demonstracyjnym z motywami Horyzont i ikonami przygotowanymi dla OpisAI.
 
 ## Przebieg wizyty
 
@@ -23,7 +21,7 @@ Przytrzymanie bąbelka uruchamia przykładowe dyktowanie. Można zatrzymać, pop
 - Pasek zadań z grupowaniem aplikacji, wskaźnikami i podglądami okien; menu Start, wyszukiwanie, widok zadań, kalendarz, powiadomienia i szybkie ustawienia.
 - Eksplorator z kartami, lokalnym drzewem dokumentów, osobną historią nawigacji w każdej karcie, wyszukiwaniem, operacjami na plikach i Koszem.
 - Notatnik z zapisem lokalnym, pobraniem pliku, wyszukiwaniem i ochroną niezapisanych zmian.
-- Jasny i ciemny motyw, oryginalne tapety Bloom, wektorowe ikony oraz natywny Segoe UI z otwartym fontem Selawik jako zamiennikiem na innych systemach.
+- Jasny i ciemny motyw Horyzont, własne wektorowe tła i ikony narzędzi oraz lokalny Segoe UI z otwartym fontem Selawik jako zamiennikiem na innych systemach. Dotychczasowe ustawienia motywu są zachowane po wymianie tapet.
 - Bąbelek z nazwą i wersją wewnątrz koła, sprężystym podążaniem za wskaźnikiem, wyraźnym wydłużaniem w kierunku pociągnięcia i krótkim wyhamowaniem po puszczeniu. Kształt, ikona i napisy odkształcają się razem, po czym sprężyście wracają do koła. Cały obrys pozostaje w obszarze pulpitu; trafienie w pole Kliniki wymaga jawnego upuszczenia na nim. Ograniczenie animacji w systemie lub ustawieniach OpisAI przełącza przeciąganie na bezpośrednie.
 
 Wszystkie funkcje dotyczą pulpitu demonstracyjnego. Przeglądarka nie zmienia konfiguracji Windows, sieci ani urządzeń na komputerze odwiedzającego. Tryb pełnoekranowy jest dostępny w Ustawieniach; część skrótów klawiaturowych może przejąć system lub przeglądarka.
@@ -45,7 +43,7 @@ Wizyta, dokumenty i ustawienia pulpitu są zapisywane w `localStorage`, pod kluc
 | `assets/clinic.js`, `assets/clinic.css` | Wizyta i interfejs Kliniki |
 | `assets/opisai.js`, `assets/opisai.css` | Bąbelek, przygotowanie, dyktowanie, przegląd i ustawienia OpisAI |
 | `assets/orb-motion.js` | Niezależny od DOM model sprężyny, bezwładności i granic ruchu bąbelka |
-| `assets/icons.js`, `assets/fonts/`, `assets/wallpaper-*.webp` | Zasoby wizualne |
+| `assets/icons.js`, `assets/fonts/`, `assets/desktop-*.svg` | Zasoby wizualne |
 | `assets/ASSET_SOURCES.md` | Źródła i licencje zasobów |
 
 Projekt jest statyczny i nie wymaga kompilacji ani instalowania zależności. GitHub Pages publikuje pliki z gałęzi `main`. Do pracy lokalnej wystarczy serwer plików statycznych uruchomiony w katalogu repozytorium.

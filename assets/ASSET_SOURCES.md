@@ -1,22 +1,21 @@
 # Asset sources
 
-## Windows 11 Bloom wallpapers
+## OpisAI Horyzont wallpapers
 
-`wallpaper-light.webp` and `wallpaper-dark.webp` are optimized WebP encodings of Microsoft's Windows 11 Bloom press images. Their original 2100 × 1181 pixel dimensions and image composition are preserved.
+`desktop-light.svg` and `desktop-dark.svg` were created directly in SVG for this project on 2026-10-23. They form the light and dark variants of **Horyzont**, an abstract landscape composed of wide, low layers, a quiet sky and directional light.
 
-- Official press gallery: https://news.microsoft.com/windows11-general-availability/
-- Light source: https://msftstories.thesourcemediaassets.com/sites/620/2021/09/Windows-11-Bloom-Screensaver-Light-1.jpg
-- Dark source: https://msftstories.thesourcemediaassets.com/sites/620/2021/09/Windows-11-Bloom-Screensaver-Dark.jpg
-- Design background and attribution: https://blogs.windows.com/windowsexperience/2021/10/06/windows-11-blossoms-with-bloom-a-new-symbol-for-a-new-operating-system/
-- Retrieved: 2026-10-23.
+- Source: the editable SVG files in this repository, drawn from paths and gradients.
+- No downloaded wallpaper, embedded bitmap, external image, font, filter or animation is used.
+- Both variants share the same composition and are cropped with `background-size: cover`.
+- The artwork contains no product logos or text.
 
-Bloom was developed by Microsoft with Six N. Five. The images remain the property of their respective rights holders. They are included here to depict the Windows desktop within this independent product demonstration; no Microsoft endorsement is implied.
+Earlier versions used Windows 11 Bloom images from Microsoft's press gallery. Those image files and the outdated desktop preview have been removed from the current project tree. This change does not rewrite earlier Git commits.
 
 ## Interface and application icons
 
-`icons.js` contains original SVG drawings made for this demonstration. Monochrome interface glyphs use a consistent 20-unit coordinate system; caption glyphs use 10 units. Colored application drawings depict recognizable Windows app functions and product identities. Windows and Microsoft Edge are Microsoft trademarks; these icon illustrations are not an official Microsoft icon package. The OpisAI medical-bag icon represents this project's own application.
+`icons.js` contains SVG drawings made for this demonstration. Monochrome interface glyphs use a consistent 20-unit coordinate system; caption glyphs use 10 units. The colored tools use project-specific drawings of generic functions: an application launcher, browser, folder, notes, settings and other desktop utilities. The earlier Windows, Edge, Microsoft Store and Word logo depictions have been removed. The OpisAI medical-bag icon represents this project's own application.
 
-All SVGs are embedded locally by `Icons.svg(name, size, extraClass)`. No third-party icon font, remote image endpoint, tracking request, or generated image is used.
+All SVGs are embedded locally by `Icons.svg(name, size, extraClass)`. No third-party icon font, remote image endpoint or tracking request is used.
 
 ## Typography
 
