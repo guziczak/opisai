@@ -25,6 +25,7 @@
     {id:'download-example',parent:'downloads',name:'Przykładowy opis.txt',type:'text',modified:now,text:'PRZYKŁADOWY OPIS WIZYTY\n\nWywiad\nSzczur, samiec, w wieku 1 roku i 9 miesięcy, o masie 420 g. Od około dwóch tygodni występują kichanie i świszczący oddech. Według notatki pacjent jest mniej aktywny i pobiera mniej pokarmu.\n\nBadanie kliniczne\nOdnotowano zgarbioną postawę, nastroszoną sierść i przyspieszony oddech.\n\nDokument demonstracyjny — wynik wymaga weryfikacji przez lekarza.\n'},
   ];
   let entries = seed(), explorer = null, fileClipboard = null, textClipboard = '', noteSerial = 0;
+  let explorerTabs = [], tabSerial = 0;
   const notebooks = new Map();
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE) || 'null');
@@ -81,10 +82,37 @@
   }
   function selectedEntries() {return explorer?[...explorer.selected].map(get).filter(Boolean):[];}
   function refreshExplorer() {if(explorer&&!explorer.win.closed)renderExplorer();}
+  function newTabState(win,path) {return {win,tabId:'explorer-tab-'+(++tabSerial),path,stack:[path],position:0,selected:new Set(),anchor:null,query:'',sort:'name',visible:[],scrollTop:0};}
+  function rememberTabScroll() {if(explorer&&!explorer.win.closed)explorer.scrollTop=$('.explorer-files',explorer.win.content)?.scrollTop||0;}
+  function addExplorerTab(path='home') {
+    const target=normalizePath(path)||'home';
+    if(!explorer||explorer.win.closed)return openExplorer(target);
+    rememberTabScroll();const tab=newTabState(explorer.win,target);explorerTabs.push(tab);explorer=tab;renderExplorer();return tab.win;
+  }
+  function switchExplorerTab(key) {const tab=explorerTabs.find(x=>x.tabId===key);if(!tab||tab===explorer)return;rememberTabScroll();explorer=tab;renderExplorer();}
+  function closeExplorerTab(key=explorer?.tabId) {
+    const index=explorerTabs.findIndex(x=>x.tabId===key);if(index<0)return;
+    if(explorerTabs.length===1){explorer.win.close();explorerTabs=[];return;}
+    const active=explorer.tabId===key;explorerTabs.splice(index,1);
+    if(active){explorer=explorerTabs[Math.min(index,explorerTabs.length-1)];renderExplorer();}else renderExplorerTabs();
+  }
+  function renderExplorerTabs() {
+    const win=explorer.win,header=$('.titlebar',win.el);let host=$('.files-title-tabs',header);
+    if(!host){host=document.createElement('div');host.className='explorer-tabs files-title-tabs';header.insertBefore(host,$('.caption-buttons',header));}
+    host.innerHTML=`<div class="files-tab-strip" role="tablist" aria-label="Karty Eksploratora">${explorerTabs.map(tab=>`<div class="explorer-tab${tab===explorer?' active':''}" data-tab="${tab.tabId}"><button type="button" class="files-tab-select" role="tab" id="select-${tab.tabId}" aria-selected="${tab===explorer}" aria-controls="files-explorer-panel" tabindex="${tab===explorer?0:-1}" title="${esc(folderLabel(tab.path))}" data-tab-select="${tab.tabId}">${icon(folderIcon(tab.path),16)}<span>${esc(folderLabel(tab.path))}</span></button><button type="button" class="files-tab-close" aria-label="Zamknij kartę: ${esc(folderLabel(tab.path))}" title="Zamknij kartę (Ctrl+W)" data-tab-close="${tab.tabId}">${icon('close',9)}</button></div>`).join('')}</div><button type="button" class="files-new-tab" aria-label="Nowa karta" title="Nowa karta (Ctrl+T)">${icon('plus',14)}</button>`;
+    $$('[data-tab-select]',host).forEach(button=>{
+      button.onclick=()=>switchExplorerTab(button.dataset.tabSelect);
+      button.onkeydown=e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();e.stopPropagation();const index=explorerTabs.findIndex(x=>x.tabId===button.dataset.tabSelect);const next=e.key==='Home'?0:e.key==='End'?explorerTabs.length-1:(index+(e.key==='ArrowRight'?1:explorerTabs.length-1))%explorerTabs.length;const key=explorerTabs[next].tabId;switchExplorerTab(key);$(`[data-tab-select="${key}"]`,header)?.focus();};
+    });
+    $$('[data-tab-close]',host).forEach(button=>button.onclick=()=>closeExplorerTab(button.dataset.tabClose));
+    $$('.explorer-tab',host).forEach(tab=>tab.onauxclick=e=>{if(e.button===1){e.preventDefault();closeExplorerTab(tab.dataset.tab);}});
+    $('.files-new-tab',host).onclick=()=>addExplorerTab();
+    const active=$('.explorer-tab.active',host);active?.scrollIntoView?.({block:'nearest',inline:'nearest'});
+  }
   function navigate(path,record=true) {
     if(!explorer)return;const target=normalizePath(path);if(!target)return;
     if(record&&target!==explorer.path){explorer.stack=explorer.stack.slice(0,explorer.position+1);explorer.stack.push(target);explorer.position++;}
-    explorer.path=target;explorer.selected.clear();explorer.anchor=null;explorer.query='';renderExplorer();
+    explorer.path=target;explorer.selected.clear();explorer.anchor=null;explorer.query='';explorer.scrollTop=0;renderExplorer();
   }
   function goHistory(direction) {const i=explorer.position+direction;if(i<0||i>=explorer.stack.length)return;explorer.position=i;navigate(explorer.stack[i],false);}
   function writableFolder() {return get(explorer?.path)?.type==='folder'?explorer.path:'documents';}
@@ -165,7 +193,7 @@
     const root=explorer.win.content;
     $$('[data-entry]',root).forEach(el=>{const yes=explorer.selected.has(el.dataset.entry);el.classList.toggle('selected',yes);el.setAttribute('aria-selected',String(yes));});
     const count=explorer.visible.length,selected=explorer.selected.size;
-    $('.explorer-status',root).textContent=`${count} ${count===1?'element':'elementów'}${selected?' · zaznaczono: '+selected:''} · Pliki demonstracji`;
+    $('.explorer-status',root).textContent=`Liczba elementów: ${count}${selected?' · zaznaczono: '+selected:''} · Pliki demonstracji`;
     $$('[data-needs-selection]',root).forEach(b=>b.disabled=!selected||selectedEntries().some(x=>x.fixed));
   }
   function selectEntry(event,key) {
@@ -181,13 +209,12 @@
     const root=explorer.win.content,path=explorer.path,trash=path==='recycleBin',list=listForPath();explorer.visible=list;
     explorer.selected=new Set([...explorer.selected].filter(key=>list.some(x=>x.id===key)));
     explorer.win.setTitle(folderLabel(path)+' — Eksplorator plików');
-    root.innerHTML=`<div class="explorer-tabs"><div class="explorer-tab">${icon(folderIcon(path),16)}<span>${esc(folderLabel(path))}</span><button type="button" class="files-tab-close" aria-label="Zamknij kartę">${icon('close',9)}</button></div></div>
-      <div class="explorer-toolbar">${trash?`<button data-command="restore">${icon('undo',18)}<span>Przywróć</span></button><button data-command="empty">${icon('delete',18)}<span>Opróżnij Kosz</span></button>`:`<button data-command="new">${icon('plus',18)}<span>Nowy</span>${icon('chevronDown',10)}</button><span class="toolbar-sep"></span><button data-command="cut" title="Wytnij (Ctrl+X)" aria-label="Wytnij" data-needs-selection>${icon('cut',18)}</button><button data-command="copy" title="Kopiuj (Ctrl+C)" aria-label="Kopiuj" data-needs-selection>${icon('copy',18)}</button><button data-command="paste" title="Wklej (Ctrl+V)" aria-label="Wklej"${!fileClipboard?' disabled':''}>${icon('paste',18)}</button><button data-command="rename" title="Zmień nazwę (F2)" aria-label="Zmień nazwę" data-needs-selection>${icon('rename',18)}</button><button data-command="delete" title="Usuń (Delete)" aria-label="Usuń" data-needs-selection>${icon('delete',18)}</button><span class="toolbar-sep"></span><button data-command="sort">${icon('sort',18)}<span>Sortuj</span>${icon('chevronDown',10)}</button>`}<button data-command="more" aria-label="Więcej opcji">${icon('more',18)}</button></div>
+    renderExplorerTabs();root.id='files-explorer-panel';root.setAttribute('role','tabpanel');root.setAttribute('aria-labelledby','select-'+explorer.tabId);
+    root.innerHTML=`<div class="explorer-toolbar">${trash?`<button data-command="restore">${icon('undo',18)}<span>Przywróć</span></button><button data-command="empty">${icon('delete',18)}<span>Opróżnij Kosz</span></button>`:`<button data-command="new">${icon('plus',18)}<span>Nowy</span>${icon('chevronDown',10)}</button><span class="toolbar-sep"></span><button data-command="cut" title="Wytnij (Ctrl+X)" aria-label="Wytnij" data-needs-selection>${icon('cut',18)}</button><button data-command="copy" title="Kopiuj (Ctrl+C)" aria-label="Kopiuj" data-needs-selection>${icon('copy',18)}</button><button data-command="paste" title="Wklej (Ctrl+V)" aria-label="Wklej"${!fileClipboard?' disabled':''}>${icon('paste',18)}</button><button data-command="rename" title="Zmień nazwę (F2)" aria-label="Zmień nazwę" data-needs-selection>${icon('rename',18)}</button><button data-command="delete" title="Usuń (Delete)" aria-label="Usuń" data-needs-selection>${icon('delete',18)}</button><span class="toolbar-sep"></span><button data-command="sort">${icon('sort',18)}<span>Sortuj</span>${icon('chevronDown',10)}</button>`}<button data-command="more" aria-label="Więcej opcji">${icon('more',18)}</button></div>
       <div class="explorer-location"><div class="files-navigation"><button data-nav="back" aria-label="Wstecz" title="Wstecz (Alt+←)"${explorer.position<=0?' disabled':''}>${icon('arrowLeft',16)}</button><button data-nav="forward" aria-label="Dalej" title="Dalej (Alt+→)"${explorer.position>=explorer.stack.length-1?' disabled':''}>${icon('arrowRight',16)}</button><button data-nav="up" aria-label="W górę" title="W górę"${['home','computer','recycleBin'].includes(path)?' disabled':''}>${icon('arrowUp',16)}</button><button data-nav="refresh" aria-label="Odśwież" title="Odśwież">${icon('refresh',16)}</button></div><div class="explorer-address" title="Adres (Ctrl+L)">${icon(folderIcon(path),16)}<div class="files-breadcrumbs">${breadcrumb(path).map((key,i)=>`${i?icon('chevronRight',10):''}<button data-path="${esc(key)}">${esc(folderLabel(key))}</button>`).join('')}</div><input class="files-address-input" aria-label="Adres folderu" hidden></div><input type="search" class="win-input explorer-search" placeholder="Wyszukaj w: ${esc(folderLabel(path))}" value="${esc(explorer.query)}" aria-label="Wyszukaj w folderze"></div>
       <div class="explorer-workspace"><nav class="explorer-sidebar" aria-label="Foldery">${['home','desktop','documents','downloads','computer','recycleBin'].map(key=>`${key==='computer'?'<div class="sidebar-rule"></div>':''}<button data-path="${key}" class="${path===key?'selected':''}">${icon(folderIcon(key),19)}<span>${esc(folderLabel(key))}</span></button>`).join('')}</nav><div class="explorer-files" tabindex="0" aria-label="Pliki i foldery">
       ${path==='home'&&!explorer.query?`<h3>Szybki dostęp</h3><div class="folder-grid files-quick-access">${fixedFolders.map(f=>`<button class="folder-tile" data-path="${f.id}">${icon(folderIcon(f.id),38)}<span>${esc(f.name)}<small>Folder demonstracji</small></span></button>`).join('')}</div><h3>Ostatnio używane</h3>`:''}
       ${list.length?`<table class="file-table" role="grid" aria-label="Lista plików"><thead><tr><th scope="col">Nazwa</th><th scope="col">Data modyfikacji</th><th scope="col">${trash?'Pierwotna lokalizacja':'Typ'}</th><th scope="col">Rozmiar</th></tr></thead><tbody>${list.map(entry=>`<tr data-entry="${esc(entry.id)}" tabindex="0" aria-selected="false"><td><span>${icon(entryIcon(entry),20)}<span>${esc(entry.name)}</span></span></td><td>${esc(dateLabel(entry))}</td><td>${esc(trash?locationName(entry):typeName(entry))}</td><td>${fileSize(entry)}</td></tr>`).join('')}</tbody></table>`:`<div class="empty-folder">${icon(trash?'recycleBin':explorer.query?'search':'folder',56)}<span>${explorer.query?'Żaden element nie pasuje do wyszukiwania.':trash?'Kosz jest pusty.':'Ten folder jest pusty.'}</span></div>`}</div></div><div class="explorer-status" aria-live="polite"></div>`;
-    $('.files-tab-close',root).onclick=()=>explorer.win.close();
     $$('[data-path]',root).forEach(b=>b.onclick=()=>navigate(b.dataset.path));
     $$('[data-nav]',root).forEach(b=>b.onclick=()=>({back:()=>goHistory(-1),forward:()=>goHistory(1),up:()=>navigate(get(path)?.parent||'computer'),refresh:renderExplorer}[b.dataset.nav])());
     $$('[data-command]',root).forEach(b=>b.onclick=e=>{const r=b.getBoundingClientRect();const at=items=>Shell.menu(items,r.left,r.bottom+4);switch(b.dataset.command){case'new':at([{label:'Folder',icon:'folder',onClick:()=>createEntry(true)},{label:'Dokument tekstowy',icon:'notepad',onClick:()=>createEntry(false)}]);break;case'cut':copyEntries(true);break;case'copy':copyEntries();break;case'paste':pasteEntries();break;case'rename':renameEntry(selectedEntries()[0]);break;case'delete':deleteEntries();break;case'restore':restoreEntries();break;case'empty':emptyRecycle();break;case'sort':at([{label:'Nazwa',checked:explorer.sort==='name',onClick:()=>{explorer.sort='name';renderExplorer();}},{label:'Data modyfikacji',checked:explorer.sort==='modified',onClick:()=>{explorer.sort='modified';renderExplorer();}}]);break;default:explorerMenu({preventDefault(){},stopPropagation(){},clientX:r.left,clientY:r.bottom+4},null);}});
@@ -196,10 +223,13 @@
     $('.files-address-input',root).onkeydown=e=>{if(e.key==='Escape'){renderExplorer();return;}if(e.key==='Enter'){const raw=e.target.value,segments=raw.split(/[\\/>]+/).map(x=>x.trim()).filter(Boolean);let target=normalizePath(raw)||normalizePath(segments.at(-1));if(!target&&segments.length){let parent=normalizePath(segments[0])||'computer';for(const segment of segments.slice(1)){const node=entries.find(x=>x.parent===parent&&x.type==='folder'&&!isTrashed(x)&&x.name.toLocaleLowerCase('pl')===segment.toLocaleLowerCase('pl'));parent=node?.id||'';}target=parent;}if(target&&normalizePath(target))navigate(target);else Shell.toast('Nie znaleziono takiego folderu w demonstracji.');}};
     const files=$('.explorer-files',root);files.oncontextmenu=e=>{if(!e.target.closest('[data-entry]')){explorer.selected.clear();renderSelection();explorerMenu(e,null);}};files.onclick=e=>{if(!e.target.closest('[data-entry],button')){explorer.selected.clear();renderSelection();}};
     $$('[data-entry]',root).forEach(row=>{row.onclick=e=>selectEntry(e,row.dataset.entry);row.ondblclick=()=>openEntry(get(row.dataset.entry));row.oncontextmenu=e=>explorerMenu(e,get(row.dataset.entry));});
-    renderSelection();
+    renderSelection();files.scrollTop=explorer.scrollTop;
   }
   function focusAddress() {const root=explorer.win.content,input=$('.files-address-input',root);$('.files-breadcrumbs',root).hidden=true;input.hidden=false;input.value=breadcrumb(explorer.path).map(folderLabel).join(' > ');input.focus();input.select();}
   function explorerKeys(e) {
+    const shortcut=e.ctrlKey||e.metaKey,keyPressed=e.key.toLowerCase();
+    if(shortcut&&['t','w'].includes(keyPressed)){e.preventDefault();e.stopPropagation();if(keyPressed==='t')addExplorerTab();else closeExplorerTab();return;}
+    if(shortcut&&e.key==='Tab'){e.preventDefault();e.stopPropagation();const index=explorerTabs.indexOf(explorer),next=(index+(e.shiftKey?explorerTabs.length-1:1))%explorerTabs.length;switchExplorerTab(explorerTabs[next].tabId);return;}
     const editing=e.target.matches('input,textarea');if(editing&&!(e.ctrlKey&&['f','l'].includes(e.key.toLowerCase())))return;
     const command=e.ctrlKey||e.metaKey,key=e.key.toLowerCase();
     if(command&&['c','x','v','a','f','l'].includes(key)){e.preventDefault();e.stopPropagation();if(key==='c')copyEntries();if(key==='x')copyEntries(true);if(key==='v')pasteEntries();if(key==='a'){explorer.visible.forEach(x=>explorer.selected.add(x.id));renderSelection();}if(key==='f')$('.explorer-search',explorer.win.content).focus();if(key==='l')focusAddress();return;}
@@ -211,8 +241,8 @@
     const target=normalizePath(path)||'home';
     if(explorer&&!explorer.win.closed){explorer.win.show();navigate(target);return explorer.win;}
     const win=Shell.createWindow({id:'explorer',appId:'explorer',title:'Eksplorator plików',icon:'explorer',className:'files-explorer',width:1010,height:660,minWidth:430,minHeight:340});
-    explorer={win,path:target,stack:[target],position:0,selected:new Set(),anchor:null,query:'',sort:'name',visible:[]};
-    win.content.addEventListener('keydown',explorerKeys);renderExplorer();return win;
+    explorer=newTabState(win,target);explorerTabs=[explorer];
+    win.el.addEventListener('keydown',explorerKeys);renderExplorer();return win;
   }
   function updateNote(note) {
     if(note.win.closed)return;
@@ -283,6 +313,7 @@
     Shell.registerApp({id:'explorer',title:'Eksplorator plików',icon:'explorer',description:'Foldery i dokumenty demonstracji',open:()=>openExplorer('home')});
     Shell.registerApp({id:'notepad',title:'Notatnik',icon:'notepad',description:'Edytuj i zapisuj lokalne notatki',open:()=>openNotepad()});
     Shell.registerApp({id:'recycleBin',title:'Kosz',icon:'recycleBin',description:'Przywracanie usuniętych elementów',open:()=>openExplorer('recycleBin')});
+    document.addEventListener('keydown',e=>{if(explorer&&!explorer.win.closed&&Shell.activeWindow===explorer.win&&(e.ctrlKey||e.metaKey)&&(e.key==='Tab'||['t','w'].includes(e.key.toLowerCase())))explorerKeys(e);},true);
     window.addEventListener('beforeunload',e=>{if([...notebooks.values()].some(n=>n.dirty)){e.preventDefault();e.returnValue='';}});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();

@@ -26,7 +26,8 @@
     return `<label class="setting-toggle"><span>${value?'Włączone':'Wyłączone'}</span><input type="checkbox" role="switch" data-setting="${key}" aria-label="${esc(label)}" ${value?'checked':''}><i aria-hidden="true"></i></label>`;
   }
   function settingButton(id,label,primary=false) {
-    return `<button class="win-button${primary?' primary':''}" data-action="${id}">${label}</button>`;
+    const aria=({display:'Ustawienia ekranu',about:'Informacje o pulpicie'})[id];
+    return `<button class="win-button${primary?' primary':''}" data-action="${id}" ${aria?`aria-label="${aria}"`:''}>${label}</button>`;
   }
   function openSettings(page='system') {
     Shell.closePopups();
@@ -107,7 +108,7 @@
     if(id==='display')return openDisplay();
     if(id==='privacy-details')return openHelp('privacy');
     if(id==='fullscreen')return fullscreen();
-    if(id==='reset')return Shell.confirm({title:'Przywróć dane demonstracji',icon:'settings',message:'Usunąć zapisane w tej przeglądarce wizyty demonstracyjne, historię OpisAI, notatki i ustawienia? Strona uruchomi się ponownie z przykładową wizytą.',confirmLabel:'Przywróć',onConfirm:()=>{Object.keys(localStorage).filter(k=>k.startsWith('opisai.demo.')).forEach(k=>localStorage.removeItem(k));location.reload();}});
+    if(id==='reset')return Shell.confirm({title:'Przywróć dane demonstracji',icon:'settings',message:'Usunąć zapisane w tej przeglądarce wizyty demonstracyjne, historię OpisAI, notatki i ustawienia? Strona uruchomi się ponownie z przykładową wizytą.',confirmLabel:'Przywróć',onConfirm:()=>{Object.keys(localStorage).filter(k=>k.startsWith('opisai.demo.')||k==='opisai-demo-settings-v12').forEach(k=>localStorage.removeItem(k));location.reload();}});
   }
   async function fullscreen() {
     try {if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}
@@ -135,7 +136,7 @@
       review:`<h1>Przegląd przed wpisaniem</h1><p>Każdy wynik możesz przeczytać i zmienić. Porównaj go ze źródłem, zaznacz pola do wpisania i potwierdź, że opis został sprawdzony.</p><h2>Ochrona aktualnej wizyty</h2><p>Jeśli w czasie przeglądu zmienisz tekst w Klinice, OpisAI wykryje różnicę i zatrzyma wpisanie. Najpierw rozstrzygnij, którego tekstu chcesz użyć.</p><h2>Historia i cofanie</h2><p>Po wpisaniu możesz cofnąć ostatnią operację lub wrócić do wcześniejszego opracowania. Cofanie również sprawdza, czy w polach nie pojawiły się późniejsze zmiany.</p><p class="help-note">Wpisanie tekstu nie zapisuje wizyty. Zapis wykonujesz osobno w Klinice.</p><button class="win-button" data-go="history">${icon('history',18)} Otwórz historię</button>`,
       spelling:`<h1>Sprawdzanie pisowni</h1><p>W polach Kliniki przykładowe pomyłki są podkreślone. Najedź na słowo, aby zobaczyć podpowiedź, lub kliknij oznaczenie, aby przypiąć okienko.</p><h2>Wybierz poprawkę</h2><p>Możesz zastosować proponowaną pisownię, zignorować wyraz albo dodać go do lokalnego słownika. Poprawkę można cofnąć.</p><div class="spelling-key"><span><i class="red-underline">błąd</i> Pisownia</span><span><i class="amber-underline">termin</i> Nieznany wyraz</span><span><i class="blue-underline">powtórzenie</i> Powtórzony wyraz</span></div><button class="win-button" data-go="clinic">Otwórz wizytę</button>`,
       desktop:`<h1>Obsługa pulpitu</h1><p>Przeciągaj okna za pasek tytułu i zmieniaj ich rozmiar przy krawędziach. Podwójne kliknięcie paska tytułu maksymalizuje okno.</p><h2>Przyciąganie i pasek zadań</h2><p>Przesuń okno do lewej, prawej lub górnej krawędzi ekranu. Najedź na maksymalizację, aby wybrać układ. Ikona na pasku zadań pozwala minimalizować i przywracać aplikację.</p><h2>Menu i skróty</h2><p>Prawy przycisk działa na pulpicie, ikonach i paskach tytułu. Menu Start wyszukuje aplikacje. Zegar otwiera kalendarz, a ikony sieci i głośności — szybkie ustawienia.</p><div class="help-actions"><button class="win-button" data-go="shortcuts">Skróty klawiaturowe</button><button class="win-button" data-go="fullscreen">${icon('fullScreen',16)} Pełny ekran</button></div>`,
-      privacy:`<h1>Dane i prywatność</h1><p>Ta strona pokazuje działanie OpisAI na przykładowej wizycie. Generowanie i dyktowanie są lokalną demonstracją. Nie wykonujemy zapytań do modeli AI i nie włączamy mikrofonu.</p><h2>Co zapamiętuje demo?</h2><p>Zmiany wizyty, notatki, historia i wybrane ustawienia są przechowywane w pamięci tej przeglądarki. Możesz je usunąć przez <strong>Ustawienia → Prywatność i zabezpieczenia</strong>.</p><h2>Prawdziwa aplikacja</h2><p>Program OpisAI uruchomiony na komputerze ma własną konfigurację dostawców, urządzeń i integracji. Nie przenosimy do niego ustawień zapisanych na tej stronie.</p><p>Do przeglądania demonstracji nie potrzebujesz konta, hasła ani klucza API.</p><button class="win-button" data-go="privacy">Ustawienia prywatności</button>`
+      privacy:`<h1>Dane i prywatność</h1><p>Ta strona pokazuje działanie OpisAI na przykładowej wizycie. Generowanie i dyktowanie są lokalną demonstracją. Nie wykonujemy zapytań do modeli AI i nie włączamy mikrofonu.</p><h2>Co zapamiętuje demo?</h2><p>Zmiany wizyty, notatki i ustawienia są zapamiętywane w tej przeglądarce. Historia operacji OpisAI jest dostępna do odświeżenia lub zamknięcia karty. Możesz je usunąć przez <strong>Ustawienia → Prywatność i zabezpieczenia</strong>.</p><h2>Prawdziwa aplikacja</h2><p>Program OpisAI uruchomiony na komputerze ma własną konfigurację dostawców, urządzeń i integracji. Nie przenosimy do niego ustawień zapisanych na tej stronie.</p><p>Do przeglądania demonstracji nie potrzebujesz konta, hasła ani klucza API.</p><button class="win-button" data-go="privacy">Ustawienia prywatności</button>`
     };
     root.innerHTML=content[helpPage]||content.start;root.scrollTop=0;
     $$('[data-go]',root).forEach(b=>b.onclick=()=>{const id=b.dataset.go;if(id==='describe')window.OpisAI?.prepare();else if(id==='dictate')window.OpisAI?.dictate();else if(id==='history')window.OpisAI?.history();else if(id==='clinic')window.Clinic?.open();else action(id);});
@@ -172,8 +173,6 @@
     Shell.registerApp({id:'personalization',title:'Personalizacja',icon:'sun',keywords:'tapeta motyw tło wygląd',open:()=>openSettings('personalization')});
     Shell.registerApp({id:'shortcuts',title:'Skróty klawiaturowe',icon:'accessibility',keywords:'klawiatura skróty',open:()=>openSettings('accessibility')});
     document.addEventListener('fullscreenchange',()=>{if(settingsWin&&!settingsWin.closed)renderSettings();});
-    let welcomed=false;try{welcomed=localStorage.getItem('opisai.demo.welcomed.v2')==='1';}catch{}
-    if(!welcomed)setTimeout(()=>{Shell.notify({title:'OpisAI jest gotowy',message:'Kliknij niebieski bąbelek, aby opracować wizytę. Przytrzymaj go, aby wypróbować dyktowanie.',icon:'opisai',actionLabel:'Pierwsze kroki',onAction:()=>openHelp(),duration:8500});try{localStorage.setItem('opisai.demo.welcomed.v2','1');}catch{}},1800);
   }
   document.addEventListener('DOMContentLoaded',init);
 })();

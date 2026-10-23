@@ -19,7 +19,7 @@ Przytrzymanie bąbelka uruchamia przykładowe dyktowanie. Można zatrzymać, pop
 
 - Ruchome okna z fokusem, ośmioma uchwytami zmiany rozmiaru, minimalizacją, maksymalizacją, przyciąganiem do krawędzi i menu systemowym.
 - Pasek zadań z grupowaniem aplikacji, wskaźnikami i podglądami okien; menu Start, wyszukiwanie, widok zadań, kalendarz, powiadomienia i szybkie ustawienia.
-- Eksplorator z lokalnym drzewem dokumentów, historią nawigacji, wyszukiwaniem, operacjami na plikach i Koszem.
+- Eksplorator z kartami, lokalnym drzewem dokumentów, osobną historią nawigacji w każdej karcie, wyszukiwaniem, operacjami na plikach i Koszem.
 - Notatnik z zapisem lokalnym, pobraniem pliku, wyszukiwaniem i ochroną niezapisanych zmian.
 - Jasny i ciemny motyw, oryginalne tapety Bloom, wektorowe ikony oraz natywny Segoe UI z otwartym fontem Selawik jako zamiennikiem na innych systemach.
 
@@ -29,7 +29,7 @@ Wszystkie funkcje dotyczą pulpitu demonstracyjnego. Przeglądarka nie zmienia k
 
 Generowanie jest lokalnym formatowaniem przykładu, a dyktowanie odtwarza zapisaną transkrypcję. Demo nie łączy się z usługami AI, nie prosi o klucze API i nie włącza mikrofonu. Dowolny tekst wprowadzony przez użytkownika pozostaje źródłem wyniku; przykład Fistaszka nie zastępuje innej notatki.
 
-Wizyta, historia, dokumenty i ustawienia są zapisywane w `localStorage`, pod kluczami zaczynającymi się od `opisai.demo.`. Ustawienia → Prywatność i zabezpieczenia → Przywróć ustawienia usuwa dane demonstracji. Do testowania należy używać fikcyjnych danych.
+Wizyta, dokumenty i ustawienia pulpitu są zapisywane w `localStorage`, pod kluczami zaczynającymi się od `opisai.demo.`. Ustawienia OpisAI są zapisywane pod kluczem `opisai-demo-settings-v12`. Historia operacji OpisAI pozostaje w bieżącej karcie i jest czyszczona po odświeżeniu strony. Ustawienia → Prywatność i zabezpieczenia → Przywróć ustawienia usuwa dane demonstracji, w tym oba zestawy ustawień. Do testowania należy używać fikcyjnych danych.
 
 ## Struktura
 
