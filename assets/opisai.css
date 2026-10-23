@@ -116,6 +116,15 @@
   outline: none;
   -webkit-tap-highlight-color: transparent;
 }
+.oa-orb-surface {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  transform: rotate(var(--oa-orb-angle, 0rad))
+    scale(var(--oa-orb-stretch, 1), var(--oa-orb-squash, 1))
+    rotate(calc(-1 * var(--oa-orb-angle, 0rad)));
+  pointer-events: none;
+}
 .oa-orb-face {
   position: absolute;
   inset: 0;
@@ -123,9 +132,6 @@
   border-radius: 50%;
   background: linear-gradient(150deg, var(--oa-orb-top), var(--oa-orb-middle) 48%, var(--oa-orb-bottom));
   box-shadow: 0 3px 3px rgba(18, 49, 85, .12), 0 8px 10px rgba(18, 49, 85, .18);
-  transform: rotate(var(--oa-orb-angle, 0rad))
-    scale(var(--oa-orb-stretch, 1), var(--oa-orb-squash, 1))
-    rotate(calc(-1 * var(--oa-orb-angle, 0rad)));
   pointer-events: none;
 }
 .oa-orb-identity {
@@ -177,8 +183,8 @@
 .oa-orb-wrap.dragging .oa-orb {
   cursor: grabbing;
 }
-.oa-orb-wrap.dragging .oa-orb-face,
-.oa-orb-wrap.coasting .oa-orb-face {
+.oa-orb-wrap.dragging .oa-orb-surface,
+.oa-orb-wrap.coasting .oa-orb-surface {
   will-change: transform;
 }
 .oa-orb-wrap[data-phase="done"] {
@@ -425,7 +431,7 @@
   animation: none !important;
   transition: none !important;
 }
-.oa-orb-wrap.reduced-motion .oa-orb-face {
+.oa-orb-wrap.reduced-motion .oa-orb-surface {
   transform: none;
   will-change: auto;
 }
@@ -446,7 +452,7 @@
     animation: none !important;
     transition: none !important;
   }
-  .oa-orb-wrap .oa-orb-face {
+  .oa-orb-wrap .oa-orb-surface {
     transform: none;
     will-change: auto;
   }

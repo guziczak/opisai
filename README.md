@@ -24,7 +24,7 @@ Przytrzymanie bąbelka uruchamia przykładowe dyktowanie. Można zatrzymać, pop
 - Eksplorator z kartami, lokalnym drzewem dokumentów, osobną historią nawigacji w każdej karcie, wyszukiwaniem, operacjami na plikach i Koszem.
 - Notatnik z zapisem lokalnym, pobraniem pliku, wyszukiwaniem i ochroną niezapisanych zmian.
 - Jasny i ciemny motyw, oryginalne tapety Bloom, wektorowe ikony oraz natywny Segoe UI z otwartym fontem Selawik jako zamiennikiem na innych systemach.
-- Bąbelek z nazwą i wersją wewnątrz koła, sprężystym podążaniem za wskaźnikiem i krótkim wyhamowaniem po puszczeniu. Ruch pozostaje w obszarze pulpitu; trafienie w pole Kliniki wymaga jawnego upuszczenia na nim. Ograniczenie animacji w systemie lub ustawieniach OpisAI przełącza przeciąganie na bezpośrednie.
+- Bąbelek z nazwą i wersją wewnątrz koła, sprężystym podążaniem za wskaźnikiem, wyraźnym wydłużaniem w kierunku pociągnięcia i krótkim wyhamowaniem po puszczeniu. Kształt, ikona i napisy odkształcają się razem, po czym sprężyście wracają do koła. Cały obrys pozostaje w obszarze pulpitu; trafienie w pole Kliniki wymaga jawnego upuszczenia na nim. Ograniczenie animacji w systemie lub ustawieniach OpisAI przełącza przeciąganie na bezpośrednie.
 
 Wszystkie funkcje dotyczą pulpitu demonstracyjnego. Przeglądarka nie zmienia konfiguracji Windows, sieci ani urządzeń na komputerze odwiedzającego. Tryb pełnoekranowy jest dostępny w Ustawieniach; część skrótów klawiaturowych może przejąć system lub przeglądarka.
 
@@ -58,7 +58,7 @@ Kontrola składni: `node --check` dla zmienianych plików JavaScript. Testy bez 
 node --test tests/*.test.cjs
 ```
 
-GitHub Actions wykonuje te same kontrole dla push i pull requestów. Testy okien odtwarzają regresję ponownego otwierania po przeciągnięciu. Testy bąbelka sprawdzają model ruchu przy różnych częstotliwościach odświeżania oraz rzeczywistą obsługę kliknięcia, przytrzymania, upuszczenia, anulowania gestu i ograniczenia animacji. Harness DOM nie zastępuje oceny wyglądu w przeglądarce.
+GitHub Actions wykonuje te same kontrole dla push i pull requestów. Testy okien odtwarzają regresję ponownego otwierania po przeciągnięciu. Testy bąbelka sprawdzają model ruchu przy różnych częstotliwościach odświeżania, widoczne rozciąganie podczas przeciągania, sprężysty powrót, granice odkształconego obrysu oraz rzeczywistą obsługę kliknięcia, przytrzymania, upuszczenia, anulowania gestu i ograniczenia animacji. Harness DOM nie zastępuje oceny wyglądu w przeglądarce.
 
 Najważniejsze ścieżki do sprawdzenia w przeglądarce:
 

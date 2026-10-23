@@ -357,10 +357,15 @@
   function createOrb(){
     const host=document.getElementById('overlay-layer')||document.body;
     const wrap=document.createElement('div');wrap.className='oa-orb-wrap';wrap.dataset.phase='idle';
-    wrap.innerHTML=`<button class="oa-orb" type="button" aria-label="OpisAI. Kliknij: opisz. Przytrzymaj: dyktuj. Prawy przycisk: menu."><span class="oa-orb-face" aria-hidden="true"></span><span class="oa-orb-identity" aria-hidden="true"><svg class="oa-orb-mark" viewBox="0 0 48 44" focusable="false"><rect x="17" y="6" width="14" height="12" rx="4" fill="none" stroke="white" stroke-width="3"/><rect x="3" y="12" width="42" height="31" rx="8" fill="white"/><path class="oa-orb-cross" d="M22 19h4a1 1 0 0 1 1 1v6h6a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-6v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-6h-6a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h6v-6a1 1 0 0 1 1-1Z"/></svg><span class="oa-orb-name">OpisAI</span><span class="oa-orb-version">${VERSION}</span></span><span class="oa-orb-progress" aria-hidden="true"></span><span class="oa-orb-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button><div class="oa-orb-caption" role="status" hidden></div><div class="oa-orb-actions"></div><div class="oa-orb-tooltip">Trzymaj: dyktowanie</div>`;
+    wrap.innerHTML=`<button class="oa-orb" type="button" aria-label="OpisAI. Kliknij: opisz. Przytrzymaj: dyktuj. Prawy przycisk: menu.">
+      <span class="oa-orb-surface" aria-hidden="true">
+        <span class="oa-orb-face"></span><span class="oa-orb-identity"><svg class="oa-orb-mark" viewBox="0 0 48 44" focusable="false"><rect x="17" y="6" width="14" height="12" rx="4" fill="none" stroke="white" stroke-width="3"/><rect x="3" y="12" width="42" height="31" rx="8" fill="white"/><path class="oa-orb-cross" d="M22 19h4a1 1 0 0 1 1 1v6h6a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-6v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-6h-6a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h6v-6a1 1 0 0 1 1-1Z"/></svg><span class="oa-orb-name">OpisAI</span><span class="oa-orb-version">${VERSION}</span></span>
+        <span class="oa-orb-progress"></span><span class="oa-orb-meter"><i></i><i></i><i></i><i></i><i></i></span>
+      </span>
+    </button><div class="oa-orb-caption" role="status" hidden></div><div class="oa-orb-actions"></div><div class="oa-orb-tooltip">Trzymaj: dyktowanie</div>`;
     host.append(wrap);state.orb=wrap;
     orbMotionQuery=matchMedia('(prefers-reduced-motion: reduce)');
-    orbMotion=OpisAIOrbMotion.create({bounds:orbBounds(),reducedMotion:orbReducedMotion()});
+    orbMotion=OpisAIOrbMotion.create({bounds:orbBounds(),diameter:orbSize(),reducedMotion:orbReducedMotion()});
     updateOrbSize();resetOrbPosition();renderOrbActions();
     const orb=$('.oa-orb',wrap);
     let pointer=null,hold=null,drag=false,held=false,dropTarget=null;
@@ -488,11 +493,10 @@
     const motion=orbMotion.snapshot(),wrap=state.orb;
     state.orbX=motion.x;state.orbY=motion.y;
     wrap.style.transform=`translate3d(${motion.x.toFixed(2)}px,${motion.y.toFixed(2)}px,0)`;
-    const reduced=orbReducedMotion(),speed=Math.hypot(motion.vx,motion.vy);
-    const stretch=reduced?1:1+Math.min(.075,speed/16000);
-    wrap.style.setProperty('--oa-orb-angle',`${speed>1?Math.atan2(motion.vy,motion.vx):0}rad`);
-    wrap.style.setProperty('--oa-orb-stretch',stretch.toFixed(4));
-    wrap.style.setProperty('--oa-orb-squash',(1/stretch).toFixed(4));
+    const reduced=orbReducedMotion();
+    wrap.style.setProperty('--oa-orb-angle',`${motion.angle}rad`);
+    wrap.style.setProperty('--oa-orb-stretch',motion.stretch.toFixed(4));
+    wrap.style.setProperty('--oa-orb-squash',motion.squash.toFixed(4));
     wrap.classList.toggle('reduced-motion',reduced);
     wrap.classList.toggle('coasting',motion.mode==='coast'&&motion.moving);
     wrap.classList.toggle('near-left',motion.x<64);
@@ -520,7 +524,7 @@
   function updateOrbSize(){
     if(!state.orb)return;
     orbCancelDrag();state.orb.style.setProperty('--oa-orb-size',orbSize()+'px');
-    orbMotion?.setReducedMotion(orbReducedMotion());refreshOrbBounds();
+    orbMotion?.setDiameter(orbSize());orbMotion?.setReducedMotion(orbReducedMotion());refreshOrbBounds();
   }
   function showBubble(){state.orbHidden=false;state.orb?.classList.remove('hidden');refreshOrbBounds();}
   function hideBubble(){orbCancelDrag();state.orbHidden=true;state.orb?.classList.add('hidden');}

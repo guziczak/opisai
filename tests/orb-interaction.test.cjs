@@ -135,6 +135,8 @@ function flick(f) {
 function assertStopped(f) {
   assert.equal(f.pendingFrames, 0); assert.equal(f.pendingTimers, 0); assert.equal(f.orb.hasPointerCapture(7), false);
   for (const name of ['dragging', 'holding', 'coasting']) assert.equal(f.wrap.classList.contains(name), false, name);
+  assert.equal(Number(f.wrap.style['--oa-orb-stretch']), 1, 'The resting bubble must be round');
+  assert.equal(Number(f.wrap.style['--oa-orb-squash']), 1);
 }
 const plain = value => JSON.parse(JSON.stringify(value));
 
@@ -158,6 +160,26 @@ test('a fling coasts but neither its synthetic click nor crossing a field starts
   const before = f.position(), probes = f.probes; f.advance(80);
   assert.notDeepEqual(f.position(), before); assert.equal(f.probes, probes, 'Coasting must not perform drop hit tests');
   f.advance(2000); assertStopped(f); assert.deepEqual(f.actions, []); assert.deepEqual(f.marks, []);
+});
+
+test('a held drag visibly stretches the rendered bubble and release springs back without an action', () => {
+  const f = fixture(), [x, y] = f.position();
+  f.pointer('pointerdown', x + 50, y + 50);
+  for (let frame = 1; frame <= 18; frame++) {
+    f.pointer('pointermove', x + 50 - frame * 10, y + 50);
+    f.advance(1000 / 60);
+  }
+  const stretch = Number(f.wrap.style['--oa-orb-stretch']);
+  assert(stretch > 1.2, 'An ordinary 600px/s drag must produce a clearly visible elongation');
+  assert(Number(f.wrap.style['--oa-orb-squash']) < .85);
+  assert(Math.abs(parseFloat(f.wrap.style['--oa-orb-angle'])) < .01, 'Stretch must follow the horizontal drag axis');
+  assert(f.orb.hasPointerCapture(7)); assert(f.wrap.classList.contains('dragging'));
+  f.pointer('pointerup', x + 50 - 180, y + 50);
+  assert.equal(Number(f.wrap.style['--oa-orb-stretch']), stretch, 'Release must preserve the current shape');
+  assert.equal(f.pendingFrames, 1);
+  f.advance(80);
+  assert(Number(f.wrap.style['--oa-orb-stretch']) > 1.01, 'The rubber must recover over time, not snap to a circle');
+  f.advance(1500); assertStopped(f); assert.deepEqual(f.actions, []);
 });
 
 test('release uses its current field, commits once, and never starts a field action in a busy phase', () => {
