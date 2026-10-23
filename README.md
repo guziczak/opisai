@@ -4,6 +4,8 @@
 
 Demonstracja przeglądarkowa OpisAI, dostosowana do przebiegu pracy aplikacji **0.12.0rc32**. Interfejs gabinetu jest osadzony w pulpicie wzorowanym na Windows 11.
 
+![Pulpit Windows 11 z Kliniką XP i oknem przygotowania opisu OpisAI](docs/preview-windows11-20261023.jpg)
+
 ## Przebieg wizyty
 
 1. Edytuj wywiad, badanie i rozpoznanie w Klinice XP.
