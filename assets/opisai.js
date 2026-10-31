@@ -851,10 +851,12 @@
     ];
   }
   /* MacroController._spelling_target: no spelling lines while OpisAI reads, generates, reviews, writes, dictates or
-   * has its settings open (SafeCoordinator.busy): any open OpisAI work view counts; only these windows do not.
-   * The operation record is not part of it (rc32 busy has no "operation"): "Odrzuć" or × on the preview leave it behind. */
-  const SPELLING_PASSIVE=new Set(['opisai-about','opisai-history','opisai-clear-history','opisai-history-delete','opisai-profile']);
-  const spellingBusy=()=>!!(state.job||state.review||state.recording||state.receipt)||['processing','recording','review'].includes(state.phase)||[...windows].some(([id,win])=>!SPELLING_PASSIVE.has(id)&&!!win?.el?.isConnected);
+   * has its settings open. SafeCoordinator.busy names its work, and so do these views: compose, review and the undo
+   * confirmation (_review_open), progress (job, _capture_busy, _writing), settings (_settings_open), dictation and its
+   * discard question (dictation_state.active). Other OpisAI windows are not work: notices and recovery reports (_say,
+   * _show_problem), history, About, a profile view. The operation record is not either: "Odrzuć" or × leave it behind. */
+  const SPELLING_WORK=['opisai-compose','opisai-review','opisai-undo','opisai-progress','opisai-settings','opisai-dictation','opisai-discard'];
+  const spellingBusy=()=>!!(state.job||state.review||state.recording||state.receipt)||['processing','recording','review'].includes(state.phase)||SPELLING_WORK.some(id=>!!windows.get(id)?.el?.isConnected);
   window.OpisAISpelling?.connect({enabled:()=>!!preferences.spelling,busy:spellingBusy,running:()=>!state.closed,theme:()=>preferences.theme}); // assets/opisai-spelling.js
   function trayTooltip(){return state.closed?'OpisAI — zamknięte\nKliknij, aby uruchomić':`OpisAI — ${preferences.model}\nKlik: opisz · Przytrzymaj: dyktuj · Prawy: menu`;}
   function syncTray(){$('.tray-opisai')?.setAttribute('aria-label',state.closed?'OpisAI — zamknięte. Kliknij, aby uruchomić.':'OpisAI. Kliknij: opisz. Prawy przycisk lub Shift+F10: menu.');}

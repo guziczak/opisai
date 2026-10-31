@@ -358,6 +358,18 @@ test('the spelling lines come back after "Odrzuć" or × on the preview: the ope
   assert.equal(host.busy(), false, 'the lines come back'); assert.deepEqual(plain(f.api.state.operation), { id: 2 });
 });
 
+test('spelling busy names OpisAI\'s work as SafeCoordinator.busy does; its notices and reports are not work', () => {
+  let host = null; const spelling = { connect(next) { host = next; }, refresh() {}, available: () => true, status: () => '', showIssues() {}, undo() {}, editWords() {} };
+  const f = fixture({ spelling });
+  for (const id of ['opisai-compose', 'opisai-review', 'opisai-undo', 'opisai-progress', 'opisai-settings', 'opisai-dictation', 'opisai-discard']) {
+    const view = f.api.open(id); assert.equal(host.busy(), true, id); view.close(); assert.equal(host.busy(), false, id + ' closed');
+  }
+  // _say() message boxes, _show_problem's recovery report (opened after job and _writing are cleared), the exchange view,
+  // the Gemini consent question (some open in the documentation and dictation views), history, About and a profile view
+  for (const id of ['opisai-message', 'opisai-recovery', 'opisai-exchange', 'opisai-gemini-consent', 'opisai-history', 'opisai-clear-history', 'opisai-history-delete', 'opisai-about', 'opisai-profile']) f.api.open(id);
+  assert.equal(host.busy(), false, 'they keep the lines');
+});
+
 test('the menu and the model tooltip follow the OpisAI theme, not the desktop theme', () => {
   for (const [theme, dark] of [['light', false], ['dark', true], ['blue', false]]) {
     const f = fixture({ prefs: { theme } }), [x, y] = f.center(); f.doc.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
