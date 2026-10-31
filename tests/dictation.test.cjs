@@ -104,7 +104,7 @@ function bubble(target, event) { event.target = target; for (let node = target; 
 
 function fixture({ prefs = {}, editor = true, active = 'badanie' } = {}) {
   const doc = new Target(), win = new Target(), media = new Target(), frames = new Map(), timers = new Map(), intervals = new Map();
-  const reviews = [], shown = [], toasts = [], confirms = [], opened = [], api = {}, storage = new Map(); let now = 0, serial = 0;
+  const reviews = [], shown = [], toasts = [], confirms = [], opened = [], copied = [], api = {}, storage = new Map(); let now = 0, serial = 0;
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body);
   doc.createElement = tag => new Element(tag, doc); doc.createElementNS = (_, tag) => new Element(tag, doc);
   doc.querySelector = selector => doc.documentElement.querySelector(selector);
@@ -133,7 +133,7 @@ function fixture({ prefs = {}, editor = true, active = 'badanie' } = {}) {
   };
   win.Clinic = clinic; win.Shell = shell; win.devicePixelRatio = 1;
   const context = vm.createContext({ window: win, document: doc, Element, __reviews: reviews, __api: api, Clinic: clinic, Shell: shell,
-    innerWidth: 1536, innerHeight: 866, performance: { now: () => now }, matchMedia: () => media, navigator: {},
+    innerWidth: 1536, innerHeight: 866, performance: { now: () => now }, matchMedia: () => media, navigator: { clipboard: { writeText: async text => { copied.push(text); } } },
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)) },
     setTimeout: (fn, delay = 0) => { timers.set(++serial, { fn, due: now + delay }); return serial; }, clearTimeout: id => timers.delete(id),
     setInterval: (fn, delay) => { intervals.set(++serial, { fn, delay, due: now + delay }); return serial; }, clearInterval: id => intervals.delete(id),
@@ -152,7 +152,7 @@ function fixture({ prefs = {}, editor = true, active = 'badanie' } = {}) {
     }
   }
   const f = {
-    doc, win, api, clinic, fields, reviews, shown, toasts, confirms, opened, storage, advance, bubble,
+    doc, win, api, clinic, fields, reviews, shown, toasts, confirms, opened, copied, storage, advance, bubble,
     get state() { return api.state; }, get rec() { return api.state.recording; }, get phase() { return api.state.phase; },
     get panel() { return doc.querySelector('.oa-dictation'); },
     q(selector) { return f.panel?.querySelector(selector) || null; },
@@ -387,4 +387,12 @@ test('Konfiguracja → Dyktowanie: rc32 engines, the ChatGPT retention notice, t
   const auto = chat.querySelector('[data-setting="autoEnter"]'), spin = chat.querySelector('[data-setting="autoEnterSeconds"]');
   assert.equal(spin.disabled, true); auto.checked = true; f.bubble(auto, { type: 'change' }); assert.equal(spin.disabled, false);
   spin.value = '3'; f.bubble(spin, { type: 'change' }); assert.equal(spin.value, 10, 'outside 5–600 s it is 10');
+});
+
+test('Konfiguracja → System → "Kopiuj informacje" names the dictation engines as rc32 does, never a stored identifier', async () => {
+  const f = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
+  f.api.settings('system'); f.click(f.doc.querySelector('[data-settings-page] [data-action="copy-info"]')); await new Promise(resolve => setImmediate(resolve));
+  assert.equal(f.copied.length, 1);
+  assert.match(f.copied[0], /^Dyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce \(próba\)$/m, 'application_info_text: "Dyktowanie: " + transcription_summary()');
+  assert(!/chatgpt_browser|local_whisper|gemini\b/.test(f.copied[0]));
 });
