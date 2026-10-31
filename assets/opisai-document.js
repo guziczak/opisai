@@ -892,7 +892,7 @@
   const api = {SECTIONS, TEMPLATE, SAMPLE, sectionByKey, variant, forCapabilities, sameVariant, variantLabel, describeVariant, modeSummary,
     clauses, sourcePanelValues, buildFullPanel, assessPanelAssignment, locatePanelQuote, verifyPanelQuotes, spellingOnly, splitSpelling, respell, withoutLabel, withUnit,
     removeRepeatedPanelFacts, preservationContract, checkPreservation, polish, isSample, splitSentences, routeSection, plan, generate, promptOutline, sentSource, consentScope,
-    reviewDocument, originCaption, originallyBlank, panelIssueDescription, blockNeedsReview, renderPanelRow, OUTLINE_NOTE, PRESERVATION_LIMITS};
+    reviewDocument, originCaption, originallyBlank, panelIssueDescription, blockNeedsReview, renderPanelRow, OUTLINE_NOTE, PRESERVATION_LIMITS, PANEL_COPY};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else globalThis.OpisAIDocument = api;
 })();

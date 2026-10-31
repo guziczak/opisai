@@ -447,6 +447,7 @@
 @container (max-height:399px){.oa-rv .oa-rv-summary{display:none}}
 @container (max-width:819px){.oa-rv .oa-rv-fnote{display:none}} /* footer_note: width >= 820 */
 @container (max-width:849px){.oa-rv .oa-rv-dnote{display:none}}
+.oa-options-table.oa-doc-layout td:last-child{width:auto} /* Konfiguracja → Sekcje opisu: the subsections column */
 /* message boxes and recovery */
 .oa-mb{padding:0 18px}
 .oa-mb-body{display:flex;gap:14px;padding:16px 0 8px;flex:1;min-height:0;overflow:auto}

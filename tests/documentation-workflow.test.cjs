@@ -16,7 +16,7 @@ const startup = "  if(document.readyState==='loading')";
 assert.equal(source.split(startup).length, 2, 'The test boundary must precede the single application startup');
 const controllerSource = source.replace(startup, `
   failure=message=>{__failures.push(message);};
-  Object.assign(__api,{prepare,review,undo,history,state,preferences:()=>preferences,setPhase});
+  Object.assign(__api,{prepare,review,undo,history,settings,state,preferences:()=>preferences,setPhase});
   return;
 ${startup}`);
 
@@ -524,6 +524,17 @@ test('Esc is reject(): compose cancels, the read and the generation ask to cance
   f = fixture(); f.api.review(result); f.click('opisai-review', '[data-action="compose"]'); f.advance(1000);
   f.escape('opisai-compose'); f.advance(10);
   assert.ok(f.win('opisai-review')?.content.querySelector('[data-plain]'), 'the dictation summary comes back');
+});
+
+test('settings: no inert compose switches; the page shows the layout and panel template the workflow uses', () => {
+  const f = fixture(); f.api.settings('sections');
+  const page = f.q('opisai-settings', '[data-settings-page]');
+  assert.equal(page.querySelectorAll('[data-panel-row], [data-section-name], [data-setting="rich"], [data-setting="panel"], [data-setting="diagnosis"]').length, 0);
+  assert.match(page.textContent, /Panel: wartości z pól, a brakujące parametry według Ustawień \(np\. norma\)\./);
+  assert.deepEqual(page.querySelectorAll('.oa-doc-layout tbody tr').map(tr => tr.children[0].textContent), ['Opis badania i ocena', 'Opis wywiadu', 'Rozpoznanie robocze']);
+  assert.ok(page.querySelectorAll('tbody td').some(td => td.textContent === 'niepowiększone, niebolesne, przesuwalne względem podłoża'));
+  f.click('opisai-settings', '[data-page="history"]');
+  assert.doesNotMatch(f.q('opisai-settings', '[data-settings-page] p').textContent, /Potwierdzone wpisy/);
 });
 
 test('review compaction: no later plain rule undoes a short- or narrow-window rule (ReviewPage._layout_review)', () => {
