@@ -347,7 +347,9 @@ test('Kontynuuj dyktowanie: the edited text waits in "Dotychczasowy tekst", the 
   // A changed field or window keeps the earlier text and says why.
   f.api.state.review = null; f.api.setPhase('idle'); f.clinic.text.badanie += ' X';
   f.api.dictate({ field: 'badanie', base: 'DRUGA POPRAWKA.', snapshot: second.snapshot, session: second.session, continuation: true, direct: true }); f.advance(100);
-  assert.equal(f.rec, null); assert.equal(f.api.state.review, second); assert.deepEqual(f.confirms, ['Zmieniła się wizyta lub treść jej pola. Zachowano wcześniejszy tekst dyktowania.']);
+  assert.equal(f.rec, null); assert.equal(f.api.state.review, second); assert.equal(f.phase, 'review', 'the review waits behind the bubble');
+  assert.equal(f.card(), 'Zmieniła się wizyta lub treść jej pola. Zachowano wcześniejszy tekst dyktowania.');
+  assert.match(f.doc.querySelector('.oa-error-card').html, /⚠ Transkrypcja/, 'the transcription notice (_show_transcribe_info, error=True)'); assert.deepEqual(f.confirms, [], 'never a modal message box');
   // Once the three samples are used up the recording stays silent and the badge says so; no sample repeats.
   const g = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
   const stub = { field: 'badanie', takes: 3, edited: { badanie: 'Stan ogólny obniżony.' }, snapshot: { ...g.clinic.text }, session: 1, output: { badanie: 'x' } };

@@ -245,7 +245,7 @@
     if(!window.Clinic?.isEditorOpen?.()){errorCard('Nie znaleziono podokna wizyty — otwórz wizytę w Klinice.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});restoreDictationReview(options);return;}
     const key='badanie',ctx=window.Clinic.getContext?.()||{},fields=getFields(),saved=options.continuation?dictationSaved(options):null;let base=fields[key]||'';
     if(options.continuation){
-      if(options.session!==undefined&&options.session!==ctx.session||String(options.snapshot?.[key]??base)!==base){restoreDictationReview(options);Shell.confirm?.({title:'OpisAI — sprawdź komunikat',icon:'info',message:'Zmieniła się wizyta lub treść jej pola. Zachowano wcześniejszy tekst dyktowania.'});return;}
+      if(options.session!==undefined&&options.session!==ctx.session||String(options.snapshot?.[key]??base)!==base){errorCard('Zmieniła się wizyta lub treść jej pola. Zachowano wcześniejszy tekst dyktowania.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});restoreDictationReview(options);return;} // DictationContinuationInput.validate → _show_transcribe_info(error=True)
       base=String(options.base??saved?.edited?.[key]??'');
     }
     const engine=preferences.transcriber,chat=engine==='chatgpt_browser',two=chat&&preferences.cardMode==='two',takes=options.continuation?(saved?.takes||1):0;
