@@ -172,25 +172,3 @@
 .clinic-subtle-message{font-size:11px;color:#7b8591;margin-top:0}
 .clinic-empty-cell{color:#7c8794}
 
-/* OpisAI spelling overlay drawn over the Klinika description fields. */
-.clinic-spell{position:relative;cursor:text;text-decoration-line:underline;text-decoration-color:#cc2b38;text-decoration-style:solid;text-decoration-thickness:1.5px;text-underline-offset:3px}
-.clinic-spell:hover{text-decoration-thickness:2.5px}
-.clinic-spell.unknown{text-decoration-color:#aa6817;text-decoration-style:dashed}
-.clinic-spell.repeat{text-decoration-color:#276fb2;text-decoration-style:dotted;text-decoration-thickness:2px}
-.clinic-spell-popover{position:fixed;width:286px;z-index:65000;background:#fdfdfd;border:1px solid #aeb8c5;border-radius:5px;box-shadow:0 6px 25px #0003;overflow:hidden;font:12px/1.45 "Segoe UI",Selawik,sans-serif;color:#263544;user-select:none;animation:clinic-pop-in .1s ease-out}
-@keyframes clinic-pop-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-.clinic-spell-popover-header{display:flex;align-items:center;padding:9px 11px 5px;font-weight:600;font-size:11px;color:#8c2934}
-.clinic-spell-popover-header.unknown{color:#956012}
-.clinic-spell-popover-header.repeat{color:#286695}
-.clinic-spell-popover-header svg{margin-right:6px}
-.clinic-spell-close{margin-left:auto;display:flex;padding:2px;border:0;background:none;color:#718092;border-radius:3px}
-.clinic-spell-close:hover{background:#e8ebef}
-.clinic-spell-explanation{padding:0 11px 8px;color:#7b8794;font-size:11px}
-.clinic-spell-suggestion{display:flex;align-items:center;gap:7px;text-align:left;width:calc(100% - 12px);padding:9px;border:0;background:#eef5fc;color:#164d7a;border-radius:3px;margin:0 6px 7px;font:13px "Segoe UI",Selawik,sans-serif}
-.clinic-spell-suggestion:hover{background:#dceafb}
-.clinic-spell-suggestion s{color:#8795a3;font-size:12px;text-decoration-thickness:1px}
-.clinic-spell-suggestion b{font-weight:600;word-break:break-word}
-.clinic-spell-actions{display:flex;justify-content:space-between;align-items:center;gap:4px;border-top:1px solid #e0e5ec;padding:6px}
-.clinic-spell-action{display:flex;align-items:center;gap:4px;padding:5px;border:0;background:none;font:11px "Segoe UI",Selawik,sans-serif;color:#52677d;border-radius:3px}
-.clinic-spell-action:hover{background:#edf1f5;color:#075e9d}
-.clinic-spell-source{padding:3px 11px 7px;color:#98a1ae;font-size:10px}

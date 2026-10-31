@@ -1,0 +1,64 @@
+/* OpisAI 0.12.0rc32 — spelling over the Klinika description fields (ui/spelling_overlay.py, spelling_suggestions.py).
+   OpisAI's own layers above the Klinika window, not part of it: only the bars under words take the mouse. */
+.oa-spell-layer,.oa-spell-cards{position:absolute;inset:0;pointer-events:none}
+.oa-spell-layer{z-index:7900}   /* over the windows, under the bubble (#overlay-layer, 8000): the bubble covers its part of a line */
+.oa-spell-cards{z-index:8500}   /* the card lies above the lines and the bubble (rc28) */
+.oa-spell-bar{position:absolute;pointer-events:auto}
+.oa-spell-bar svg,.oa-spell-confirm svg{position:absolute;left:0;top:0;overflow:hidden}
+.oa-spell-bar.is-new{animation:oa-spell-fade .14s cubic-bezier(.33,1,.68,1)}
+@keyframes oa-spell-fade{from{opacity:0}to{opacity:1}}
+/* SpellingRangePreview: the whole range of a context proposal, a faint amber box; the letters stay readable. */
+.oa-spell-preview{position:absolute;inset:0}
+.oa-spell-preview i{position:absolute;box-sizing:border-box;border:1px solid rgba(197,138,34,.55);border-radius:2px;background:rgba(232,169,65,.11)}
+/* SpellingConfirmation: min(1, t/0.12) × (1 − t)^1.4 over 0.38 s. */
+.oa-spell-confirm{position:absolute;opacity:0;animation:oa-spell-confirm .38s linear}
+@keyframes oa-spell-confirm{0%{opacity:0}6%{opacity:.46}12%{opacity:.84}25%{opacity:.67}37.5%{opacity:.52}50%{opacity:.38}62.5%{opacity:.25}75%{opacity:.14}87.5%{opacity:.05}100%{opacity:0}}
+/* SuggestionCard: colours of the OpisAI theme (rc32 colors("auto") → _theme_is_dark), the kind's colour from spelling_style. */
+.oa-spell-card{--bg:#f5f7fb;--ink:#222a36;--muted:#5e6878;--line:#ccd4df;--kind:#d1352f;--kind-rgb:209,53,47;position:absolute;box-sizing:border-box;display:flex;flex-direction:column;gap:5px;padding:7px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:13.333px/18px 'Segoe UI','Selawik',Arial,sans-serif;pointer-events:auto;user-select:none;-webkit-user-select:none;overflow:hidden}
+.oa-spell-card[hidden]{display:none}   /* margins 8 px with the painted 1 px frame inside them: 1 + 7 */
+.oa-spell-ruler{position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;font:13.333px/18px 'Segoe UI','Selawik',Arial,sans-serif}   /* the app font, Segoe UI 10 pt */
+.oa-spell-card.oa-theme-dark{--bg:#202124;--ink:#edf0f4;--muted:#a5abb5;--line:#42454b}
+.oa-spell-card.is-pinned{border-color:rgba(var(--kind-rgb),.7);box-shadow:inset 0 0 0 .5px rgba(var(--kind-rgb),.7)}
+.oa-spell-card button{margin:0;border:0;border-radius:5px;background:transparent;color:var(--ink);font:inherit;cursor:default}
+.oa-spell-card button:hover:not(:disabled){background:var(--line)}
+.oa-spell-card button:disabled{color:var(--muted);opacity:1}   /* QPushButton:disabled: muted ink, not the desktop's faded button */
+.oa-spell-head{flex:none;display:flex;align-items:center;gap:4px;height:26px;min-width:0}
+.oa-spell-kind{flex:none;white-space:nowrap}
+.oa-spell-kind .dot{color:var(--kind)}
+.oa-spell-kind .name{color:var(--muted)}
+.oa-spell-word{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oa-spell-search{flex:none;color:var(--muted);white-space:nowrap;overflow:hidden}
+.oa-spell-card .oa-spell-close{flex:none;width:26px;height:26px;padding:0;line-height:26px;text-align:center}   /* QToolButton "×": the app font, 10 pt */
+.oa-spell-choices{flex:1;min-height:0;display:flex;flex-direction:column;gap:3px;padding-right:2px;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
+.oa-spell-choices.reserve{overflow-y:scroll}
+.oa-spell-choice{flex:none;display:block;width:100%;height:30px;padding:0 7px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oa-spell-choice b{font-weight:700;color:var(--kind)}
+.oa-spell-choice.is-primary{font-weight:600;background:rgba(var(--kind-rgb),.094)}
+.oa-spell-card .oa-spell-choice.is-primary:hover{background:rgba(var(--kind-rgb),.188)}
+.oa-spell-choice s,.oa-spell-choice .arrow{color:var(--muted)}
+.oa-spell-choice s{text-decoration:line-through}
+.oa-spell-choice.is-context{height:auto;display:flex;flex-direction:column;gap:2px;padding:5px 7px;white-space:normal;overflow-wrap:anywhere}
+.oa-spell-choice.is-context .before{color:var(--muted)}
+.oa-spell-choice.is-context b{font-weight:600;color:#ca8a25}
+.oa-spell-empty,.oa-spell-hint{flex:none}
+.oa-spell-hint{color:var(--muted)}
+.oa-spell-empty[hidden],.oa-spell-hint[hidden],.oa-spell-skeleton[hidden]{display:none}
+/* _Skeleton: two quiet bars where the choices will come (rc24, instead of a "searching" sentence). */
+.oa-spell-skeleton{flex:none;position:relative;height:63px}
+.oa-spell-skeleton i{position:absolute;left:7px;height:9px;border-radius:4.5px;background:var(--line)}
+.oa-spell-skeleton i:first-child{top:11.25px;width:calc((100% - 14px) * .72)}
+.oa-spell-skeleton i:last-child{top:42.75px;width:calc((100% - 14px) * .48)}
+.oa-spell-foot{flex:none;display:flex;gap:3px;height:28px}
+.oa-spell-foot button{flex:1 1 auto;min-width:0;padding:4px 7px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* shares set at the opening (_measure) */
+/* QToolTip "Szukam propozycji…" while the right button's menu is prepared. */
+.oa-spell-tip{position:absolute;padding:4px 8px;border:1px solid #ccd4df;border-radius:5px;background:#edf1f7;color:#222a36;font:12px/1.4 'Segoe UI','Selawik',Arial,sans-serif;white-space:nowrap;pointer-events:none}
+.oa-spell-tip.oa-theme-dark{border-color:#42454b;background:#292b2f;color:#edf0f4}
+/* A menu opened by the mouse holds the keyboard (Esc closes it) without a focus ring of its own. */
+.shell-menu.oa-spell-menu:focus{outline:none}
+/* "Mój słownik…": QInputDialog.getMultiLineText. */
+.oa-spell-words{padding:14px 16px 16px;gap:10px}
+.oa-spell-words-label{color:var(--oa-muted)}
+.oa-app.oa-spell-words textarea{flex:1;min-height:120px;resize:none;line-height:1.45}
+.oa-spell-words-foot{display:flex;justify-content:flex-end;gap:8px}
+.oa-spell-words-foot .oa-btn{min-width:88px}
+@media (prefers-reduced-motion:reduce){.oa-spell-bar.is-new{animation:none}}

@@ -1722,7 +1722,6 @@
   function orbMenuItems(){ // MacroController._setup_tray: same order, separators and submenus
     const unavailable=name=>()=>{unavailableToast?.remove?.();unavailableToast=toast(`„${name}” jest niedostępne w demonstracji. Okna i pola Kliniki XP są tu przypisane na stałe.`);}; // each replaces the last, so they never stack over the bubble
     const dot='<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="#22c55e"/></svg>';
-    const spelling=preferences.spelling&&!!window.Clinic?.isEditorOpen?.();
     return [
       {label:'Wybierz okno główne...',icon:'computer',onClick:unavailable('Wybierz okno główne')},
       {label:'Wybierz podokno opisu...',icon:'window',onClick:unavailable('Wybierz podokno opisu')},
@@ -1731,12 +1730,12 @@
       {separator:true},
       {label:'🎤  Dyktowanie (lub przytrzymaj bąbelek)',icon:'volume',onClick:()=>dictate()},
       {label:'🎙  Profil głosu (rozpoznawanie mówców)…',title:'Kalibracja głosu do oznaczania mówców w dyktowaniu (czytanka ~2 min)',onClick:()=>settings('dictation')},
-      {label:'Podpowiedzi pisowni',children:()=>[
-        {label:'Podkreślaj podejrzane słowa w Klinice',checked:!!preferences.spelling,onClick:()=>{preferences.spelling=!preferences.spelling;window.Clinic?.setSpellingEnabled?.(preferences.spelling);savePreferences();}},
-        {label:'Sugestie dla aktywnej wizyty…',disabled:!spelling,onClick:()=>{const mark=document.querySelector('.kxp-editor-window .clinic-spell');if(mark)mark.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,button:0}));else toast('Brak podpowiedzi pisowni w aktywnej wizycie.');}},
-        {label:'Cofnij ostatnią poprawkę pisowni',disabled:!spelling,onClick:unavailable('Cofnij ostatnią poprawkę pisowni')},
-        {label:'Mój słownik…',onClick:unavailable('Mój słownik')},
-        {label:'Sprawdzanie pisowni',disabled:true}]},
+      {label:'Podpowiedzi pisowni',children:()=>{const sp=window.OpisAISpelling,ready=!!(preferences.spelling&&sp?.available());return [ // _refresh_spelling_menu on aboutToShow
+        {label:'Podkreślaj podejrzane słowa w Klinice',checked:!!preferences.spelling,onClick:()=>{preferences.spelling=!preferences.spelling;savePreferences();sp?.refresh();}}, // _set_spelling_enabled: the one source
+        {label:'Sugestie dla aktywnej wizyty…',disabled:!ready,onClick:()=>sp.showIssues()},
+        {label:'Cofnij ostatnią poprawkę pisowni',disabled:!ready,onClick:()=>sp.undo()},
+        {label:'Mój słownik…',onClick:sp?()=>sp.editWords():unavailable('Mój słownik')},
+        {label:sp?.status()||'Sprawdzanie pisowni',disabled:true}];}}, // the spelling status (SpellingController.status_changed)
       {label:'🎮  Tryb fizyki (easter egg)',onClick:physicsMode},
       {separator:true},
       {label:'Konfiguracja...',icon:'list',onClick:()=>settings()},
@@ -1750,6 +1749,14 @@
         {label:'Sprawdź niepotwierdzone operacje…',onClick:()=>Shell.confirm({title:'Dziennik',icon:'info',message:'Brak niezamkniętych lub niepotwierdzonych operacji.'})}]}
     ];
   }
+  /* MacroController._spelling_target: no spelling lines while OpisAI reads, generates, reviews, writes, dictates or
+   * has its settings open. SafeCoordinator.busy names its work, and so do these views: compose, review and the undo
+   * confirmation (_review_open), progress (job, _capture_busy, _writing), settings (_settings_open), dictation and its
+   * discard question (dictation_state.active). Other OpisAI windows are not work: notices and recovery reports (_say,
+   * _show_problem), history, About, a profile view. The operation record is not either: "Odrzuć" or × leave it behind. */
+  const SPELLING_WORK=['opisai-compose','opisai-review','opisai-undo','opisai-progress','opisai-settings','opisai-dictation','opisai-discard'];
+  const spellingBusy=()=>!!(state.job||state.review||state.recording||state.receipt)||['processing','recording','review'].includes(state.phase)||SPELLING_WORK.some(id=>!!windows.get(id)?.el?.isConnected);
+  window.OpisAISpelling?.connect({enabled:()=>!!preferences.spelling,busy:spellingBusy,running:()=>!state.closed,theme:()=>preferences.theme}); // assets/opisai-spelling.js
   function trayTooltip(){return state.closed?'OpisAI — zamknięte\nKliknij, aby uruchomić':`OpisAI — ${preferences.model}\nKlik: opisz · Przytrzymaj: dyktuj · Prawy: menu`;}
   function syncTray(){$('.tray-opisai')?.setAttribute('aria-label',state.closed?'OpisAI — zamknięte. Kliknij, aby uruchomić.':'OpisAI. Kliknij: opisz. Prawy przycisk lub Shift+F10: menu.');}
 
