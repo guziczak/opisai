@@ -121,7 +121,8 @@ function fixture({ prefs = {}, editor = true, active = 'badanie' } = {}) {
   storage.set('opisai-demo-settings-v12', JSON.stringify(prefs));
   media.matches = false;
   const clinic = { editor, session: 1, text, isEditorOpen: () => clinic.editor, isOpen: () => true, open: () => opened.push('main'), openEditor: () => opened.push('editor'),
-    getFields: () => ({ ...clinic.text }), getActiveField: () => active, getContext: () => ({ editorOpen: clinic.editor, session: clinic.editor ? clinic.session : 0 }) };
+    getFields: () => ({ ...clinic.text }), getActiveField: () => active, getContext: () => ({ editorOpen: clinic.editor, session: clinic.editor ? clinic.session : 0 }),
+    focusField: key => { if (!clinic.editor || !fields[key]) return false; fields[key].focus(); return true; } };
   const editorWindow = { id: 'clinic-editor', el: editorEl, get visible() { return clinic.editor; } };
   const shell = {
     menu: () => ({ querySelector: () => null }), notify() {},
@@ -326,6 +327,21 @@ test('"Zwiń" hides the preview while dictating; "Pokaż" recalls it', () => {
   f.api.dictate(); f.advance(2000);
   f.click(f.q('[data-dt="hide"]')); f.advance(400); assert.equal(f.panel.hidden, true); assert.equal(f.phase, 'recording');
   f.api.orbAction('show'); assert.equal(f.panel.hidden, false); assert.equal(f.doc.activeElement, f.q('[data-dt-scroll]'));
+});
+
+test('the focus never stays in a hidden or finishing panel: "Zwiń" returns it to the dictated field, Finish keeps it on the transcript', () => {
+  const f = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
+  f.api.dictate(); f.advance(2000);
+  const hide = f.q('[data-dt="hide"]'); hide.focus(); f.click(hide);
+  // Elements are compared with assert(): a failing deepEqual diff of the DOM fixture would take minutes.
+  assert.equal(f.panel.hidden, true); assert(f.doc.activeElement === f.fields.badanie, '"Badanie kliniczne" of the same window');
+  f.api.orbAction('show'); assert(f.doc.activeElement === f.q('[data-dt-scroll]'));
+  const finish = f.q('[data-dt="finish"]'); finish.focus(); f.click(finish);
+  assert.equal(finish.disabled, true); assert(f.doc.activeElement === f.q('[data-dt-scroll]'), 'the disabled button does not drop the focus');
+  // Without the sub-window (or for a reopened one) the focus goes to the bubble.
+  const g = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
+  g.api.dictate(); g.advance(2000); g.q('[data-dt-scroll]').focus(); g.clinic.editor = false; g.advance(350);
+  assert.equal(g.panel.hidden, true); assert(g.doc.activeElement?.classList.contains('oa-orb'), 'the bubble has the focus');
 });
 
 test('Kontynuuj dyktowanie: the edited text waits in "Dotychczasowy tekst", the transcript holds only new words; nothing new restores the review', () => {

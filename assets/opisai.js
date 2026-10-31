@@ -353,6 +353,7 @@
    * the stop still waits for; the review opens once the last text has arrived. */
   function finishDictation(){
     const rec=state.recording;if(!rec||rec.stopping!=null||rec.cancelled)return;
+    if(document.activeElement?.matches?.('[data-dt="finish"],[data-dt="flush"]')&&rec.el?.contains(document.activeElement))rec.el.querySelector('[data-dt-scroll]')?.focus?.(); // both get disabled: keep the focus in the panel, where the stop is announced
     rec.stopping=rec.t;rec.stopAt=rec.t;rec.listening=false;rec.command=null;
     if(rec.chat)cutFragment(rec,rec.t);
     setPhase('processing');renderDictation(rec);
@@ -365,7 +366,11 @@
   }
   function disposeDictation(rec){
     clearInterval(rec.tick);clearInterval(rec.follow);cancelAnimationFrame(rec.frame);rec.observer?.disconnect?.();
-    if(rec.onResize)window.removeEventListener('resize',rec.onResize);rec.el?.remove();rec.el=null;
+    const focused=!!rec.el?.contains(document.activeElement);
+    if(rec.onResize)window.removeEventListener('resize',rec.onResize);rec.el?.remove();rec.el=null;if(focused)returnDictationFocus(rec);
+  }
+  function returnDictationFocus(rec){ // a hidden or closed panel never keeps the focus ("Zwiń" is NoFocus in rc32): the dictated field of the same window, else the bubble
+    if(window.Clinic?.getContext?.().session!==rec.session||!window.Clinic?.focusField?.(rec.key))orb.el?.querySelector('.oa-orb')?.focus?.();
   }
   function closeDictation(rec){ // the worker finished: teardown, then the review of the text (DictationSession.release)
     state.recording=null;disposeDictation(rec);
@@ -459,7 +464,7 @@
     const el=rec?.el;if(!el)return;
     const win=window.Shell?.windows?.get?.('clinic-editor'),ctx=window.Clinic?.getContext?.();
     const field=win?.visible&&ctx?.session===rec.session?win.el?.querySelector?.(`[data-clinic-field="${rec.key}"]`):null,r=field?.getBoundingClientRect?.();
-    if(!r||r.width<120||r.height<40||rec.userHidden){el.hidden=true;return;}
+    if(!r||r.width<120||r.height<40||rec.userHidden){const focused=!el.hidden&&el.contains(document.activeElement);el.hidden=true;if(focused)returnDictationFocus(rec);return;}
     if(rec.drag)return;
     const wasHidden=el.hidden;el.hidden=false;el.style.zIndex=win.el.style?.zIndex||'';el.style.width=Math.max(320,r.width)+'px';el.style.height='auto';
     const body=el.querySelector('.oa-dt-body'),a=workArea(),natural=(el.offsetHeight||0)+Math.max(0,(body?.scrollHeight||0)-(body?.clientHeight||0)); // the body's content beyond its 44 px minimum
