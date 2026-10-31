@@ -19,7 +19,7 @@
   const LIST_TITLE = '[DEMO] Klinika XP — Wizyty';
   const NO_EDITOR = 'Nie znaleziono podokna opisu wizyty. Otwórz wizytę w Klinice i spróbuj ponownie.';
   const WINDOW_CHANGED = 'Zmieniło się okno, proces programu lub mapowanie pól. Odczytaj pola ponownie.';
-  const DOCTOR = 'Anna Nowak';
+  const DOCTOR = 'Lekarz testowy'; // as on kxp_mock.c's status bar: a label, not a person
   const VISIT_TYPES = ['Badanie', 'Kontrola', 'Profilaktyka', 'Obserwacja', 'Diagnostyka', 'Badanie i profilaktyka'];
   const MENUS = ['OPCJE', 'PRZEBIEG WIZYTY – ZWIERZĘ DOMOWE', 'ZWIERZĘTA', 'KLIENCI', 'WIZYTY', 'Dane główne', 'Apteka', 'Finanse', 'Leczenie', 'Profilaktyka', 'Organizacja pracy', 'Dodatkowe', 'Administrator', 'Pomoc'];
   const SIDE = [['start', 'Początek', 'caseStart'], ['visit', 'Przebieg wizyty', 'caseVisit'], ['treatment', 'Leczenie', 'caseTreat'], ['billing', 'Rozliczenie', 'caseBill'], ['media', 'Multimedia', 'monitors'], ['next', 'Następna…', 'caseNext']];
@@ -44,7 +44,16 @@
     { id: 'V-140', patient: 1, occurred: '2026-08-12 16:40', type: 'Profilaktyka', number: '140/2026', doctor: DOCTOR, weight: '0.45', temperature: '', fields: { wywiad: 'Kontrola okresowa. Apetyt dobry, aktywny, bez kichania.', badanie: 'Stan ogólny dobry, sierść gładka, oddech spokojny, bez wydzieliny z nozdrzy. Masa 450 g.', diagnoza: 'Zdrowy, bez zmian chorobowych.' } },
     { id: 'V-063', patient: 1, occurred: '2026-03-03 11:20', type: 'Badanie', number: '063/2026', doctor: DOCTOR, weight: '0.38', temperature: '', fields: { wywiad: 'Pierwsza wizyta po zakupie. Karmiony mieszanką dla szczurów, mieszka z drugim samcem.', badanie: 'Stan ogólny dobry, BCS 3/5. Uszy, oczy i nozdrza czyste.', diagnoza: 'Zdrowy.' } },
     { id: 'V-151', patient: 2, occurred: '2026-09-02 09:30', type: 'Kontrola', number: '151/2026', doctor: DOCTOR, weight: '4.1', temperature: '38.6', fields: { wywiad: 'Kontrola po zmianie karmy. Apetyt dobry, wymiotów brak.', badanie: 'Stan ogólny dobry, brzuch miękki, niebolesny. Śluzówki różowe.', diagnoza: 'Bez zmian chorobowych.' } },
-    { id: 'V-158', patient: 3, occurred: '2026-09-20 18:05', type: 'Badanie', number: '158/2026', doctor: DOCTOR, weight: '18.5', temperature: '38.9', fields: { wywiad: 'Kuleje na lewą kończynę piersiową od wczoraj, po zabawie w parku.', badanie: 'Bolesność przy zginaniu nadgarstka lewego, bez obrzęku. Pozostałe kończyny bez zmian.', diagnoza: 'Stłuczenie nadgarstka lewego, do kontroli.' } }
+    { id: 'V-158', patient: 3, occurred: '2026-09-20 18:05', type: 'Badanie', number: '158/2026', doctor: DOCTOR, weight: '18.5', temperature: '38.9', fields: { wywiad: 'Kuleje na lewą kończynę piersiową od wczoraj, po zabawie w parku.', badanie: 'Bolesność przy zginaniu nadgarstka lewego, bez obrzęku. Pozostałe kończyny bez zmian.', diagnoza: 'Stłuczenie nadgarstka lewego, do kontroli.' } },
+    /* Catalog visits for the cat and the dog: each visit's three fields come from one invented test case of kxp_mock.c
+     * (cases 1–50). Their panel shows what rc32 really does with several or timed
+     * measurements; tests/catalog.test.cjs checks it against the real 0.12.0rc32 panel. */
+    { id: 'V-071', patient: 2, occurred: '2026-04-14 12:10', type: 'Badanie', number: '071/2026', doctor: DOCTOR, weight: '4.0', temperature: '', fields: { wywiad: 'trzepie głową od tyg, drapie prawe ucho. lewe raczej nie. kąpiel tydz temu.', badanie: 'ucho P: zaczerwienienie i brunatna wydzielina. L: bez widocznej wydzieliny. otoskopia niepełna - opór.', diagnoza: 'zap. zewn. przewodu słuchowego P? typ do ustalenia' } },
+    { id: 'V-088', patient: 3, occurred: '2026-05-12 17:20', type: 'Badanie', number: '088/2026', doctor: DOCTOR, weight: '18.2', temperature: '38.5', fields: { wywiad: 'w lecznicy bardzo się stresuje, w domu zachowanie zwykłe. kaszlu brak.', badanie: 'HR przy wejściu 164/min; po uspokojeniu 112/min. T 38,5. serce miarowe w obu pomiarach. płuca b.z.', diagnoza: 'pobudzenie w gabinecie, różne HR zależne od czasu pomiaru' } },
+    { id: 'V-097', patient: 2, occurred: '2026-06-03 10:40', type: 'Badanie', number: '097/2026', doctor: DOCTOR, weight: '4.0', temperature: '38.7', fields: { wywiad: 'kicha od 4 dni, przezroczysty wypływ z nosa. kaszlu nie zgł.', badanie: 'niewielki surowiczy wypływ z obu nozdrzy. płuca osłuchowo bez zmian. T 38,7.', diagnoza: 'objawy górnych dróg odd., przyczyna do ustalenia' } },
+    { id: 'V-104', patient: 3, occurred: '2026-06-10 16:15', type: 'Badanie', number: '104/2026', doctor: DOCTOR, weight: '18.3', temperature: '', fields: { wywiad: 'kaszel 5 dni gł po bieganiu. w nocy raz też. nie zemdlał, apetyt ok.', badanie: 'serce: szmer skurczowy. płuca osłuchowo bez zmian. oddech w spocz 26/min.', diagnoza: 'kaszel, etiologia nieustalona; szmer do wyjaśnienia' } },
+    { id: 'V-122', patient: 3, occurred: '2026-07-21 18:30', type: 'Badanie', number: '122/2026', doctor: DOCTOR, weight: '18.4', temperature: '38.6', fields: { wywiad: 'notatka op: serce szybciej, bez dokładnej pory. nie było omdlenia wg op.', badanie: 'HR 140/min, dalej zapisano HR 100/min - brak czasu drugiego odczytu. T 38,6.', diagnoza: 'dwie wartości HR bez jasnej chronologii; do weryf., nie wybierać automatycznie' } },
+    { id: 'V-133', patient: 3, occurred: '2026-08-04 09:50', type: 'Kontrola', number: '133/2026', doctor: DOCTOR, weight: '18.4', temperature: '38.7', fields: { wywiad: 'wczoraj apatia, dziś chętniej je. wczoraj T 39,6 wg poprzedniej notatki.', badanie: 'dziś T 38,7; nie 39,6. HR 116/min. kontakt zachowany.', diagnoza: 'kontrola po epizodzie podwyższonej T, przyczyna nadal nieustalona' } }
   ];
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const displayDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : (iso || '');
@@ -56,7 +65,8 @@
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
       if (!saved || !saved.current || !saved.current.fields || KEYS.some(key => typeof saved.current.fields[key] !== 'string') || !Array.isArray(saved.visits)) return base;
       const { spelling, ignoredWords, ...rest } = saved; // OpisAI's spelling was never Klinika's: older saves drop it
-      return { ...base, ...rest, weights: Array.isArray(saved.weights) && saved.weights.length === 3 ? saved.weights : base.weights };
+      const doctor = m => (m && m.doctor === 'Anna Nowak' ? { ...m, doctor: DOCTOR } : m); // the demo's earlier seed name, never a user's entry; seed visits added later join a saved list
+      return { ...base, ...rest, visits: [...rest.visits.map(doctor), ...base.visits.filter(v => !rest.visits.some(x => x.id === v.id))], current: { ...rest.current, meta: doctor(rest.current.meta) }, weights: Array.isArray(saved.weights) && saved.weights.length === 3 ? saved.weights : base.weights };
     } catch (_) { return base; }
   }
   let state = loadState();

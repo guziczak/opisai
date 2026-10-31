@@ -1,0 +1,983 @@
+[
+ {
+  "case": 4,
+  "name": "Kaszel po wysiłku",
+  "patient": "Bruno",
+  "texts": {
+   "badanie": "serce: szmer skurczowy. płuca osłuchowo bez zmian. oddech w spocz 26/min.",
+   "wywiad": "kaszel 5 dni gł po bieganiu. w nocy raz też. nie zemdlał, apetyt ok.",
+   "diagnoza": "kaszel, etiologia nieustalona; szmer do wyjaśnienia"
+  },
+  "keys": [
+   "badanie",
+   "wywiad"
+  ],
+  "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: w normie\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: w normie\nDrogi oddechowe (osłuchowo): Płuca: osłuchowo bez zmian\nSerce (osłuchowo): szmer skurczowy\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+  "rows": [
+   {
+    "parameter_id": "general_condition",
+    "label": "Stan ogólny",
+    "value": "stabilny, przytomny, kontaktowy",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "temperature",
+    "label": "Temperatura",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "capillary_refill",
+    "label": "CRT",
+    "value": "<2 s",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "mucosa",
+    "label": "Błony śluzowe",
+    "value": "różowe, wilgotne",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "heart_rate",
+    "label": "Tętno",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "respiratory_auscultation",
+    "label": "Drogi oddechowe (osłuchowo)",
+    "value": "Płuca: osłuchowo bez zmian",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "płuca osłuchowo bez zmian"
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "cardiac_auscultation",
+    "label": "Serce (osłuchowo)",
+    "value": "szmer skurczowy",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "serce: szmer skurczowy"
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "lymph_nodes",
+    "label": "Węzły chłonne",
+    "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "abdomen",
+    "label": "Brzuch",
+    "value": "niebolesny, lekko spięty",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "peristalsis",
+    "label": "Odgłosy perystaltyczne",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   }
+  ],
+  "values": {
+   "cardiac_auscultation": [
+    {
+     "value": "szmer skurczowy",
+     "quote": "serce: szmer skurczowy",
+     "qualified": false
+    }
+   ],
+   "respiratory_auscultation": [
+    {
+     "value": "Płuca: osłuchowo bez zmian",
+     "quote": "płuca osłuchowo bez zmian",
+     "qualified": false
+    }
+   ]
+  }
+ },
+ {
+  "case": 6,
+  "name": "Dwa pomiary tętna",
+  "patient": "Bruno",
+  "texts": {
+   "badanie": "HR przy wejściu 164/min; po uspokojeniu 112/min. T 38,5. serce miarowe w obu pomiarach. płuca b.z.",
+   "wywiad": "w lecznicy bardzo się stresuje, w domu zachowanie zwykłe. kaszlu brak.",
+   "diagnoza": "pobudzenie w gabinecie, różne HR zależne od czasu pomiaru"
+  },
+  "keys": [
+   "badanie",
+   "wywiad"
+  ],
+  "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: 38,5°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: HR przy wejściu 164/min; po uspokojeniu 112/min\nDrogi oddechowe (osłuchowo): Płuca: b.z.\nSerce (osłuchowo): miarowe w obu pomiarach\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+  "rows": [
+   {
+    "parameter_id": "general_condition",
+    "label": "Stan ogólny",
+    "value": "stabilny, przytomny, kontaktowy",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "temperature",
+    "label": "Temperatura",
+    "value": "38,5°C",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "T 38,5"
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "capillary_refill",
+    "label": "CRT",
+    "value": "<2 s",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "mucosa",
+    "label": "Błony śluzowe",
+    "value": "różowe, wilgotne",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "heart_rate",
+    "label": "Tętno",
+    "value": "HR przy wejściu 164/min; po uspokojeniu 112/min",
+    "origin": "source",
+    "status": "mentioned",
+    "quotes": [
+     "HR przy wejściu 164/min",
+     "po uspokojeniu 112/min"
+    ],
+    "respelled": false,
+    "needs_review": true,
+    "attribution": "local",
+    "issues": [
+     [
+      "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+      "po uspokojeniu 112/min",
+      " po uspokojeniu 112/min",
+      true
+     ]
+    ]
+   },
+   {
+    "parameter_id": "respiratory_auscultation",
+    "label": "Drogi oddechowe (osłuchowo)",
+    "value": "Płuca: b.z.",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "płuca b.z."
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "cardiac_auscultation",
+    "label": "Serce (osłuchowo)",
+    "value": "miarowe w obu pomiarach",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "serce miarowe w obu pomiarach"
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "lymph_nodes",
+    "label": "Węzły chłonne",
+    "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "abdomen",
+    "label": "Brzuch",
+    "value": "niebolesny, lekko spięty",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "peristalsis",
+    "label": "Odgłosy perystaltyczne",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   }
+  ],
+  "values": {
+   "heart_rate": [
+    {
+     "value": "przy wejściu 164/min",
+     "quote": "HR przy wejściu 164/min",
+     "qualified": false
+    },
+    {
+     "value": "po uspokojeniu 112/min",
+     "quote": "po uspokojeniu 112/min",
+     "qualified": true
+    }
+   ],
+   "temperature": [
+    {
+     "value": "38,5",
+     "quote": "T 38,5",
+     "qualified": false
+    }
+   ],
+   "cardiac_auscultation": [
+    {
+     "value": "miarowe w obu pomiarach",
+     "quote": "serce miarowe w obu pomiarach",
+     "qualified": false
+    }
+   ],
+   "respiratory_auscultation": [
+    {
+     "value": "Płuca: b.z.",
+     "quote": "płuca b.z.",
+     "qualified": false
+    }
+   ]
+  }
+ },
+ {
+  "case": 11,
+  "name": "Świąd ucha prawego",
+  "patient": "Mela",
+  "texts": {
+   "badanie": "ucho P: zaczerwienienie i brunatna wydzielina. L: bez widocznej wydzieliny. otoskopia niepełna - opór.",
+   "wywiad": "trzepie głową od tyg, drapie prawe ucho. lewe raczej nie. kąpiel tydz temu.",
+   "diagnoza": "zap. zewn. przewodu słuchowego P? typ do ustalenia"
+  },
+  "keys": [
+   "badanie",
+   "wywiad"
+  ],
+  "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: w normie\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: w normie\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+  "rows": [
+   {
+    "parameter_id": "general_condition",
+    "label": "Stan ogólny",
+    "value": "stabilny, przytomny, kontaktowy",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "temperature",
+    "label": "Temperatura",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "capillary_refill",
+    "label": "CRT",
+    "value": "<2 s",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "mucosa",
+    "label": "Błony śluzowe",
+    "value": "różowe, wilgotne",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "heart_rate",
+    "label": "Tętno",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "respiratory_auscultation",
+    "label": "Drogi oddechowe (osłuchowo)",
+    "value": "górne i dolne bez zmian",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "cardiac_auscultation",
+    "label": "Serce (osłuchowo)",
+    "value": "bez nieprawidłowości",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "lymph_nodes",
+    "label": "Węzły chłonne",
+    "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "abdomen",
+    "label": "Brzuch",
+    "value": "niebolesny, lekko spięty",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "peristalsis",
+    "label": "Odgłosy perystaltyczne",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   }
+  ],
+  "values": {}
+ },
+ {
+  "case": 31,
+  "name": "Kichanie",
+  "patient": "Mela",
+  "texts": {
+   "badanie": "niewielki surowiczy wypływ z obu nozdrzy. płuca osłuchowo bez zmian. T 38,7.",
+   "wywiad": "kicha od 4 dni, przezroczysty wypływ z nosa. kaszlu nie zgł.",
+   "diagnoza": "objawy górnych dróg odd., przyczyna do ustalenia"
+  },
+  "keys": [
+   "badanie",
+   "wywiad"
+  ],
+  "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: 38,7°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: w normie\nDrogi oddechowe (osłuchowo): Płuca: osłuchowo bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+  "rows": [
+   {
+    "parameter_id": "general_condition",
+    "label": "Stan ogólny",
+    "value": "stabilny, przytomny, kontaktowy",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "temperature",
+    "label": "Temperatura",
+    "value": "38,7°C",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "T 38,7"
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "capillary_refill",
+    "label": "CRT",
+    "value": "<2 s",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "mucosa",
+    "label": "Błony śluzowe",
+    "value": "różowe, wilgotne",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "heart_rate",
+    "label": "Tętno",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "respiratory_auscultation",
+    "label": "Drogi oddechowe (osłuchowo)",
+    "value": "Płuca: osłuchowo bez zmian",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "płuca osłuchowo bez zmian"
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "cardiac_auscultation",
+    "label": "Serce (osłuchowo)",
+    "value": "bez nieprawidłowości",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "lymph_nodes",
+    "label": "Węzły chłonne",
+    "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "abdomen",
+    "label": "Brzuch",
+    "value": "niebolesny, lekko spięty",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "peristalsis",
+    "label": "Odgłosy perystaltyczne",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   }
+  ],
+  "values": {
+   "respiratory_auscultation": [
+    {
+     "value": "Płuca: osłuchowo bez zmian",
+     "quote": "płuca osłuchowo bez zmian",
+     "qualified": false
+    }
+   ],
+   "temperature": [
+    {
+     "value": "38,7",
+     "quote": "T 38,7",
+     "qualified": false
+    }
+   ]
+  }
+ },
+ {
+  "case": 35,
+  "name": "Temperatura w czasie",
+  "patient": "Bruno",
+  "texts": {
+   "badanie": "dziś T 38,7; nie 39,6. HR 116/min. kontakt zachowany.",
+   "wywiad": "wczoraj apatia, dziś chętniej je. wczoraj T 39,6 wg poprzedniej notatki.",
+   "diagnoza": "kontrola po epizodzie podwyższonej T, przyczyna nadal nieustalona"
+  },
+  "keys": [
+   "badanie",
+   "wywiad"
+  ],
+  "text": "Stan ogólny: kontakt zachowany; wczoraj apatia\nTemperatura: dziś T 38,7; wczoraj T 39,6 wg poprzedniej notatki\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: 116/min\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+  "rows": [
+   {
+    "parameter_id": "general_condition",
+    "label": "Stan ogólny",
+    "value": "kontakt zachowany; wczoraj apatia",
+    "origin": "source",
+    "status": "mentioned",
+    "quotes": [
+     "kontakt zachowany",
+     "wczoraj apatia"
+    ],
+    "respelled": false,
+    "needs_review": true,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "temperature",
+    "label": "Temperatura",
+    "value": "dziś T 38,7; wczoraj T 39,6 wg poprzedniej notatki",
+    "origin": "source",
+    "status": "mentioned",
+    "quotes": [
+     "dziś T 38,7",
+     "wczoraj T 39,6 wg poprzedniej notatki"
+    ],
+    "respelled": false,
+    "needs_review": true,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "capillary_refill",
+    "label": "CRT",
+    "value": "<2 s",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "mucosa",
+    "label": "Błony śluzowe",
+    "value": "różowe, wilgotne",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "heart_rate",
+    "label": "Tętno",
+    "value": "116/min",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "HR 116/min"
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "respiratory_auscultation",
+    "label": "Drogi oddechowe (osłuchowo)",
+    "value": "górne i dolne bez zmian",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "cardiac_auscultation",
+    "label": "Serce (osłuchowo)",
+    "value": "bez nieprawidłowości",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "lymph_nodes",
+    "label": "Węzły chłonne",
+    "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "abdomen",
+    "label": "Brzuch",
+    "value": "niebolesny, lekko spięty",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "peristalsis",
+    "label": "Odgłosy perystaltyczne",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   }
+  ],
+  "values": {
+   "temperature": [
+    {
+     "value": "dziś T 38,7",
+     "quote": "dziś T 38,7",
+     "qualified": true
+    }
+   ],
+   "heart_rate": [
+    {
+     "value": "116/min",
+     "quote": "HR 116/min",
+     "qualified": false
+    }
+   ],
+   "general_condition": [
+    {
+     "value": "kontakt zachowany",
+     "quote": "kontakt zachowany",
+     "qualified": true,
+     "status": "mentioned"
+    }
+   ]
+  }
+ },
+ {
+  "case": 45,
+  "name": "Pomiary z niejasnym czasem",
+  "patient": "Bruno",
+  "texts": {
+   "badanie": "HR 140/min, dalej zapisano HR 100/min - brak czasu drugiego odczytu. T 38,6.",
+   "wywiad": "notatka op: serce szybciej, bez dokładnej pory. nie było omdlenia wg op.",
+   "diagnoza": "dwie wartości HR bez jasnej chronologii; do weryf., nie wybierać automatycznie"
+  },
+  "keys": [
+   "badanie",
+   "wywiad"
+  ],
+  "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: 38,6°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: HR 140/min, dalej zapisano; HR 100/min - brak czasu drugiego odczytu\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): notatka op: serce szybciej, bez dokładnej pory\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+  "rows": [
+   {
+    "parameter_id": "general_condition",
+    "label": "Stan ogólny",
+    "value": "stabilny, przytomny, kontaktowy",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "temperature",
+    "label": "Temperatura",
+    "value": "38,6°C",
+    "origin": "source",
+    "status": "measured",
+    "quotes": [
+     "T 38,6"
+    ],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "capillary_refill",
+    "label": "CRT",
+    "value": "<2 s",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "mucosa",
+    "label": "Błony śluzowe",
+    "value": "różowe, wilgotne",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "heart_rate",
+    "label": "Tętno",
+    "value": "HR 140/min, dalej zapisano; HR 100/min - brak czasu drugiego odczytu",
+    "origin": "source",
+    "status": "mentioned",
+    "quotes": [
+     "HR 140/min, dalej zapisano",
+     "HR 100/min - brak czasu drugiego odczytu"
+    ],
+    "respelled": false,
+    "needs_review": true,
+    "attribution": "local",
+    "issues": [
+     [
+      "Cytat pomija kontekst źródła, np. negację lub czas. Zachowano pełniejszy fragment do sprawdzenia.",
+      "HR 140/min, dalej zapisano",
+      "HR 140/min, dalej zapisano HR 100/min - brak czasu drugiego odczytu",
+      true
+     ]
+    ]
+   },
+   {
+    "parameter_id": "respiratory_auscultation",
+    "label": "Drogi oddechowe (osłuchowo)",
+    "value": "górne i dolne bez zmian",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "cardiac_auscultation",
+    "label": "Serce (osłuchowo)",
+    "value": "notatka op: serce szybciej, bez dokładnej pory",
+    "origin": "source",
+    "status": "mentioned",
+    "quotes": [
+     "notatka op: serce szybciej, bez dokładnej pory"
+    ],
+    "respelled": false,
+    "needs_review": true,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "lymph_nodes",
+    "label": "Węzły chłonne",
+    "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "abdomen",
+    "label": "Brzuch",
+    "value": "niebolesny, lekko spięty",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   },
+   {
+    "parameter_id": "peristalsis",
+    "label": "Odgłosy perystaltyczne",
+    "value": "w normie",
+    "origin": "template",
+    "status": "default",
+    "quotes": [],
+    "respelled": false,
+    "needs_review": false,
+    "attribution": "local",
+    "issues": []
+   }
+  ],
+  "values": {
+   "heart_rate": [
+    {
+     "value": "140/min, dalej zapisano",
+     "quote": "HR 140/min, dalej zapisano",
+     "qualified": false
+    },
+    {
+     "value": "100/min - brak czasu drugiego odczytu",
+     "quote": "HR 100/min - brak czasu drugiego odczytu",
+     "qualified": false
+    }
+   ],
+   "temperature": [
+    {
+     "value": "38,6",
+     "quote": "T 38,6",
+     "qualified": false
+    }
+   ]
+  }
+ }
+]
