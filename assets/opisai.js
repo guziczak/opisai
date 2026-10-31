@@ -51,7 +51,8 @@
     const variant={rich:preferences.rich,panel:preferences.panel,diagnosis:preferences.diagnosis};
     if(field && field!=='badanie')variant.panel=false;
     if(field==='diagnoza')variant.diagnosis=true;
-    const op={id:++state.token,snapshot,sources,variant,field,fromDictation:!!options.fromDictation,approved:false,details:false};
+    const session=options.session??window.Clinic?.getContext?.().session;
+    const op={id:++state.token,snapshot,sources,variant,field,session,fromDictation:!!options.fromDictation,approved:false,details:false};
     state.operation=op;state.review=null;
     const cards=Object.entries(FIELDS).filter(([key])=>!field||key===field).map(([key,label])=>`<div class="oa-source-card ${key==='diagnoza'&&!variant.diagnosis?'out-of-scope':''}" data-source-card="${key}"><h3>${esc(label)}</h3><textarea data-source="${key}" aria-label="${esc(label)} — źródło do opracowania, edytowalne" spellcheck="false">${esc(sources[key]||'')}</textarea><div class="oa-source-status">${key==='diagnoza'&&!variant.diagnosis?'Poza wybranym zakresem — rozpoznanie nie będzie opracowywane.':''}</div></div>`).join('');
     const html=`<div class="oa-app oa-compose"><header class="oa-header"><div class="oa-header-row"><div><h1>${field?'Przygotuj opis pola':'Przygotuj opis wizyty'}</h1><p class="oa-route">${icon('shield',13)} <span data-route>${esc(route())}</span></p></div>${button('Połączenie i model','connection','link small','settings')}</div></header><div class="oa-content"><div class="oa-compose-body"><section class="oa-source-panel"><div class="oa-section-label" data-source-heading>Treść pól</div><div data-sources>${cards}</div><textarea class="oa-rules" readonly aria-label="Zasady i źródła" hidden></textarea>${button('Pokaż zasady i źródła','rules','small','document')}</section><section class="oa-options-panel"><div class="oa-section-label">Sposób opracowania</div><div class="oa-variant-grid">${[true,false].map(rich=>`<div class="oa-variant-row-label">${rich?'Bogato':'Wiernie'}</div>${[0,1,2].map(col=>`<button class="oa-variant ${variant.rich===rich&&(variant.diagnosis?2:variant.panel?1:0)===col?'selected':''}" type="button" data-variant="${rich?'rich':'faithful'}-${col}" aria-label="${rich?'Bogato':'Wiernie'} — ${['sam opis','z panelem parametrów','z panelem i rozpoznaniem'][col]}" ${field&&((col===1&&field!=='badanie')||(col===2&&field==='wywiad'))?'disabled':''}><span class="oa-tick">${icon('check',13)}</span>${col===0?'Sam opis':col===1?'+ panel<br>parametrów':'+ panel<br>+ rozpoznanie'}</button>`).join('')}`).join('')}</div><div class="oa-variant-explanation" data-variant-description></div>${notice('Dane pacjenta i właściciela pozostają w oknie Kliniki. Sprawdź treść pól przed przygotowaniem opisu.')}<div style="margin-top:12px">${button('Ustawienia sekcji opisu','sections','link small','settings')}</div></section></div><div class="oa-notice error" data-compose-error hidden></div></div><div class="oa-ack-area">${check(`Sprawdzone: tylko te pola, bez danych osobowych właściciela i personelu.`,'oa-compose-ack')}<div class="oa-ack-note" data-ack-note>Potwierdzenie dotyczy pokazanych źródeł i wybranego zakresu.</div></div><footer class="oa-footer"><span class="oa-footnote" data-compose-foot>Pola wizyty pozostaną bez zmian.<br>OpisAI ${VERSION}</span>${button('Anuluj','cancel')}${button('Przygotuj podgląd','generate','primary','play','disabled')}</footer></div>`;
@@ -123,7 +124,7 @@
       $$('[data-step]',root).forEach(x=>x.classList.toggle('active',Number(x.dataset.step)===step));
       $('[data-stream]',root).textContent=fullText.slice(0,Math.floor(fullText.length*Math.max(0,(done-4)/21)));
       const live=$('.oa-live-preview',root);live.scrollTop=live.scrollHeight;
-      if(done>=28){clearInterval(timer);state.job=null;win.close();const result={id:op.id,snapshot:op.snapshot,sources:op.sources,output:outputs,variant:op.variant,field:op.field,mode:'generation',route:route(),created:new Date().toISOString()};state.review=result;review(result);}
+      if(done>=28){clearInterval(timer);state.job=null;win.close();const result={id:op.id,snapshot:op.snapshot,sources:op.sources,session:op.session,output:outputs,variant:op.variant,field:op.field,mode:'generation',route:route(),created:new Date().toISOString()};state.review=result;review(result);}
     },preferences.animations?120:35);
     const cancel=()=>{if(state.job?.token!==token)return;++state.token;clearInterval(timer);state.job=null;win.close();state.active=null;state.operation=null;setPhase('idle');toast('Przygotowanie opisu anulowane. Pola wizyty pozostają bez zmian.');};
     state.job={token,cancel};setPhase('processing');bind(root,'cancel',cancel);
@@ -158,15 +159,15 @@
       if(Object.values(changes).some(value=>!String(value).trim())){
         const err=$('[data-write-error]',root);err.hidden=false;err.innerHTML=icon('info',16)+'<div>Puste pole nie zastąpi dotychczasowej treści. Uzupełnij wynik lub pomiń to pole.</div>';return;
       }
-      const applied=Clinic.setFields(changes,{expected:result.snapshot,source:'OpisAI'});
-      if(!applied.ok){const err=$('[data-write-error]',root);err.hidden=false;err.innerHTML=icon('info',16)+`<div><strong>Zmieniła się treść wizyty.</strong><br>${esc(applied.reason||'Pola nie odpowiadają wcześniejszemu odczytowi.')} Odczytaj źródła ponownie.</div>`+button('Odczytaj ponownie','reread','small');bind(err,'reread',()=>{win.close();state.review=null;prepare({field:result.field});});invalidate();return;}
-      const record={id:result.id,time:stamp(),mode:result.mode,variant:result.variant,route:result.route||'Przykładowe dyktowanie',before:clone(result.snapshot),after:clone(changes),status:'Wpis potwierdzony'};
+      const applied=Clinic.setFields(changes,{expected:result.snapshot,session:result.session,source:'OpisAI'});
+      if(!applied.ok){const err=$('[data-write-error]',root);err.hidden=false;const reason=applied.reason||'Pola nie odpowiadają wcześniejszemu odczytowi. Odczytaj pola ponownie.';err.innerHTML=icon('info',16)+`<div><strong>${/^Zmieniło się okno/.test(reason)?'Zmieniło się okno wizyty.':/^Nie znaleziono/.test(reason)?'Nie ma okna wizyty.':'Zmieniła się treść wizyty.'}</strong><br>${esc(reason)}</div>`+button('Odczytaj ponownie','reread','small');bind(err,'reread',()=>{win.close();state.review=null;prepare({field:result.field});});invalidate();return;}
+      const record={id:result.id,time:stamp(),mode:result.mode,variant:result.variant,route:result.route||'Przykładowe dyktowanie',before:clone(result.snapshot),after:clone(changes),session:result.session,status:'Wpis potwierdzony'};
       state.lastWrite=record;if(preferences.history)state.history.unshift(record);
       state.review=null;state.operation=null;win.close();state.active=null;setPhase('done');if(result.selected[0])Clinic.focusField(result.selected[0]);
       Shell.notify({title:'OpisAI — gotowe',message:`Wpisano ${result.selected.length===1?'tekst do pola':`tekst do ${result.selected.length} pól`}. Wizyta czeka na zapis w Klinice.`,icon:'opisai',actionLabel:'Cofnij wpis',onAction:undo});
     });
-    bind(root,'compose',()=>{win.close();state.review=null;prepare({sources:{...result.snapshot,...result.edited},snapshot:result.snapshot,fromDictation:true});});
-    bind(root,'continue',()=>{win.close();state.review=null;dictate({field:result.field||keys[0],base:result.edited[result.field||keys[0]],snapshot:result.snapshot,continuation:true,direct:true});});
+    bind(root,'compose',()=>{win.close();state.review=null;prepare({sources:{...result.snapshot,...result.edited},snapshot:result.snapshot,session:result.session,fromDictation:true});});
+    bind(root,'continue',()=>{win.close();state.review=null;dictate({field:result.field||keys[0],base:result.edited[result.field||keys[0]],snapshot:result.snapshot,session:result.session,continuation:true,direct:true});});
     draw();
   }
   async function copyText(value,control){
@@ -178,7 +179,7 @@
     const fields=Object.keys(last.after),html=`<div class="oa-app"><header class="oa-header"><h1>Cofnij ostatni potwierdzony wpis</h1><p>Operacja z ${esc(last.time)} · ${fields.map(k=>esc(FIELDS[k])).join(', ')}</p></header><div class="oa-content">${notice('Przywrócona zostanie treść sprzed wpisu OpisAI. Późniejsza edycja w Klinice zatrzyma cofnięcie.')}<div class="oa-history-detail">${esc(fields.map(k=>FIELDS[k]+'\n'+(last.before[k]||'(puste pole)')).join('\n\n'))}</div><div class="oa-notice error" data-undo-error hidden></div></div><div class="oa-ack-area">${check('Sprawdzone: przywracam pokazane pola tej wizyty.','oa-undo-ack')}</div><footer class="oa-footer"><span class="oa-footnote">Cofnięcie obejmuje tylko ostatni wpis OpisAI.</span>${button('Anuluj','cancel')}${button('Przywróć poprzednią treść','undo','primary','undo','disabled')}</footer></div>`;
     const win=makeWindow('opisai-undo','OpisAI — cofnięcie wpisu',650,490,html),root=win.content;
     $('#oa-undo-ack',root).addEventListener('change',e=>$('[data-action="undo"]',root).disabled=!e.target.checked);bind(root,'cancel',()=>win.close());
-    bind(root,'undo',()=>{if(!$('#oa-undo-ack',root).checked)return;const before={};fields.forEach(k=>before[k]=last.before[k]);const result=Clinic.setFields(before,{expected:last.after,source:'OpisAI — cofnięcie'});if(!result.ok){const error=$('[data-undo-error]',root);error.hidden=false;error.innerHTML=icon('info',16)+'<div>'+esc(result.reason||'Pola zmieniły się po wpisie. Nie cofnięto zmian.')+'</div>';return;}last.status='Cofnięto';state.lastWrite=null;win.close();setPhase('done');toast('Przywrócono poprzednią treść pól.');});
+    bind(root,'undo',()=>{if(!$('#oa-undo-ack',root).checked)return;const before={};fields.forEach(k=>before[k]=last.before[k]);const result=Clinic.setFields(before,{expected:last.after,session:last.session,source:'OpisAI — cofnięcie'});if(!result.ok){const error=$('[data-undo-error]',root);error.hidden=false;error.innerHTML=icon('info',16)+'<div>'+esc(result.reason||'Pola zmieniły się po wpisie. Nie cofnięto zmian.')+'</div>';return;}last.status='Cofnięto';state.lastWrite=null;win.close();setPhase('done');toast('Przywrócono poprzednią treść pól.');});
   }
 
   /* Recording is deliberately scripted: the microphone is never requested. */
@@ -198,7 +199,7 @@
     const field=FIELDS[options.field]?options.field:(Clinic.getActiveField?.()||state.activeField||'wywiad');
     const snapshot=clone(options.snapshot||getFields());
     state.review=null;closeWin('opisai-compose');closeWin('opisai-review');
-    state.recording={id:++state.token,field,snapshot,base:options.base||'',text:'',wordIndex:0,seconds:0,paused:false,listening:false,started:Date.now(),tick:null,canvasFrame:null,continuation:!!options.continuation};
+    state.recording={id:++state.token,field,snapshot,session:options.session??window.Clinic?.getContext?.().session,base:options.base||'',text:'',wordIndex:0,seconds:0,paused:false,listening:false,started:Date.now(),tick:null,canvasFrame:null,continuation:!!options.continuation};
     const rec=state.recording;setPhase('processing');showDictation(); // dots until the microphone is confirmed
     setTimeout(()=>{if(state.recording===rec){rec.listening=true;setPhase('recording');}},700); // red REC only while it records
     const words=DICTATION_TEXT.split(' ');
@@ -236,7 +237,7 @@
     if(!text){setPhase('idle');toast('Nie odebrano tekstu do sprawdzenia.');return;}
     const withBefore=rec.base?text:[rec.snapshot[rec.field],text].filter(Boolean).join('\n\n'),receipt=state.receipt={id:rec.id};
     setPhase('processing'); // REC ends with the recording; the last text is still arriving
-    receipt.deliver=()=>{if(state.receipt!==receipt)return;state.receipt=null;review({id:rec.id,snapshot:rec.snapshot,sources:{...rec.snapshot,[rec.field]:withBefore},output:{[rec.field]:withBefore},variant:{rich:false,panel:false,diagnosis:false},field:rec.field,mode:'dictation',route:'Przykładowe dyktowanie',created:new Date().toISOString()});};
+    receipt.deliver=()=>{if(state.receipt!==receipt)return;state.receipt=null;review({id:rec.id,snapshot:rec.snapshot,sources:{...rec.snapshot,[rec.field]:withBefore},output:{[rec.field]:withBefore},variant:{rich:false,panel:false,diagnosis:false},field:rec.field,session:rec.session,mode:'dictation',route:'Przykładowe dyktowanie',created:new Date().toISOString()});};
     setTimeout(receipt.deliver,600); // "Pokaż" or a click delivers it at once
   }
   function dropDictation(){ // discard the recording, its microphone start or its last-text receipt
