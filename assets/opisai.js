@@ -236,6 +236,7 @@
     const html=`<div class="oa-app oa-consent"><div class="oa-content"><h2>Dyktowanie przez Gemini Live</h2><p>Dźwięk z mikrofonu będzie przesyłany do usługi Google Gemini Live w celu zamiany mowy na tekst. Podczas nagrywania zobaczysz transkrypcję, a po zakończeniu sprawdzisz ją przed wpisaniem do Kliniki.</p>${check('Zapamiętaj zgodę na dyktowanie przez Gemini Live','oa-gemini-remember',true)}<p class="oa-muted">Zgodę możesz cofnąć w konfiguracji, w sekcji transkrypcji głosowej.</p></div><footer class="oa-footer"><span class="oa-footnote"></span>${button('Anuluj','cancel')}${button('Rozpocznij dyktowanie','start','primary')}</footer></div>`;
     const id='opisai-gemini-consent',win=Shell.createWindow({id,title:'OpisAI — dyktowanie',icon:'opisai',width:610,height:290,minWidth:420,minHeight:250,className:'oa-host oa-theme-'+preferences.theme,content:html,resizable:false,maximizable:false,taskbar:false,onClose:()=>answer(false)}),root=win.content;
     windows.set(id,win);if(win.el)win.el.dataset.oaWindow=id;holdPosition();
+    const max=win.el?.querySelector?.('[data-caption="max"]');if(max)max.hidden=true; // CompactDialog: only "×" in its title bar
     bind(root,'cancel',()=>win.close());
     bind(root,'start',()=>{if($('#oa-gemini-remember',root)?.checked){preferences.dictationConsent=true;savePreferences();}answer(true);win.close();});
     setTimeout(()=>$('[data-action="cancel"]',root)?.focus?.(),0); // "Anuluj" is the default button

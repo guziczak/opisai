@@ -128,7 +128,7 @@ function fixture({ prefs = {}, editor = true, active = 'badanie' } = {}) {
     menu: () => ({ querySelector: () => null }), notify() {},
     toast: message => { toasts.push(message); const el = doc.createElement('div'); doc.body.append(el); return el; },
     confirm: o => confirms.push(o.message), windows: new Map([['clinic-editor', editorWindow]]),
-    createWindow: options => { const el = doc.createElement('section'); el.innerHTML = options.content; doc.body.append(el); shown.push(options.id);
+    createWindow: options => { const el = doc.createElement('section'); el.innerHTML = `<header class="titlebar"><button data-caption="max" ${options.maximizable === false ? 'disabled' : ''}></button></header>` + options.content; doc.body.append(el); shown.push(options.id);
       const w = { id: options.id, el, content: el, closed: false, options, show() { shown.push(options.id); }, focus() {}, minimize() {},
         close() { if (this.closed) return; this.closed = true; el.remove(); options.onClose?.(); }, setTitle() {}, setContent(html) { el.innerHTML = html; } }; return w; }
   };
@@ -275,6 +275,7 @@ test('Gemini Live (the rc32 default): consent before the first recording, then l
   const dialog = f.doc.querySelector('.oa-consent');
   assert.match(dialog.text, /Dyktowanie przez Gemini Live/); assert.match(dialog.text, /Zapamiętaj zgodę na dyktowanie przez Gemini Live/);
   assert.equal(dialog.querySelector('#oa-gemini-remember').checked, true);
+  assert.equal(dialog.parentNode.querySelector('[data-caption="max"]').hidden, true, 'a compact dialog: only "×" in the title bar');
   f.click(dialog.querySelector('[data-action="start"]')); f.advance(100);
   assert.equal(JSON.parse(f.storage.get('opisai-demo-settings-v12')).dictationConsent, true, 'remembered consent is stored');
   assert.equal(f.rec.engine, 'gemini'); assert.match(f.status(), /^🎙 Łączę z Gemini… za chwilę mów\./);
