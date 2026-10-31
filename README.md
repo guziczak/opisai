@@ -22,7 +22,11 @@ Przytrzymanie bąbelka uruchamia przykładowe dyktowanie. Można zatrzymać, pop
 - Eksplorator z kartami, lokalnym drzewem dokumentów, osobną historią nawigacji w każdej karcie, wyszukiwaniem, operacjami na plikach i Koszem.
 - Notatnik z zapisem lokalnym, pobraniem pliku, wyszukiwaniem i ochroną niezapisanych zmian.
 - Jasny i ciemny motyw Horyzont, własne wektorowe tła i ikony narzędzi oraz lokalny Segoe UI z otwartym fontem Selawik jako zamiennikiem na innych systemach. Dotychczasowe ustawienia motywu są zachowane po wymianie tapet.
-- Bąbelek z nazwą i wersją wewnątrz koła, sprężystym podążaniem za wskaźnikiem, wyraźnym wydłużaniem w kierunku pociągnięcia i krótkim wyhamowaniem po puszczeniu. Kształt, ikona i napisy odkształcają się razem, po czym sprężyście wracają do koła. Cały obrys pozostaje w obszarze pulpitu; trafienie w pole Kliniki wymaga jawnego upuszczenia na nim. Ograniczenie animacji w systemie lub ustawieniach OpisAI przełącza przeciąganie na bezpośrednie.
+- Bąbelek odwzorowany z OpisAI 0.12.0rc32. Stan widać wewnątrz koła: niebieskie „OpisAI” w spoczynku (także przy otwartym oknie przygotowania), mieniące się kropki podczas generowania, czerwone „REC” z korektorem w torbie podczas nagrywania, bursztynowe „Sprawdź” w trakcie przeglądu, zielone „Gotowe” przez 4 s i czerwony „Błąd” przez 3 s. Przytrzymany lub przeciągany bąbelek odkłada powrót do spoczynku do chwili puszczenia. Po chwili najechania pod kołem pojawiają się podpisane akcje, a podpowiedź obok pokazuje model i wersję.
+- Kliknięcie opisuje wizytę albo przywołuje już otwarte okno OpisAI, nie zaczynając drugiej operacji. Przytrzymanie przez 0,45 s włącza lub kończy dyktowanie; pierścień i podpis zapowiadają ten gest. Przesuwanie zaczyna się najwcześniej po 180 ms. Puszczenie po wcześniejszym poruszeniu kończy gest bez akcji, a po włączeniu dyktowania ruch jest ignorowany. Bąbelek podąża za wskaźnikiem bez przeregulowania i po puszczeniu krótko wyhamowuje. Odkształca się wyłącznie jego obrys (elipsa z wybrzuszeniem z przodu); logo i napisy zachowują kształt.
+- Upuszczony na widocznym polu Kliniki bąbelek wsiąka w nie i wynurza się w miejscu sprzed przeciągnięcia. Pole zasłonięte innym oknem nie przyjmuje upuszczenia, a podczas przeciągania nad właściwym polem widać przerywaną, maszerującą ramkę. OpisAI czyta tylko otwarte podokno opisu wizyty i nigdy samo go nie otwiera. Bez niego bąbelek pokazuje czerwony „Błąd”, z którego wyrasta dymek „⚠ Błąd”. Gdy Klinika nie działa, dymek ma przycisk „▶ Uruchom Klinikę”, który otwiera okno główne, ale nie wizytę.
+- Prawy przycisk na bąbelku i na ikonie OpisAI w zasobniku otwiera to samo menu co w aplikacji, z podmenu pisowni, wskazywania pól i bezpiecznego zapisu. Pozycje wymagające prawdziwego pulpitu Windows pokazują komunikat „niedostępne w demonstracji”. „Zamknij” odtwarza animację wyjścia; w demonstracji bąbelek wraca po kliknięciu ikony OpisAI w zasobniku albo na pulpicie. Ukryty „Tryb fizyki” uruchamia się tylko z menu: przez 30 s strzałki poruszają bąbelkiem, Spacja ładuje i wybija go, a Esc kończy tryb.
+- Po 10 s bez ruchu myszy i klawiatury bąbelek spada na pasek zadań, sprężyście się spłaszcza, odbija kilka razy z drobnymi kroplami i wraca na miejsce. Interwał i limit odbić ustawisz w Konfiguracji, na stronie Bąbelek. Domyślne położenie to prawy dolny róg pulpitu; przeciągnięty bąbelek zapamiętuje miejsce. Bąbelek, który znalazł się całkowicie poza pulpitem, wraca w prawy dolny róg. Systemowe ograniczenie ruchu wyłącza falowanie, bezwładność, wsiąkanie i odbijanie, a przeciąganie staje się bezpośrednie.
 
 Wszystkie funkcje dotyczą pulpitu demonstracyjnego. Przeglądarka nie zmienia konfiguracji Windows, sieci ani urządzeń na komputerze odwiedzającego. Tryb pełnoekranowy jest dostępny w Ustawieniach; część skrótów klawiaturowych może przejąć system lub przeglądarka.
 
@@ -42,7 +46,7 @@ Układ, etykiety i zachowanie okna pochodzą z `kxp_mock.c` 2.4.1 z repozytorium
 
 Generowanie jest lokalnym formatowaniem przykładu, a dyktowanie odtwarza zapisaną transkrypcję. Demo nie łączy się z usługami AI, nie prosi o klucze API i nie włącza mikrofonu. Dowolny tekst wprowadzony przez użytkownika pozostaje źródłem wyniku; przykład Fistaszka nie zastępuje innej notatki.
 
-Wizyty makiety Kliniki, dokumenty i ustawienia pulpitu są zapisywane w `localStorage`, pod kluczami zaczynającymi się od `opisai.demo.` (wizyty: `opisai.demo.visit.v3`; dawny klucz `opisai.demo.visit.v2` jest usuwany przy przywróceniu przykładu). Ustawienia OpisAI są zapisywane pod kluczem `opisai-demo-settings-v12`. Historia operacji OpisAI pozostaje w bieżącej karcie i jest czyszczona po odświeżeniu strony. Ustawienia → Prywatność i zabezpieczenia → Przywróć ustawienia usuwa dane demonstracji, w tym oba zestawy ustawień. Do testowania należy używać fikcyjnych danych.
+Wizyty makiety Kliniki, dokumenty, ustawienia pulpitu i położenie bąbelka (`opisai.demo.bubble.v1`) są zapisywane w `localStorage`, pod kluczami zaczynającymi się od `opisai.demo.` (wizyty: `opisai.demo.visit.v3`; dawny klucz `opisai.demo.visit.v2` jest usuwany przy przywróceniu przykładu). Ustawienia OpisAI są zapisywane pod kluczem `opisai-demo-settings-v12`. Historia operacji OpisAI pozostaje w bieżącej karcie i jest czyszczona po odświeżeniu strony. Ustawienia → Prywatność i zabezpieczenia → Przywróć ustawienia usuwa dane demonstracji, w tym oba zestawy ustawień. Do testowania należy używać fikcyjnych danych.
 
 ## Struktura
 
@@ -55,7 +59,7 @@ Wizyty makiety Kliniki, dokumenty i ustawienia pulpitu są zapisywane w `localSt
 | `assets/clinic.js`, `assets/clinic.css` | Makieta Kliniki XP: przebieg wizyty, podokno opisu, przegląd tylko do odczytu, lista wizyt |
 | `assets/clinic-icons.js` | Ikony makiety Kliniki przeniesione z `kxp_mock.c` |
 | `assets/opisai.js`, `assets/opisai.css` | Bąbelek, przygotowanie, dyktowanie, przegląd i ustawienia OpisAI |
-| `assets/orb-motion.js` | Niezależny od DOM model sprężyny, bezwładności i granic ruchu bąbelka |
+| `assets/orb-motion.js` | Niezależne od DOM modele bąbelka przeniesione z rc32: podążanie i wyhamowanie, rozpoznawanie gestów, obrys, odbicie od paska zadań i krople |
 | `assets/icons.js`, `assets/fonts/`, `assets/desktop-*.svg` | Zasoby wizualne |
 | `assets/ASSET_SOURCES.md` | Źródła i licencje zasobów |
 
@@ -69,17 +73,18 @@ Kontrola składni: `node --check` dla zmienianych plików JavaScript. Testy bez 
 node --test tests/*.test.cjs
 ```
 
-GitHub Actions wykonuje te same kontrole dla push i pull requestów. Testy okien odtwarzają regresję ponownego otwierania po przeciągnięciu. Testy bąbelka sprawdzają model ruchu przy różnych częstotliwościach odświeżania, widoczne rozciąganie podczas przeciągania, sprężysty powrót, granice odkształconego obrysu oraz rzeczywistą obsługę kliknięcia, przytrzymania, upuszczenia, anulowania gestu i ograniczenia animacji. Harness DOM nie zastępuje oceny wyglądu w przeglądarce.
+GitHub Actions wykonuje te same kontrole dla push i pull requestów. Testy okien odtwarzają regresję ponownego otwierania po przeciągnięciu. Testy bąbelka sprawdzają zachowanie z rc32: podążanie bez przeregulowania (20% odległości na takt 33 ms) i wyhamowanie ×0,82, brak odbijania od krawędzi, odkształcanie samego obrysu, gesty (przeciąganie po 180 ms, przytrzymanie po 450 ms, anulowanie), odbicie i krople zgodne z wartościami z modułów Pythona, menu 1:1 z zasobnikiem, akcje w poszczególnych stanach, wsiąkanie w widoczne pole, czerwony „Błąd” z dymkiem i zapamiętywanie położenia. Harness DOM nie zastępuje oceny wyglądu w przeglądarce.
 
 Najważniejsze ścieżki do sprawdzenia w przeglądarce:
 
 - Przygotowanie → zmiana źródła unieważnia zatwierdzenie → opracowanie → edycja przeglądu → wpis → cofnięcie.
 - Zmiana pola w Klinice w trakcie przeglądu → konflikt zatrzymuje wpis.
-- Zamknięte podokno opisu (ANULUJ albo „Na razie zatrzymaj”) → kliknięcie bąbelka kończy się błędem „Nie znaleziono podokna opisu wizyty”.
+- Zamknięte podokno opisu (ANULUJ albo „Na razie zatrzymaj”) → kliknięcie bąbelka kończy się czerwonym „Błędem” i dymkiem „Nie znaleziono podokna opisu wizyty”; przy zamkniętej całej Klinice dymek ma „▶ Uruchom Klinikę”, który otwiera tylko okno główne.
 - OK w podoknie → przegląd tylko do odczytu → „Przejdź do edycji” (F2); Ctrl+L → przegląd innej wizyty; F4 → nowa wizyta.
 - Dyktowanie → zakończenie → kontynuacja / opracowanie / wpisanie notatki.
 - Minimalizowanie i przywracanie, maksymalizacja, zmiana rozmiaru, przyciąganie i menu klawiaturowe.
 - Zapis i ponowne otwarcie notatki, przeniesienie do Kosza i przywrócenie.
 - Zmiana motywu oraz zachowanie okien na węższym ekranie.
 - Przeciągnięcie Kliniki → puszczenie bez ponownego odtwarzania animacji otwarcia.
-- Przeciągnięcie bąbelka → wyhamowanie bez otwarcia okna; upuszczenie na pole → przygotowanie wyłącznie tego pola; wyłączenie animacji → brak bezwładności.
+- Przeciągnięcie bąbelka → wyhamowanie bez otwarcia okna; upuszczenie na pole → wsiąknięcie i przygotowanie wyłącznie tego pola; systemowe ograniczenie ruchu → brak bezwładności.
+- 10 s bez ruchu → odbicie od paska zadań; prawy przycisk → menu jak w zasobniku → „Zamknij” → powrót z ikony w zasobniku.
