@@ -347,6 +347,17 @@ test('the spelling submenu follows the one spelling state (rc32 _refresh_spellin
   assert.equal(host.running(), true); f.api.closeApp(); f.advance(2000); assert.equal(host.running(), false, 'a closed OpisAI draws nothing');
 });
 
+test('the spelling lines come back after "Odrzuć" or × on the preview: the operation record is not work (SafeCoordinator.busy)', () => {
+  let host = null; const spelling = { connect(next) { host = next; }, refresh() {}, available: () => true, status: () => '', showIssues() {}, undo() {}, editWords() {} };
+  const f = fixture({ spelling });
+  f.api.state.operation = { id: 1 }; assert.equal(host.busy(), false, 'an operation record with no work view open');
+  // generate → review → "Odrzuć" (or the preview's ×): the view closes and the phase returns to idle, the record stays behind
+  const view = f.api.open('opisai-review'); f.api.state.operation = { id: 2 }; f.api.state.review = { id: 2 }; f.api.setPhase('review');
+  assert.equal(host.busy(), true, 'the preview is work');
+  view.close(); f.api.state.review = null; f.api.state.active = null; f.api.setPhase('idle');
+  assert.equal(host.busy(), false, 'the lines come back'); assert.deepEqual(plain(f.api.state.operation), { id: 2 });
+});
+
 test('the menu and the model tooltip follow the OpisAI theme, not the desktop theme', () => {
   for (const [theme, dark] of [['light', false], ['dark', true], ['blue', false]]) {
     const f = fixture({ prefs: { theme } }), [x, y] = f.center(); f.doc.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
