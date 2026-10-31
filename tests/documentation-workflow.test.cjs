@@ -441,6 +441,17 @@ test('dictation → "Generuj opis" → Anuluj returns to the summary; a changed 
   assert.equal(f.win('opisai-review'), undefined); assert.equal(f.phase, 'review'); assert.equal(f.api.state.review, result);
 });
 
+test('consent: an edit of a source outside the chosen scope also clears it (asdict(request) carries every source)', () => {
+  const f = fixture(); f.compose();
+  const ack = f.q('opisai-compose', '#oa-compose-ack');
+  f.check('opisai-compose', '#oa-compose-ack');
+  assert.equal(f.q('opisai-compose', '[data-source-card="diagnoza"] [data-status]').textContent, 'Poza wybranym zakresem — diagnoza nie będzie opracowywana.');
+  f.type('opisai-compose', '[data-source="diagnoza"]', SAMPLE.diagnoza + ' Edytowane.');
+  assert.equal(ack.checked, false);
+  assert.equal(f.q('opisai-compose', '[data-foot]').textContent, 'Zmieniło się to, co zostanie wysłane — zaznacz potwierdzenie ponownie.');
+  assert.equal(f.q('opisai-compose', '[data-action="generate"]').disabled, true);
+});
+
 test('focus: a rebuilt review tab, field action, comparison or detail tab keeps the keyboard focus; "Wybierz" moves it into the editor', () => {
   const f = fixture(); f.compose(); f.generate();
   let active = f.press('opisai-review', '[data-tab="wywiad"]');

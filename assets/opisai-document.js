@@ -743,8 +743,9 @@
     return {request, sections, included, panelSource, initialPanel};
   }
   const sentSource = sources => sources.filter(s => s.included !== false && strip(s.text)).map(s => s.label + ': ' + s.text).join('\n\n');
-  /* Consent covers what is sent and where; the writing style alone keeps it (ui/state.py ApprovalState). */
-  const consentScope = (sources, v, extra = {}) => JSON.stringify({sources: sources.filter(s => s.included !== false && strip(s.text)).map(s => [s.label, s.role, s.text]), panel: !!v.panel, diagnosis: !!v.diagnosis, ...extra});
+  /* Consent covers what is sent and where; the writing style alone keeps it (ui/state.py ApprovalState). Like
+   * asdict(request) it covers every source of the compose window, with its text and scope, even one outside the scope. */
+  const consentScope = (sources, v, extra = {}) => JSON.stringify({sources: sources.map(s => [s.label, s.role, s.text, s.included !== false]), panel: !!v.panel, diagnosis: !!v.diagnosis, ...extra});
   const json = value => JSON.stringify(value);
   const OUTLINE_NOTE = 'Demonstracja: treść reguł skrócono do jednego zdania. Kolejność reguł, sloty, przeznaczenie sekcji, zestawienie panelu, format odpowiedzi i źródła odpowiadają poleceniu aplikacji dla tej wizyty.';
   /* "Zasady i źródła": the real order and structure of application/generation.py _render_prompt,
