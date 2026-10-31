@@ -17,6 +17,14 @@ Earlier versions used Windows 11 Bloom images from Microsoft's press gallery. Th
 
 All SVGs are embedded locally by `Icons.svg(name, size, extraClass)`. No third-party icon font, remote image endpoint or tracking request is used.
 
+## Klinika XP mock-up
+
+`clinic.js` and `clinic.css` reconstruct the visit window of Klinika XP from the test mock `kxp_mock.c` 2.4.1 (OpisAI-resources), which was itself drawn after photos of the real program: the "Przebieg wizyty" main window, the separate description sub-window "Rejestracja wizyty: Wywiad - Badanie - Diagnoza", the read-only review and the visit list.
+
+- Klinika XP is a product of BRI. The mock-up is an independent reconstruction for showing the OpisAI workflow, not a BRI product, and contains no artwork of the publisher.
+- All patients, owners, visits and notes are fictional. Six catalog visits of the cat and the dog take their notes from the invented test cases 1–50 of `kxp_mock.c`, one case per visit; the mock's other cases and its start-up patient data are not used.
+- Titles carry a `[DEMO]` prefix, as the mock's carry `[MOCK]`.
+
 ## Klinika XP mock-up icons
 
 `clinic-icons.js` holds the 47 icons of the Klinika XP test mock `kxp_mock.c` 2.4.1 (OpisAI-resources). They were converted 1:1 to 32-unit SVG on 2026-10-31 by compiling the mock's shared `ui_icon()` drawing code with a painter that records rectangles, lines, ellipses and polygons instead of pixels.
