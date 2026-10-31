@@ -13,12 +13,11 @@
     badanie: 'Stan ogólny obniżony, postawa zgarbiona, sierść nastroszna. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchwo nad polami płucnymi rzęzenia i świsty. BCS 2/5. T 37,8°C, HR ok. 360/min.',
     diagnoza: 'Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.'
   });
+  /* Invented misspellings only. */
   const SPELLING = {
-    nastroszna: 'nastroszona', osłuchwo: 'Osłuchowo', rzęzenia: 'rzężenia', rózowe: 'różowe',
-    sluzowe: 'śluzowe', patoogicznych: 'patologicznych', oddechowew: 'oddechowe', badaniau: 'badaniu',
-    dexdormitro: 'Dexdomitor', chelbocąc: 'chełbocząc', bravekto: 'Bravecto', szcur: 'szczur',
-    szczor: 'szczur', apatycznny: 'apatyczny', klinczne: 'kliniczne', przyspiesozny: 'przyspieszony',
-    błonyy: 'błony', porfirryna: 'porfiryna', wilgotneee: 'wilgotne', wymiotty: 'wymioty'
+    nastroszna: 'nastroszona', osłuchwo: 'Osłuchowo', rzęzenia: 'rzężenia', sluzowe: 'śluzowe',
+    bravekto: 'Bravecto', szcur: 'szczur', szczor: 'szczur', apatycznny: 'apatyczny', klinczne: 'kliniczne',
+    przyspiesozny: 'przyspieszony', błonyy: 'błony', porfirryna: 'porfiryna', wilgotneee: 'wilgotne', wymiotty: 'wymioty'
   };
   const UNKNOWN_TERMS = new Set(['fancy']);
   const MAIN_TITLE = '[DEMO] Klinika XP - [Przebieg wizyty - Zwierzę domowe]';
