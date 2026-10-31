@@ -208,9 +208,10 @@
   const DT_ACTIVE=['queued','starting','recording','transcribing','stabilizing'];
 
   /* Hold, "Dyktuj" and the menu (MacroController._on_triple_click). A second hold stops the recording;
-   * a hold while the Gemini question waits cancels that start; the configuration blocks it; another
-   * open OpisAI window is recalled (ui_windows().raise_active); a review waiting behind the bubble is
-   * "another operation", and nothing starts during generation. */
+   * a hold while the Gemini question waits cancels that start; the configuration blocks it; any open
+   * OpisAI window, compose, progress, review and undo included, is recalled silently
+   * (ui_windows().raise_active); only a review waiting behind the bubble is "another operation"
+   * (_start_transcription_planned, safe.busy), and nothing starts during generation. */
   function dictate(options={}){
     options=validOption(options);
     if(state.closed)launch();
@@ -218,9 +219,7 @@
     if(state.receipt)return;
     if(state.consent){state.consent.cancelled=true;return;} // _dictation_starting: the question stays, the start is cancelled
     if(!options.direct&&settingsOpen())return;
-    // rc32 _start_transcription_planned: while compose/review is open (safe.busy) dictation does not start and does not recall the window.
-    if(!options.direct&&liveWindows().some(w=>['opisai-compose','opisai-progress','opisai-review','opisai-undo'].includes(w.id))){errorCard('Trwa inna operacja — zakończ ją przed dyktowaniem.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});return;}
-    if(!options.direct&&raiseActive())return;
+    if(!options.direct&&raiseActive())return; // the open view comes forward and nothing starts
     if(state.job)return;
     if(!options.direct&&state.review){errorCard('Trwa inna operacja — zakończ ją przed dyktowaniem.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});return;}
     if(!window.Clinic?.isEditorOpen?.()){errorCard('Nie znaleziono podokna wizyty — otwórz wizytę w Klinice.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});restoreDictationReview(options);return;}

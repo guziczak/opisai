@@ -233,16 +233,16 @@ test('the panel has no "Anuluj", pause, timer or "Enter — zakończ"; Finish is
   assert.equal(JSON.parse(f.storage.get('opisai-demo-settings-v12')).dictationDetails, true, 'the details choice is remembered at once');
 });
 
-test('compose or review open, or a review waiting behind the bubble, is another operation; other OpisAI windows are recalled', () => {
-  const f = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
-  f.api.open('opisai-compose'); f.shown.length = 0;
-  f.api.dictate(); f.advance(1200);
-  assert.equal(f.rec, null); assert.equal(f.card(), 'Trwa inna operacja — zakończ ją przed dyktowaniem.');
-  assert.deepEqual(f.shown, [], 'the open compose window is neither closed nor recalled'); assert.equal(f.doc.querySelector('.oa-dictation'), null);
-  const h = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
-  h.api.open('opisai-history'); h.shown.length = 0;
-  h.api.dictate(); h.advance(200);
-  assert.equal(h.rec, null); assert.deepEqual(h.shown, ['opisai-history'], 'ui_windows().raise_active()'); assert.equal(h.card(), '');
+test('an open OpisAI window (compose, progress, review, history) is recalled silently; a review waiting behind the bubble is another operation', () => {
+  // MacroController._on_triple_click: ui_windows().raise_active() comes before _start_transcription, so the
+  // "Trwa inna operacja" of _start_transcription_planned is reached only without a live window.
+  for (const id of ['opisai-compose', 'opisai-progress', 'opisai-review', 'opisai-history']) {
+    const f = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
+    f.api.open(id); f.shown.length = 0;
+    f.api.dictate(); f.advance(1200);
+    assert.equal(f.rec, null, id); assert.deepEqual(f.shown, [id], id + ': ui_windows().raise_active()');
+    assert.equal(f.card(), '', id + ': no message'); assert.equal(f.doc.querySelector('.oa-dictation'), null);
+  }
   const g = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
   g.api.state.review = { field: 'badanie', output: { badanie: 'x' } }; g.api.setPhase('review');
   g.api.dictate(); g.advance(1200);
