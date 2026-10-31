@@ -1,0 +1,4909 @@
+{
+ "panel": [
+  {
+   "name": "sample",
+   "texts": {
+    "badanie": "Stan ogólny obniżony, postawa zgarbiona, sierść nastroszna. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchwo nad polami płucnymi rzęzenia i świsty. BCS 2/5. T 37,8°C, HR ok. 360/min.",
+    "wywiad": "Szczur, samiec, fancy rat, 1 rok 9 mies., ok. 420 g. Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych."
+   },
+   "keys": [
+    "badanie",
+    "wywiad"
+   ],
+   "text": "Stan ogólny: obniżony, postawa zgarbiona, sierść nastroszna; Apatyczny, mniej je, chudnie\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Oddech przyspieszony z wysiłkiem; Osłuchwo nad polami płucnymi rzęzenia i świsty; Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "obniżony, postawa zgarbiona, sierść nastroszna; Apatyczny, mniej je, chudnie",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Stan ogólny obniżony, postawa zgarbiona, sierść nastroszna",
+      "Apatyczny, mniej je, chudnie"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "37,8°C",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "T 37,8°C"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "ok. 360/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR ok. 360/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "Oddech przyspieszony z wysiłkiem; Osłuchwo nad polami płucnymi rzęzenia i świsty; Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Oddech przyspieszony z wysiłkiem",
+      "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+      "Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Oddech przyspieszony z wysiłkiem",
+       " Oddech przyspieszony z wysiłkiem brzusznym",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       " Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       " Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "brzusznym",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "brzusznym"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "general_condition": [
+     {
+      "value": "obniżony, postawa zgarbiona, sierść nastroszna",
+      "quote": "Stan ogólny obniżony, postawa zgarbiona, sierść nastroszna",
+      "qualified": false
+     }
+    ],
+    "respiratory_auscultation": [
+     {
+      "value": "Oddech przyspieszony z wysiłkiem",
+      "quote": "Oddech przyspieszony z wysiłkiem",
+      "qualified": true,
+      "status": "mentioned"
+     },
+     {
+      "value": "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+      "quote": "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+      "qualified": true,
+      "status": "mentioned"
+     }
+    ],
+    "abdomen": [
+     {
+      "value": "brzusznym",
+      "quote": "brzusznym",
+      "qualified": true,
+      "status": "mentioned"
+     }
+    ],
+    "temperature": [
+     {
+      "value": "37,8°C",
+      "quote": "T 37,8°C",
+      "qualified": false
+     }
+    ],
+    "heart_rate": [
+     {
+      "value": "ok. 360/min",
+      "quote": "HR ok. 360/min",
+      "qualified": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "tetno-temp",
+   "texts": {
+    "badanie": "tętno 96/min\ntemp 38,4\nCRT 1 s\nStan ogólny dobry"
+   },
+   "keys": [
+    "badanie"
+   ],
+   "text": "Stan ogólny: dobry\nTemperatura: 38,4°C\nCRT: 1 s\nBłony śluzowe: różowe, wilgotne\nTętno: 96/min\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "dobry",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny dobry"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "38,4°C",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "temp 38,4"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "1 s",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "CRT 1 s"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "96/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "tętno 96/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "górne i dolne bez zmian",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "heart_rate": [
+     {
+      "value": "96/min",
+      "quote": "tętno 96/min",
+      "qualified": false
+     }
+    ],
+    "temperature": [
+     {
+      "value": "38,4",
+      "quote": "temp 38,4",
+      "qualified": false
+     }
+    ],
+    "capillary_refill": [
+     {
+      "value": "1 s",
+      "quote": "CRT 1 s",
+      "qualified": false
+     }
+    ],
+    "general_condition": [
+     {
+      "value": "dobry",
+      "quote": "Stan ogólny dobry",
+      "qualified": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "hr-mass",
+   "texts": {
+    "badanie": "HR 120/min, masa ok. 12,5 kg. Stan ogólny dobry."
+   },
+   "keys": [
+    "badanie"
+   ],
+   "text": "Stan ogólny: dobry\nTemperatura: w normie\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: 120/min, masa ok. 12,5 kg\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "dobry",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny dobry"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "120/min, masa ok. 12,5 kg",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR 120/min, masa ok. 12,5 kg"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "górne i dolne bez zmian",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "heart_rate": [
+     {
+      "value": "120/min, masa ok. 12,5 kg",
+      "quote": "HR 120/min, masa ok. 12,5 kg",
+      "qualified": false
+     }
+    ],
+    "general_condition": [
+     {
+      "value": "dobry",
+      "quote": "Stan ogólny dobry",
+      "qualified": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "mela",
+   "texts": {
+    "badanie": "Stan ogólny dobry, brzuch miękki, niebolesny. Śluzówki różowe.",
+    "wywiad": "Kontrola po zmianie karmy. Apetyt dobry, wymiotów brak."
+   },
+   "keys": [
+    "badanie",
+    "wywiad"
+   ],
+   "text": "Stan ogólny: dobry\nTemperatura: w normie\nCRT: <2 s\nBłony śluzowe: różowe\nTętno: w normie\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: miękki, niebolesny\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "dobry",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny dobry"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Śluzówki różowe"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "górne i dolne bez zmian",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "miękki, niebolesny",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "brzuch miękki, niebolesny"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "general_condition": [
+     {
+      "value": "dobry",
+      "quote": "Stan ogólny dobry",
+      "qualified": false
+     }
+    ],
+    "abdomen": [
+     {
+      "value": "miękki, niebolesny",
+      "quote": "brzuch miękki, niebolesny",
+      "qualified": false
+     }
+    ],
+    "mucosa": [
+     {
+      "value": "różowe",
+      "quote": "Śluzówki różowe",
+      "qualified": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "bruno",
+   "texts": {
+    "badanie": "Bolesność przy zginaniu nadgarstka lewego, bez obrzęku. Pozostałe kończyny bez zmian.",
+    "wywiad": "Kuleje na lewą kończynę piersiową od wczoraj, po zabawie w parku."
+   },
+   "keys": [
+    "badanie",
+    "wywiad"
+   ],
+   "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: w normie\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: w normie\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "stabilny, przytomny, kontaktowy",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "górne i dolne bez zmian",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {}
+  },
+  {
+   "name": "v140",
+   "texts": {
+    "badanie": "Stan ogólny dobry, sierść gładka, oddech spokojny, bez wydzieliny z nozdrzy. Masa 450 g.",
+    "wywiad": "Kontrola okresowa. Apetyt dobry, aktywny, bez kichania."
+   },
+   "keys": [
+    "badanie",
+    "wywiad"
+   ],
+   "text": "Stan ogólny: dobry, sierść gładka\nTemperatura: w normie\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: w normie\nDrogi oddechowe (osłuchowo): oddech spokojny, bez wydzieliny z nozdrzy\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "dobry, sierść gładka",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny dobry, sierść gładka"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "oddech spokojny, bez wydzieliny z nozdrzy",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "oddech spokojny, bez wydzieliny z nozdrzy"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "oddech spokojny, bez wydzieliny z nozdrzy",
+       "Stan ogólny dobry, sierść gładka, oddech spokojny, bez wydzieliny z nozdrzy",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "general_condition": [
+     {
+      "value": "dobry, sierść gładka",
+      "quote": "Stan ogólny dobry, sierść gładka",
+      "qualified": false
+     }
+    ],
+    "respiratory_auscultation": [
+     {
+      "value": "oddech spokojny, bez wydzieliny z nozdrzy",
+      "quote": "oddech spokojny, bez wydzieliny z nozdrzy",
+      "qualified": true,
+      "status": "mentioned"
+     }
+    ]
+   }
+  },
+  {
+   "name": "v063",
+   "texts": {
+    "badanie": "Stan ogólny dobry, BCS 3/5. Uszy, oczy i nozdrza czyste.",
+    "wywiad": "Pierwsza wizyta po zakupie. Karmiony mieszanką dla szczurów, mieszka z drugim samcem."
+   },
+   "keys": [
+    "badanie",
+    "wywiad"
+   ],
+   "text": "Stan ogólny: dobry, BCS 3/5\nTemperatura: w normie\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: w normie\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "dobry, BCS 3/5",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny dobry, BCS 3/5"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "górne i dolne bez zmian",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "general_condition": [
+     {
+      "value": "dobry, BCS 3/5",
+      "quote": "Stan ogólny dobry, BCS 3/5",
+      "qualified": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "time",
+   "texts": {
+    "badanie": "Temperatura 39,5, obecnie 38,7. HR 140/min."
+   },
+   "keys": [
+    "badanie"
+   ],
+   "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: 39,5; obecnie 38,7\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: 140/min\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "stabilny, przytomny, kontaktowy",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "39,5; obecnie 38,7",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Temperatura 39,5",
+      "obecnie 38,7"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "obecnie 38,7",
+       "Temperatura 39,5, obecnie 38,7. HR 140/min",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "140/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR 140/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "górne i dolne bez zmian",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "temperature": [
+     {
+      "value": "39,5",
+      "quote": "Temperatura 39,5",
+      "qualified": false
+     },
+     {
+      "value": "obecnie 38,7",
+      "quote": "obecnie 38,7",
+      "qualified": true
+     }
+    ],
+    "heart_rate": [
+     {
+      "value": "140/min",
+      "quote": "HR 140/min",
+      "qualified": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "unmeasured",
+   "texts": {
+    "badanie": "T, CRT nie mierzone. Węzłów chłonnych nie badano. Brzuch miękki, nie badano per rectum."
+   },
+   "keys": [
+    "badanie"
+   ],
+   "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: T, CRT nie mierzone\nCRT: nie mierzone\nBłony śluzowe: różowe, wilgotne\nTętno: w normie\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: nie badano\nBrzuch: miękki, nie badano per rectum\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "stabilny, przytomny, kontaktowy",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "T, CRT nie mierzone",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "T, CRT nie mierzone"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "nie mierzone",
+     "origin": "source",
+     "status": "not_examined",
+     "quotes": [
+      "CRT nie mierzone"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "górne i dolne bez zmian",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "nie badano",
+     "origin": "source",
+     "status": "not_examined",
+     "quotes": [
+      "Węzłów chłonnych nie badano"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "miękki, nie badano per rectum",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Brzuch miękki, nie badano per rectum"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "temperature": [
+     {
+      "value": "T, CRT nie mierzone",
+      "quote": "T, CRT nie mierzone",
+      "qualified": true
+     }
+    ],
+    "capillary_refill": [
+     {
+      "value": "nie mierzone",
+      "quote": "CRT nie mierzone",
+      "qualified": false,
+      "status": "not_examined"
+     }
+    ],
+    "lymph_nodes": [
+     {
+      "value": "nie badano",
+      "quote": "Węzłów chłonnych nie badano",
+      "qualified": false,
+      "status": "not_examined"
+     }
+    ],
+    "abdomen": [
+     {
+      "value": "miękki, nie badano per rectum",
+      "quote": "Brzuch miękki, nie badano per rectum",
+      "qualified": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "auscult",
+   "texts": {
+    "badanie": "płuca b.z., serce: szmer skurczowy 2/6. Gorączka 40,1."
+   },
+   "keys": [
+    "badanie"
+   ],
+   "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: Gorączka 40,1\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: w normie\nDrogi oddechowe (osłuchowo): Płuca: b.z.\nSerce (osłuchowo): szmer skurczowy 2/6\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "stabilny, przytomny, kontaktowy",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "Gorączka 40,1",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Gorączka 40,1"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "Płuca: b.z.",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "płuca b.z."
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "szmer skurczowy 2/6",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "serce: szmer skurczowy 2/6"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "respiratory_auscultation": [
+     {
+      "value": "Płuca: b.z.",
+      "quote": "płuca b.z.",
+      "qualified": false
+     }
+    ],
+    "cardiac_auscultation": [
+     {
+      "value": "szmer skurczowy 2/6",
+      "quote": "serce: szmer skurczowy 2/6",
+      "qualified": false
+     }
+    ],
+    "temperature": [
+     {
+      "value": "Gorączka 40,1",
+      "quote": "Gorączka 40,1",
+      "qualified": true,
+      "status": "mentioned"
+     }
+    ]
+   }
+  },
+  {
+   "name": "typos",
+   "texts": {
+    "badanie": "błony śluzowe  bladoróżowe, wilgtne\ndrogi oddechowe - bez szmerów dodatkowych\nT 38,6 C\ntemp. 38,2\nTętno: 120"
+   },
+   "keys": [
+    "badanie"
+   ],
+   "text": "Stan ogólny: stabilny, przytomny, kontaktowy\nTemperatura: T 38,6 C; temp. 38,2\nCRT: <2 s\nBłony śluzowe: bladoróżowe, wilgtne\nTętno: 120/min\nDrogi oddechowe (osłuchowo): bez szmerów dodatkowych\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "stabilny, przytomny, kontaktowy",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "T 38,6 C; temp. 38,2",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "T 38,6 C",
+      "temp. 38,2"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "bladoróżowe, wilgtne",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "błony śluzowe  bladoróżowe, wilgtne"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "120/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Tętno: 120"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "bez szmerów dodatkowych",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "drogi oddechowe - bez szmerów dodatkowych"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "mucosa": [
+     {
+      "value": "bladoróżowe, wilgtne",
+      "quote": "błony śluzowe  bladoróżowe, wilgtne",
+      "qualified": false
+     }
+    ],
+    "respiratory_auscultation": [
+     {
+      "value": "bez szmerów dodatkowych",
+      "quote": "drogi oddechowe - bez szmerów dodatkowych",
+      "qualified": false
+     }
+    ],
+    "temperature": [
+     {
+      "value": "38,6 C",
+      "quote": "T 38,6 C",
+      "qualified": false
+     },
+     {
+      "value": "38,2",
+      "quote": "temp. 38,2",
+      "qualified": false
+     }
+    ],
+    "heart_rate": [
+     {
+      "value": "120",
+      "quote": "Tętno: 120",
+      "qualified": false
+     }
+    ]
+   }
+  },
+  {
+   "name": "apathy",
+   "texts": {
+    "badanie": "Pies nieco apatyczny, osowiały od rana; śluzówki blado różowe."
+   },
+   "keys": [
+    "badanie"
+   ],
+   "text": "Stan ogólny: Pies nieco apatyczny, osowiały od rana\nTemperatura: w normie\nCRT: <2 s\nBłony śluzowe: blado różowe\nTętno: w normie\nDrogi oddechowe (osłuchowo): górne i dolne bez zmian\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: niebolesny, lekko spięty\nOdgłosy perystaltyczne: w normie",
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "Pies nieco apatyczny, osowiały od rana",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Pies nieco apatyczny, osowiały od rana"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "blado różowe",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "śluzówki blado różowe"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "górne i dolne bez zmian",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "niebolesny, lekko spięty",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "values": {
+    "general_condition": [
+     {
+      "value": "Pies nieco apatyczny, osowiały od rana",
+      "quote": "Pies nieco apatyczny, osowiały od rana",
+      "qualified": false
+     }
+    ],
+    "mucosa": [
+     {
+      "value": "blado różowe",
+      "quote": "śluzówki blado różowe",
+      "qualified": false
+     }
+    ]
+   }
+  }
+ ],
+ "spelling": [
+  [
+   "wilgtne",
+   "wilgotne",
+   true
+  ],
+  [
+   "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+   "Osłuchowo nad polami płucnymi rzężenia i świsty",
+   true
+  ],
+  [
+   "HR 120/min",
+   "HR 130/min",
+   false
+  ],
+  [
+   "tony sercowe czyte",
+   "tony sercowe czyste",
+   true
+  ],
+  [
+   "nie badano",
+   "badano",
+   false
+  ],
+  [
+   "brzuch miekki",
+   "brzuch miękki",
+   true
+  ],
+  [
+   "T 38,6 C",
+   "T 38,6 °C",
+   false
+  ],
+  [
+   "sierść nastroszna",
+   "sierść nastroszona",
+   true
+  ],
+  [
+   "stan dobry",
+   "stan dobry ogólny",
+   false
+  ],
+  [
+   "kot",
+   "kat",
+   true
+  ]
+ ],
+ "repetition": [
+  {
+   "text": "Temperatura 38,6°C. Sierść gładka.",
+   "note": "Stan ogólny dobry. T 38,6 C. Serce osłuchowo: bez nieprawidłowości. Brzuch niebolesny.",
+   "kept": "Sierść gładka.",
+   "messages": [
+    "Usunięto powtórzenie faktu już obecnego w panelu: Temperatura."
+   ],
+   "evidence": [
+    "Temperatura 38,6°C."
+   ]
+  },
+  {
+   "text": "Stan ogólny: dobry. Temperatura: 38,6 °C. Brzuch jest niebolesny.",
+   "note": "Stan ogólny dobry. T 38,6 C. Serce osłuchowo: bez nieprawidłowości. Brzuch niebolesny.",
+   "kept": "",
+   "messages": [
+    "Usunięto powtórzenie faktu już obecnego w panelu: Stan ogólny.",
+    "Usunięto powtórzenie faktu już obecnego w panelu: Temperatura.",
+    "Usunięto powtórzenie faktu już obecnego w panelu: Brzuch."
+   ],
+   "evidence": [
+    "Stan ogólny: dobry.",
+    "Temperatura: 38,6 °C.",
+    "Brzuch jest niebolesny."
+   ]
+  },
+  {
+   "text": "Wczoraj temperatura 38,6°C.",
+   "note": "Stan ogólny dobry. T 38,6 C. Serce osłuchowo: bez nieprawidłowości. Brzuch niebolesny.",
+   "kept": "Wczoraj temperatura 38,6°C.",
+   "messages": [],
+   "evidence": []
+  },
+  {
+   "text": "Osłuchowo serce bez nieprawidłowości. Kondycja dobra.",
+   "note": "Stan ogólny dobry. T 38,6 C. Serce osłuchowo: bez nieprawidłowości. Brzuch niebolesny.",
+   "kept": "Osłuchowo serce bez nieprawidłowości. Kondycja dobra.",
+   "messages": [],
+   "evidence": []
+  },
+  {
+   "text": "T 38,6. Stan ogólny dobry.",
+   "note": "Stan ogólny dobry. T 38,6 C. Serce osłuchowo: bez nieprawidłowości. Brzuch niebolesny.",
+   "kept": "Stan ogólny dobry.",
+   "messages": [
+    "Usunięto powtórzenie faktu już obecnego w panelu: Temperatura."
+   ],
+   "evidence": [
+    "T 38,6."
+   ]
+  }
+ ],
+ "generate": [
+  {
+   "scope": "visit",
+   "rich": false,
+   "panel": false,
+   "diagnosis": false,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny obniżony, postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. BCS 2/5. Temperatura 37,8°C, HR ok. 360/min."
+    ],
+    [
+     "wywiad",
+     "Opis wywiadu",
+     "Sygnalment:\nSzczur, samiec, fancy rat, 1 rok 9 mies., masa ciała ok. 420 g.\n\nPowód wizyty:\nNasilające się kichanie i świszczący oddech.\n\nPrzebieg i czas trwania:\nOd ok. 2 tygodni nasilające się objawy. Czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych."
+    ]
+   ],
+   "findings": [],
+   "rows": [],
+   "initial": "",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "sierść nastroszna",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 0,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Stan ogólny obniżony, postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. BCS 2/5. Temperatura 37,8°C, HR ok. 360/min.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/signalment/text",
+     "text",
+     "Szczur, samiec, fancy rat, 1 rok 9 mies., masa ciała ok. 420 g.",
+     "model"
+    ],
+    [
+     "history/signalment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/chief_complaint/text",
+     "text",
+     "Nasilające się kichanie i świszczący oddech.",
+     "model"
+    ],
+    [
+     "history/chief_complaint/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/course/text",
+     "text",
+     "Od ok. 2 tygodni nasilające się objawy. Czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych.",
+     "model"
+    ],
+    [
+     "history/course/inference",
+     "inference",
+     "",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "visit",
+   "rich": false,
+   "panel": true,
+   "diagnosis": false,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny: obniżony\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Osłuchowo nad polami płucnymi rzężenia i świsty\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie\n\nPostawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. BCS 2/5."
+    ],
+    [
+     "wywiad",
+     "Opis wywiadu",
+     "Sygnalment:\nSzczur, samiec, fancy rat, 1 rok 9 mies., masa ciała ok. 420 g.\n\nPowód wizyty:\nNasilające się kichanie i świszczący oddech.\n\nPrzebieg i czas trwania:\nOd ok. 2 tygodni nasilające się objawy. Czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych."
+    ]
+   ],
+   "findings": [
+    [
+     "panel_assignment_review",
+     "Przypisania źródeł do parametrów wymagają sprawdzenia: 3.",
+     ""
+    ],
+    [
+     "panel_quotes_attributed",
+     "Fragmenty notatki przypisane do wierszy panelu przez AI i sprawdzone dosłownie: Stan ogólny, Drogi oddechowe (osłuchowo).",
+     ""
+    ]
+   ],
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "obniżony",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny obniżony"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "ai",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "37,8°C",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "T 37,8°C"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "ok. 360/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR ok. 360/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Osłuchwo nad polami płucnymi rzęzenia i świsty"
+     ],
+     "respelled": true,
+     "needs_review": true,
+     "attribution": "ai",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Oddech przyspieszony z wysiłkiem",
+       " Oddech przyspieszony z wysiłkiem brzusznym",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       " Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       " Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "brzusznym",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "brzusznym"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "initial": "Badanie kliniczne:\nStan ogólny: obniżony, postawa zgarbiona, sierść nastroszna; Apatyczny, mniej je, chudnie\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Oddech przyspieszony z wysiłkiem; Osłuchwo nad polami płucnymi rzęzenia i świsty; Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "sierść nastroszna",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "HR ok",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 0,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/panel/general_condition",
+     "panel_row",
+     "obniżony",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/temperature",
+     "panel_row",
+     "37,8°C",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/capillary_refill",
+     "panel_row",
+     "<2 s",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/mucosa",
+     "panel_row",
+     "różowe, wilgotne",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/heart_rate",
+     "panel_row",
+     "ok. 360/min",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/respiratory_auscultation",
+     "panel_row",
+     "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/cardiac_auscultation",
+     "panel_row",
+     "bez nieprawidłowości",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/lymph_nodes",
+     "panel_row",
+     "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/abdomen",
+     "panel_row",
+     "brzusznym",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/peristalsis",
+     "panel_row",
+     "w normie",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. BCS 2/5.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/signalment/text",
+     "text",
+     "Szczur, samiec, fancy rat, 1 rok 9 mies., masa ciała ok. 420 g.",
+     "model"
+    ],
+    [
+     "history/signalment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/chief_complaint/text",
+     "text",
+     "Nasilające się kichanie i świszczący oddech.",
+     "model"
+    ],
+    [
+     "history/chief_complaint/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/course/text",
+     "text",
+     "Od ok. 2 tygodni nasilające się objawy. Czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych.",
+     "model"
+    ],
+    [
+     "history/course/inference",
+     "inference",
+     "",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "visit",
+   "rich": false,
+   "panel": true,
+   "diagnosis": true,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny: obniżony\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Osłuchowo nad polami płucnymi rzężenia i świsty\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie\n\nPostawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. BCS 2/5."
+    ],
+    [
+     "wywiad",
+     "Opis wywiadu",
+     "Sygnalment:\nSzczur, samiec, fancy rat, 1 rok 9 mies., masa ciała ok. 420 g.\n\nPowód wizyty:\nNasilające się kichanie i świszczący oddech.\n\nPrzebieg i czas trwania:\nOd ok. 2 tygodni nasilające się objawy. Czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych."
+    ],
+    [
+     "diagnoza",
+     "Rozpoznanie robocze",
+     "Rozpoznanie wstępne:\nPodejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.\n\nRóżnicowanie:\nDo rozważenia: inne bakteryjne zakażenie dróg oddechowych."
+    ]
+   ],
+   "findings": [
+    [
+     "panel_assignment_review",
+     "Przypisania źródeł do parametrów wymagają sprawdzenia: 3.",
+     ""
+    ],
+    [
+     "panel_quotes_attributed",
+     "Fragmenty notatki przypisane do wierszy panelu przez AI i sprawdzone dosłownie: Stan ogólny, Drogi oddechowe (osłuchowo).",
+     ""
+    ],
+    [
+     "inference_review",
+     "Wynik zawiera propozycje lub interpretacje do sprawdzenia.",
+     ""
+    ]
+   ],
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "obniżony",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny obniżony"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "ai",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "37,8°C",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "T 37,8°C"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "ok. 360/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR ok. 360/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Osłuchwo nad polami płucnymi rzęzenia i świsty"
+     ],
+     "respelled": true,
+     "needs_review": true,
+     "attribution": "ai",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Oddech przyspieszony z wysiłkiem",
+       " Oddech przyspieszony z wysiłkiem brzusznym",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       " Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       " Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "brzusznym",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "brzusznym"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "initial": "Badanie kliniczne:\nStan ogólny: obniżony, postawa zgarbiona, sierść nastroszna; Apatyczny, mniej je, chudnie\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Oddech przyspieszony z wysiłkiem; Osłuchwo nad polami płucnymi rzęzenia i świsty; Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "sierść nastroszna",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "HR ok",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 1,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/panel/general_condition",
+     "panel_row",
+     "obniżony",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/temperature",
+     "panel_row",
+     "37,8°C",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/capillary_refill",
+     "panel_row",
+     "<2 s",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/mucosa",
+     "panel_row",
+     "różowe, wilgotne",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/heart_rate",
+     "panel_row",
+     "ok. 360/min",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/respiratory_auscultation",
+     "panel_row",
+     "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/cardiac_auscultation",
+     "panel_row",
+     "bez nieprawidłowości",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/lymph_nodes",
+     "panel_row",
+     "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/abdomen",
+     "panel_row",
+     "brzusznym",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/peristalsis",
+     "panel_row",
+     "w normie",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. BCS 2/5.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/signalment/text",
+     "text",
+     "Szczur, samiec, fancy rat, 1 rok 9 mies., masa ciała ok. 420 g.",
+     "model"
+    ],
+    [
+     "history/signalment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/chief_complaint/text",
+     "text",
+     "Nasilające się kichanie i świszczący oddech.",
+     "model"
+    ],
+    [
+     "history/chief_complaint/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/course/text",
+     "text",
+     "Od ok. 2 tygodni nasilające się objawy. Czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych.",
+     "model"
+    ],
+    [
+     "history/course/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/working_diagnosis/text",
+     "text",
+     "Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.",
+     "model"
+    ],
+    [
+     "diagnosis/working_diagnosis/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/differential/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/differential/inference",
+     "inference",
+     "Do rozważenia: inne bakteryjne zakażenie dróg oddechowych.",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "visit",
+   "rich": true,
+   "panel": false,
+   "diagnosis": false,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny obniżony; zwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. Kondycja ciała BCS 2/5. Temperatura 37,8°C, tętno ok. 360/min.\n\nZalecenia i leczenie do domu:\nDo rozważenia: wymiana ściółki z trocin sosnowych na mniej pylącą oraz obserwacja apetytu i masy ciała.\n\nRokowanie i plan dalszy:\nRokowanie ostrożne; do monitorowania: oddech, apetyt i masa ciała."
+    ],
+    [
+     "wywiad",
+     "Opis wywiadu",
+     "Sygnalment:\nSzczur, samiec, odmiana fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g.\n\nPowód wizyty:\nNasilające się kichanie i świszczący oddech.\n\nPrzebieg i czas trwania:\nObjawy trwają od ok. 2 tygodni i narastają. Wokół nozdrzy i oczu czerwonobrązowa wydzielina (porfiryna). Apatia, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane na ściółce z trocin sosnowych."
+    ]
+   ],
+   "findings": [
+    [
+     "inference_review",
+     "Wynik zawiera propozycje lub interpretacje do sprawdzenia.",
+     ""
+    ]
+   ],
+   "rows": [],
+   "initial": "",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "postawa zgarbiona",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "sierść nastroszna",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "HR ok",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "1 rok 9 mies.",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "mniej je",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "chudnie",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 2,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Stan ogólny obniżony; zwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. Kondycja ciała BCS 2/5. Temperatura 37,8°C, tętno ok. 360/min.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "Do rozważenia: wymiana ściółki z trocin sosnowych na mniej pylącą oraz obserwacja apetytu i masy ciała.",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "Rokowanie ostrożne; do monitorowania: oddech, apetyt i masa ciała.",
+     "model"
+    ],
+    [
+     "history/signalment/text",
+     "text",
+     "Szczur, samiec, odmiana fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g.",
+     "model"
+    ],
+    [
+     "history/signalment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/chief_complaint/text",
+     "text",
+     "Nasilające się kichanie i świszczący oddech.",
+     "model"
+    ],
+    [
+     "history/chief_complaint/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/course/text",
+     "text",
+     "Objawy trwają od ok. 2 tygodni i narastają. Wokół nozdrzy i oczu czerwonobrązowa wydzielina (porfiryna). Apatia, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane na ściółce z trocin sosnowych.",
+     "model"
+    ],
+    [
+     "history/course/inference",
+     "inference",
+     "",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "visit",
+   "rich": true,
+   "panel": true,
+   "diagnosis": false,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny: obniżony\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Osłuchowo nad polami płucnymi rzężenia i świsty\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie\n\nZwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Kondycja ciała BCS 2/5.\n\nZalecenia i leczenie do domu:\nDo rozważenia: wymiana ściółki z trocin sosnowych na mniej pylącą oraz obserwacja apetytu i masy ciała.\n\nRokowanie i plan dalszy:\nRokowanie ostrożne; do monitorowania: oddech, apetyt i masa ciała."
+    ],
+    [
+     "wywiad",
+     "Opis wywiadu",
+     "Sygnalment:\nSzczur, samiec, odmiana fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g.\n\nPowód wizyty:\nNasilające się kichanie i świszczący oddech.\n\nPrzebieg i czas trwania:\nObjawy trwają od ok. 2 tygodni i narastają. Wokół nozdrzy i oczu czerwonobrązowa wydzielina (porfiryna). Apatia, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane na ściółce z trocin sosnowych."
+    ]
+   ],
+   "findings": [
+    [
+     "panel_assignment_review",
+     "Przypisania źródeł do parametrów wymagają sprawdzenia: 3.",
+     ""
+    ],
+    [
+     "panel_quotes_attributed",
+     "Fragmenty notatki przypisane do wierszy panelu przez AI i sprawdzone dosłownie: Stan ogólny, Drogi oddechowe (osłuchowo).",
+     ""
+    ],
+    [
+     "inference_review",
+     "Wynik zawiera propozycje lub interpretacje do sprawdzenia.",
+     ""
+    ]
+   ],
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "obniżony",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny obniżony"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "ai",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "37,8°C",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "T 37,8°C"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "ok. 360/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR ok. 360/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Osłuchwo nad polami płucnymi rzęzenia i świsty"
+     ],
+     "respelled": true,
+     "needs_review": true,
+     "attribution": "ai",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Oddech przyspieszony z wysiłkiem",
+       " Oddech przyspieszony z wysiłkiem brzusznym",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       " Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       " Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "brzusznym",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "brzusznym"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "initial": "Badanie kliniczne:\nStan ogólny: obniżony, postawa zgarbiona, sierść nastroszna; Apatyczny, mniej je, chudnie\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Oddech przyspieszony z wysiłkiem; Osłuchwo nad polami płucnymi rzęzenia i świsty; Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "postawa zgarbiona",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "sierść nastroszna",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "HR ok",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "1 rok 9 mies.",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "mniej je",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "chudnie",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 2,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/panel/general_condition",
+     "panel_row",
+     "obniżony",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/temperature",
+     "panel_row",
+     "37,8°C",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/capillary_refill",
+     "panel_row",
+     "<2 s",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/mucosa",
+     "panel_row",
+     "różowe, wilgotne",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/heart_rate",
+     "panel_row",
+     "ok. 360/min",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/respiratory_auscultation",
+     "panel_row",
+     "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/cardiac_auscultation",
+     "panel_row",
+     "bez nieprawidłowości",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/lymph_nodes",
+     "panel_row",
+     "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/abdomen",
+     "panel_row",
+     "brzusznym",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/peristalsis",
+     "panel_row",
+     "w normie",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Zwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Kondycja ciała BCS 2/5.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "Do rozważenia: wymiana ściółki z trocin sosnowych na mniej pylącą oraz obserwacja apetytu i masy ciała.",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "Rokowanie ostrożne; do monitorowania: oddech, apetyt i masa ciała.",
+     "model"
+    ],
+    [
+     "history/signalment/text",
+     "text",
+     "Szczur, samiec, odmiana fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g.",
+     "model"
+    ],
+    [
+     "history/signalment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/chief_complaint/text",
+     "text",
+     "Nasilające się kichanie i świszczący oddech.",
+     "model"
+    ],
+    [
+     "history/chief_complaint/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/course/text",
+     "text",
+     "Objawy trwają od ok. 2 tygodni i narastają. Wokół nozdrzy i oczu czerwonobrązowa wydzielina (porfiryna). Apatia, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane na ściółce z trocin sosnowych.",
+     "model"
+    ],
+    [
+     "history/course/inference",
+     "inference",
+     "",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "visit",
+   "rich": true,
+   "panel": true,
+   "diagnosis": true,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny: obniżony\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Osłuchowo nad polami płucnymi rzężenia i świsty\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie\n\nZwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Kondycja ciała BCS 2/5.\n\nZalecenia i leczenie do domu:\nDo rozważenia: wymiana ściółki z trocin sosnowych na mniej pylącą oraz obserwacja apetytu i masy ciała.\n\nRokowanie i plan dalszy:\nRokowanie ostrożne; do monitorowania: oddech, apetyt i masa ciała."
+    ],
+    [
+     "wywiad",
+     "Opis wywiadu",
+     "Sygnalment:\nSzczur, samiec, odmiana fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g.\n\nPowód wizyty:\nNasilające się kichanie i świszczący oddech.\n\nPrzebieg i czas trwania:\nObjawy trwają od ok. 2 tygodni i narastają. Wokół nozdrzy i oczu czerwonobrązowa wydzielina (porfiryna). Apatia, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane na ściółce z trocin sosnowych."
+    ],
+    [
+     "diagnoza",
+     "Rozpoznanie robocze",
+     "Rozpoznanie wstępne:\nPodejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.\n\nRóżnicowanie:\nDo rozważenia: inne bakteryjne zakażenie dróg oddechowych; podrażnienie dróg oddechowych pyłem ze ściółki."
+    ]
+   ],
+   "findings": [
+    [
+     "panel_assignment_review",
+     "Przypisania źródeł do parametrów wymagają sprawdzenia: 3.",
+     ""
+    ],
+    [
+     "panel_quotes_attributed",
+     "Fragmenty notatki przypisane do wierszy panelu przez AI i sprawdzone dosłownie: Stan ogólny, Drogi oddechowe (osłuchowo).",
+     ""
+    ],
+    [
+     "inference_review",
+     "Wynik zawiera propozycje lub interpretacje do sprawdzenia.",
+     ""
+    ]
+   ],
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "obniżony",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny obniżony"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "ai",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "37,8°C",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "T 37,8°C"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "ok. 360/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR ok. 360/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Osłuchwo nad polami płucnymi rzęzenia i świsty"
+     ],
+     "respelled": true,
+     "needs_review": true,
+     "attribution": "ai",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Oddech przyspieszony z wysiłkiem",
+       " Oddech przyspieszony z wysiłkiem brzusznym",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       " Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       " Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "brzusznym",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "brzusznym"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "initial": "Badanie kliniczne:\nStan ogólny: obniżony, postawa zgarbiona, sierść nastroszna; Apatyczny, mniej je, chudnie\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Oddech przyspieszony z wysiłkiem; Osłuchwo nad polami płucnymi rzęzenia i świsty; Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "postawa zgarbiona",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "sierść nastroszna",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "HR ok",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "1 rok 9 mies.",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "mniej je",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "chudnie",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 3,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/panel/general_condition",
+     "panel_row",
+     "obniżony",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/temperature",
+     "panel_row",
+     "37,8°C",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/capillary_refill",
+     "panel_row",
+     "<2 s",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/mucosa",
+     "panel_row",
+     "różowe, wilgotne",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/heart_rate",
+     "panel_row",
+     "ok. 360/min",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/respiratory_auscultation",
+     "panel_row",
+     "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/cardiac_auscultation",
+     "panel_row",
+     "bez nieprawidłowości",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/lymph_nodes",
+     "panel_row",
+     "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/abdomen",
+     "panel_row",
+     "brzusznym",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/peristalsis",
+     "panel_row",
+     "w normie",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Zwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Kondycja ciała BCS 2/5.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "Do rozważenia: wymiana ściółki z trocin sosnowych na mniej pylącą oraz obserwacja apetytu i masy ciała.",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "Rokowanie ostrożne; do monitorowania: oddech, apetyt i masa ciała.",
+     "model"
+    ],
+    [
+     "history/signalment/text",
+     "text",
+     "Szczur, samiec, odmiana fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g.",
+     "model"
+    ],
+    [
+     "history/signalment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/chief_complaint/text",
+     "text",
+     "Nasilające się kichanie i świszczący oddech.",
+     "model"
+    ],
+    [
+     "history/chief_complaint/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/course/text",
+     "text",
+     "Objawy trwają od ok. 2 tygodni i narastają. Wokół nozdrzy i oczu czerwonobrązowa wydzielina (porfiryna). Apatia, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane na ściółce z trocin sosnowych.",
+     "model"
+    ],
+    [
+     "history/course/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/working_diagnosis/text",
+     "text",
+     "Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.",
+     "model"
+    ],
+    [
+     "diagnosis/working_diagnosis/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/differential/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/differential/inference",
+     "inference",
+     "Do rozważenia: inne bakteryjne zakażenie dróg oddechowych; podrażnienie dróg oddechowych pyłem ze ściółki.",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "badanie",
+   "rich": false,
+   "panel": false,
+   "diagnosis": false,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny obniżony, postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. BCS 2/5. Temperatura 37,8°C, HR ok. 360/min."
+    ]
+   ],
+   "findings": [],
+   "rows": [],
+   "initial": "",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "sierść nastroszna",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 0,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Stan ogólny obniżony, postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. BCS 2/5. Temperatura 37,8°C, HR ok. 360/min.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "badanie",
+   "rich": false,
+   "panel": true,
+   "diagnosis": false,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny: obniżony, postawa zgarbiona, sierść nastroszna\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Osłuchowo nad polami płucnymi rzężenia i świsty\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie\n\nPostawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. BCS 2/5."
+    ]
+   ],
+   "findings": [
+    [
+     "panel_assignment_review",
+     "Przypisania źródeł do parametrów wymagają sprawdzenia: 2.",
+     ""
+    ],
+    [
+     "panel_quotes_attributed",
+     "Fragmenty notatki przypisane do wierszy panelu przez AI i sprawdzone dosłownie: Drogi oddechowe (osłuchowo).",
+     ""
+    ]
+   ],
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "obniżony, postawa zgarbiona, sierść nastroszna",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny obniżony, postawa zgarbiona, sierść nastroszna"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "37,8°C",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "T 37,8°C"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "ok. 360/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR ok. 360/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Osłuchwo nad polami płucnymi rzęzenia i świsty"
+     ],
+     "respelled": true,
+     "needs_review": true,
+     "attribution": "ai",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Oddech przyspieszony z wysiłkiem",
+       " Oddech przyspieszony z wysiłkiem brzusznym",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       " Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "brzusznym",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "brzusznym"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "initial": "Badanie kliniczne:\nStan ogólny: obniżony, postawa zgarbiona, sierść nastroszna\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Oddech przyspieszony z wysiłkiem; Osłuchwo nad polami płucnymi rzęzenia i świsty\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "HR ok",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 0,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/panel/general_condition",
+     "panel_row",
+     "obniżony, postawa zgarbiona, sierść nastroszna",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/temperature",
+     "panel_row",
+     "37,8°C",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/capillary_refill",
+     "panel_row",
+     "<2 s",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/mucosa",
+     "panel_row",
+     "różowe, wilgotne",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/heart_rate",
+     "panel_row",
+     "ok. 360/min",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/respiratory_auscultation",
+     "panel_row",
+     "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/cardiac_auscultation",
+     "panel_row",
+     "bez nieprawidłowości",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/lymph_nodes",
+     "panel_row",
+     "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/abdomen",
+     "panel_row",
+     "brzusznym",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/peristalsis",
+     "panel_row",
+     "w normie",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. BCS 2/5.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "badanie",
+   "rich": true,
+   "panel": false,
+   "diagnosis": false,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny obniżony; zwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. Kondycja ciała BCS 2/5. Temperatura 37,8°C, tętno ok. 360/min.\n\nZalecenia i leczenie do domu:\nDo rozważenia: obserwacja oddechu i kondycji ciała.\n\nRokowanie i plan dalszy:\nRokowanie ostrożne; do monitorowania: oddech i kondycja ciała."
+    ]
+   ],
+   "findings": [
+    [
+     "inference_review",
+     "Wynik zawiera propozycje lub interpretacje do sprawdzenia.",
+     ""
+    ]
+   ],
+   "rows": [],
+   "initial": "",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "postawa zgarbiona",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "sierść nastroszna",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Badanie kliniczne",
+     "HR ok",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 2,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Stan ogólny obniżony; zwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. Kondycja ciała BCS 2/5. Temperatura 37,8°C, tętno ok. 360/min.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "Do rozważenia: obserwacja oddechu i kondycji ciała.",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "Rokowanie ostrożne; do monitorowania: oddech i kondycja ciała.",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "badanie",
+   "rich": true,
+   "panel": true,
+   "diagnosis": false,
+   "sections": [
+    [
+     "badanie",
+     "Opis badania i ocena",
+     "Badanie kliniczne:\nStan ogólny: obniżony, postawa zgarbiona, sierść nastroszna\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Osłuchowo nad polami płucnymi rzężenia i świsty\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie\n\nZwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Kondycja ciała BCS 2/5.\n\nZalecenia i leczenie do domu:\nDo rozważenia: obserwacja oddechu i kondycji ciała.\n\nRokowanie i plan dalszy:\nRokowanie ostrożne; do monitorowania: oddech i kondycja ciała."
+    ]
+   ],
+   "findings": [
+    [
+     "panel_assignment_review",
+     "Przypisania źródeł do parametrów wymagają sprawdzenia: 2.",
+     ""
+    ],
+    [
+     "panel_quotes_attributed",
+     "Fragmenty notatki przypisane do wierszy panelu przez AI i sprawdzone dosłownie: Drogi oddechowe (osłuchowo).",
+     ""
+    ],
+    [
+     "inference_review",
+     "Wynik zawiera propozycje lub interpretacje do sprawdzenia.",
+     ""
+    ]
+   ],
+   "rows": [
+    {
+     "parameter_id": "general_condition",
+     "label": "Stan ogólny",
+     "value": "obniżony, postawa zgarbiona, sierść nastroszna",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "Stan ogólny obniżony, postawa zgarbiona, sierść nastroszna"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "temperature",
+     "label": "Temperatura",
+     "value": "37,8°C",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "T 37,8°C"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "capillary_refill",
+     "label": "CRT",
+     "value": "<2 s",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "mucosa",
+     "label": "Błony śluzowe",
+     "value": "różowe, wilgotne",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "heart_rate",
+     "label": "Tętno",
+     "value": "ok. 360/min",
+     "origin": "source",
+     "status": "measured",
+     "quotes": [
+      "HR ok. 360/min"
+     ],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "respiratory_auscultation",
+     "label": "Drogi oddechowe (osłuchowo)",
+     "value": "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "Osłuchwo nad polami płucnymi rzęzenia i świsty"
+     ],
+     "respelled": true,
+     "needs_review": true,
+     "attribution": "ai",
+     "issues": [
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Oddech przyspieszony z wysiłkiem",
+       " Oddech przyspieszony z wysiłkiem brzusznym",
+       true
+      ],
+      [
+       "Nie potwierdzono jednoznacznie przypisania cytatu do tego parametru. Zachowano propozycję do sprawdzenia.",
+       "Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       " Osłuchwo nad polami płucnymi rzęzenia i świsty",
+       true
+      ]
+     ]
+    },
+    {
+     "parameter_id": "cardiac_auscultation",
+     "label": "Serce (osłuchowo)",
+     "value": "bez nieprawidłowości",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "lymph_nodes",
+     "label": "Węzły chłonne",
+     "value": "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "abdomen",
+     "label": "Brzuch",
+     "value": "brzusznym",
+     "origin": "source",
+     "status": "mentioned",
+     "quotes": [
+      "brzusznym"
+     ],
+     "respelled": false,
+     "needs_review": true,
+     "attribution": "local",
+     "issues": []
+    },
+    {
+     "parameter_id": "peristalsis",
+     "label": "Odgłosy perystaltyczne",
+     "value": "w normie",
+     "origin": "template",
+     "status": "default",
+     "quotes": [],
+     "respelled": false,
+     "needs_review": false,
+     "attribution": "local",
+     "issues": []
+    }
+   ],
+   "initial": "Badanie kliniczne:\nStan ogólny: obniżony, postawa zgarbiona, sierść nastroszna\nTemperatura: 37,8°C\nCRT: <2 s\nBłony śluzowe: różowe, wilgotne\nTętno: ok. 360/min\nDrogi oddechowe (osłuchowo): Oddech przyspieszony z wysiłkiem; Osłuchwo nad polami płucnymi rzęzenia i świsty\nSerce (osłuchowo): bez nieprawidłowości\nWęzły chłonne: niepowiększone, niebolesne, przesuwalne względem podłoża\nBrzuch: brzusznym\nOdgłosy perystaltyczne: w normie",
+   "preservation": [
+    [
+     "Badanie kliniczne",
+     "HR ok",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 2,
+   "blocks": [
+    [
+     "clinical_exam/clinical_findings/panel/general_condition",
+     "panel_row",
+     "obniżony, postawa zgarbiona, sierść nastroszna",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/temperature",
+     "panel_row",
+     "37,8°C",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/capillary_refill",
+     "panel_row",
+     "<2 s",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/mucosa",
+     "panel_row",
+     "różowe, wilgotne",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/heart_rate",
+     "panel_row",
+     "ok. 360/min",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/respiratory_auscultation",
+     "panel_row",
+     "Osłuchowo nad polami płucnymi rzężenia i świsty",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/cardiac_auscultation",
+     "panel_row",
+     "bez nieprawidłowości",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/lymph_nodes",
+     "panel_row",
+     "niepowiększone, niebolesne, przesuwalne względem podłoża",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/abdomen",
+     "panel_row",
+     "brzusznym",
+     "source"
+    ],
+    [
+     "clinical_exam/clinical_findings/panel/peristalsis",
+     "panel_row",
+     "w normie",
+     "template"
+    ],
+    [
+     "clinical_exam/clinical_findings/text",
+     "text",
+     "Zwierzę w zgarbionej postawie, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony, z wysiłkiem brzusznym. Kondycja ciała BCS 2/5.",
+     "model"
+    ],
+    [
+     "clinical_exam/clinical_findings/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/additional_tests/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/visit_treatment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/home_care/inference",
+     "inference",
+     "Do rozważenia: obserwacja oddechu i kondycji ciała.",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "clinical_exam/prognosis/inference",
+     "inference",
+     "Rokowanie ostrożne; do monitorowania: oddech i kondycja ciała.",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "wywiad",
+   "rich": false,
+   "panel": false,
+   "diagnosis": false,
+   "sections": [
+    [
+     "wywiad",
+     "Opis wywiadu",
+     "Sygnalment:\nSzczur, samiec, fancy rat, 1 rok 9 mies., masa ciała ok. 420 g.\n\nPowód wizyty:\nNasilające się kichanie i świszczący oddech.\n\nPrzebieg i czas trwania:\nOd ok. 2 tygodni nasilające się objawy. Czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych."
+    ]
+   ],
+   "findings": [],
+   "rows": [],
+   "initial": "",
+   "preservation": [],
+   "inference": 0,
+   "blocks": [
+    [
+     "history/signalment/text",
+     "text",
+     "Szczur, samiec, fancy rat, 1 rok 9 mies., masa ciała ok. 420 g.",
+     "model"
+    ],
+    [
+     "history/signalment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/chief_complaint/text",
+     "text",
+     "Nasilające się kichanie i świszczący oddech.",
+     "model"
+    ],
+    [
+     "history/chief_complaint/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/course/text",
+     "text",
+     "Od ok. 2 tygodni nasilające się objawy. Czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych.",
+     "model"
+    ],
+    [
+     "history/course/inference",
+     "inference",
+     "",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "wywiad",
+   "rich": true,
+   "panel": false,
+   "diagnosis": false,
+   "sections": [
+    [
+     "wywiad",
+     "Opis wywiadu",
+     "Sygnalment:\nSzczur, samiec, odmiana fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g.\n\nPowód wizyty:\nNasilające się kichanie i świszczący oddech.\n\nPrzebieg i czas trwania:\nObjawy trwają od ok. 2 tygodni i narastają. Wokół nozdrzy i oczu czerwonobrązowa wydzielina (porfiryna). Apatia, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane na ściółce z trocin sosnowych."
+    ]
+   ],
+   "findings": [],
+   "rows": [],
+   "initial": "",
+   "preservation": [
+    [
+     "Wywiad",
+     "1 rok 9 mies.",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "mniej je",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ],
+    [
+     "Wywiad",
+     "chudnie",
+     "Krótki niejasny fragment źródła nie ma dosłownego odpowiednika w wyniku."
+    ]
+   ],
+   "inference": 0,
+   "blocks": [
+    [
+     "history/signalment/text",
+     "text",
+     "Szczur, samiec, odmiana fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g.",
+     "model"
+    ],
+    [
+     "history/signalment/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/chief_complaint/text",
+     "text",
+     "Nasilające się kichanie i świszczący oddech.",
+     "model"
+    ],
+    [
+     "history/chief_complaint/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "history/course/text",
+     "text",
+     "Objawy trwają od ok. 2 tygodni i narastają. Wokół nozdrzy i oczu czerwonobrązowa wydzielina (porfiryna). Apatia, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane na ściółce z trocin sosnowych.",
+     "model"
+    ],
+    [
+     "history/course/inference",
+     "inference",
+     "",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "diagnoza",
+   "rich": false,
+   "panel": false,
+   "diagnosis": true,
+   "sections": [
+    [
+     "diagnoza",
+     "Rozpoznanie robocze",
+     "Rozpoznanie wstępne:\nPodejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.\n\nRóżnicowanie:\nDo rozważenia: inne bakteryjne zakażenie dróg oddechowych."
+    ]
+   ],
+   "findings": [
+    [
+     "inference_review",
+     "Wynik zawiera propozycje lub interpretacje do sprawdzenia.",
+     ""
+    ]
+   ],
+   "rows": [],
+   "initial": "",
+   "preservation": [],
+   "inference": 1,
+   "blocks": [
+    [
+     "diagnosis/working_diagnosis/text",
+     "text",
+     "Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.",
+     "model"
+    ],
+    [
+     "diagnosis/working_diagnosis/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/differential/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/differential/inference",
+     "inference",
+     "Do rozważenia: inne bakteryjne zakażenie dróg oddechowych.",
+     "model"
+    ]
+   ]
+  },
+  {
+   "scope": "diagnoza",
+   "rich": true,
+   "panel": false,
+   "diagnosis": true,
+   "sections": [
+    [
+     "diagnoza",
+     "Rozpoznanie robocze",
+     "Rozpoznanie wstępne:\nPodejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.\n\nRóżnicowanie:\nDo rozważenia: inne bakteryjne zakażenie dróg oddechowych; podrażnienie dróg oddechowych pyłem ze ściółki."
+    ]
+   ],
+   "findings": [
+    [
+     "inference_review",
+     "Wynik zawiera propozycje lub interpretacje do sprawdzenia.",
+     ""
+    ]
+   ],
+   "rows": [],
+   "initial": "",
+   "preservation": [],
+   "inference": 1,
+   "blocks": [
+    [
+     "diagnosis/working_diagnosis/text",
+     "text",
+     "Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.",
+     "model"
+    ],
+    [
+     "diagnosis/working_diagnosis/inference",
+     "inference",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/differential/text",
+     "text",
+     "",
+     "model"
+    ],
+    [
+     "diagnosis/differential/inference",
+     "inference",
+     "Do rozważenia: inne bakteryjne zakażenie dróg oddechowych; podrażnienie dróg oddechowych pyłem ze ściółki.",
+     "model"
+    ]
+   ]
+  }
+ ]
+}
