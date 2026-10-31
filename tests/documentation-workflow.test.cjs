@@ -200,6 +200,8 @@ function fixture({fields = SAMPLE, storage: saved = {}} = {}) {
     win: id => windows.get(id), root: id => windows.get(id)?.content,
     q(id, selector) { const el = windows.get(id)?.content.querySelector(selector); assert.ok(el, `${id}: ${selector}`); return el; },
     click(id, selector) { f.q(id, selector).click(); f.advance(0); },
+    press(id, selector) { const el = f.q(id, selector); el.focus(); el.click(); f.advance(0); return f.doc.activeElement; }, // Enter or Space on a focused control
+    escape(id) { f.win(id).el.dispatchEvent({type: 'keydown', key: 'Escape'}); f.advance(0); },
     type(id, selector, text) { const el = f.q(id, selector); el.value = text; el.dispatchEvent({type: 'input'}); f.advance(0); },
     check(id, selector, on = true) { const el = f.q(id, selector); el.checked = on; el.dispatchEvent({type: 'change'}); f.advance(0); },
     get phase() { return api.state.phase; },
@@ -437,6 +439,48 @@ test('dictation → "Generuj opis" → Anuluj returns to the summary; a changed 
   f.click('opisai-review', '[data-action="compose"]'); f.advance(1000);
   assert.equal(f.messageText(), 'Pole wizyty zmieniło się podczas dyktowania. Sprawdź je przed dalszym opracowaniem transkrypcji.');
   assert.equal(f.win('opisai-review'), undefined); assert.equal(f.phase, 'review'); assert.equal(f.api.state.review, result);
+});
+
+test('focus: a rebuilt review tab, field action, comparison or detail tab keeps the keyboard focus; "Wybierz" moves it into the editor', () => {
+  const f = fixture(); f.compose(); f.generate();
+  let active = f.press('opisai-review', '[data-tab="wywiad"]');
+  assert.ok(active.isConnected); assert.equal(active.dataset.tab, 'wywiad');
+  active = f.press('opisai-review', '[data-action="toggle-field"]');
+  assert.ok(active.isConnected); assert.equal(active.dataset.action, 'toggle-field'); assert.equal(active.textContent, 'Wybierz', '"Pomiń" keeps the focus on its action');
+  active = f.press('opisai-review', '[data-action="toggle-field"]');
+  assert.ok(active.isConnected); assert.ok(active.hasAttribute('data-block') && !active.readOnly, '_toggle_target focuses the selected field\'s editor');
+  active = f.press('opisai-review', '[data-action="compare"]');
+  assert.ok(active.isConnected); assert.equal(active.textContent, 'Ukryj porównanie');
+  f.press('opisai-review', '[data-tab="details"]');
+  active = f.press('opisai-review', '[data-details="controls"]');
+  assert.ok(active.isConnected); assert.equal(active.dataset.details, 'controls');
+});
+
+test('Esc is reject(): compose cancels, the read and the generation ask to cancel, the review is rejected, undo is not accepted, history closes', () => {
+  let f = fixture(); f.compose(); f.escape('opisai-compose');
+  assert.ok(!f.win('opisai-compose'), 'opisai-compose is closed'); assert.ok(!f.api.state.operation, 'composeClosed ends the operation'); assert.equal(f.phase, 'idle');
+  f.api.prepare(); f.advance(0);
+  assert.equal(f.doc.activeElement?.dataset.action, 'cancel', 'the read focuses Anuluj');
+  f.escape('opisai-progress');
+  assert.equal(f.q('opisai-progress', '[data-heading]').textContent, 'Anuluję operację');
+  f.advance(1000); assert.ok(!f.win('opisai-compose'), 'a cancelled read opens nothing');
+  f.compose(); f.check('opisai-compose', '#oa-compose-ack'); f.click('opisai-compose', '[data-action="generate"]');
+  assert.equal(f.doc.activeElement?.dataset.action, 'hide-stream', 'ProgressPage focuses "Ukryj" while the live text shows');
+  f.escape('opisai-review');
+  assert.equal(f.q('opisai-review', '[data-heading]').textContent, 'Anuluję generowanie');
+  f.advance(2000); assert.equal(f.q('opisai-recovery', 'h2').textContent, 'Anulowano przygotowanie');
+  f = fixture(); f.compose(); f.generate(); f.escape('opisai-review');
+  assert.ok(!f.win('opisai-review'), 'opisai-review is closed'); assert.equal(f.api.state.history[0].status, 'rejected');
+  f = fixture(); f.compose(); f.generate(); f.approve(); f.click('opisai-message', '[data-action="mb-close"]');
+  const written = {...f.clinic.fields};
+  f.api.undo(); f.advance(1000); assert.ok(f.win('opisai-undo'));
+  f.escape('opisai-undo'); f.advance(5000);
+  assert.ok(!f.win('opisai-undo'), 'opisai-undo is closed'); assert.deepEqual(f.clinic.fields, written, 'not accepted: nothing is restored');
+  f.api.history(); f.escape('opisai-history'); assert.ok(!f.win('opisai-history'), 'opisai-history is closed');
+  const result = {id: 9, mode: 'dictation', field: 'badanie', snapshot: {...SAMPLE}, session: 1, output: {badanie: SAMPLE.badanie + '\nBłony śluzowe bladoróżowe.'}, variant: {rich: false, panel: false, diagnosis: false}};
+  f = fixture(); f.api.review(result); f.click('opisai-review', '[data-action="compose"]'); f.advance(1000);
+  f.escape('opisai-compose'); f.advance(10);
+  assert.ok(f.win('opisai-review')?.content.querySelector('[data-plain]'), 'the dictation summary comes back');
 });
 
 test('review compaction: no later plain rule undoes a short- or narrow-window rule (ReviewPage._layout_review)', () => {

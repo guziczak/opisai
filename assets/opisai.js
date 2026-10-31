@@ -69,6 +69,18 @@
   const composeRequest = op => ({mode: op.variant.rich ? 'rich' : 'faithful', panel: op.variant.panel, diagnosis: op.variant.diagnosis, sources: composeSources(op),
     outputs: [...op.scope.outputs, ...(op.variant.diagnosis ? ['diagnoza'] : [])], panelTarget: op.variant.panel ? 'badanie' : '', snapshot: op.snapshot});
   const linkButton = (label, action, extra = '') => `<button type="button" class="oa-link-btn" data-action="${esc(action)}" ${extra}>${label}</button>`;
+  /* AppDialog (QDialog): Esc is reject(), the same path as the window's × or Anuluj. */
+  function escapeCloses(win) {
+    if (!win?.el || win.el.dataset.oaEscape) return; win.el.dataset.oaEscape = '1';
+    win.el.addEventListener('keydown', e => { if (e.key !== 'Escape' || e.defaultPrevented || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return; e.preventDefault(); e.stopPropagation(); win.close(); });
+  }
+  /* Qt keeps the keyboard focus on a control whose text changes; a control rebuilt here hands it to its replacement. */
+  const FOCUS_KEYS = ['data-tab', 'data-details', 'data-page', 'data-entry', 'data-action', 'data-note'];
+  function keepFocus(root, render) {
+    const active = document.activeElement, key = active && active !== root && root.contains(active) ? FOCUS_KEYS.find(k => active.hasAttribute(k)) : null, value = key ? active.getAttribute(key) : '';
+    render();
+    if (key && !active.isConnected) root.querySelector(`[${key}="${CSS.escape(value)}"]`)?.focus();
+  }
 
   /* MacroController.on_trigger: the sub-window is read first (SafeCoordinator.capture shows "Odczytuję
    * pola"), then one compose window. A dictation summary handed over here (_compose_dictation) waits
@@ -106,7 +118,7 @@
     // VariantDescription: every enabled tile's text keeps its space, so another choice never moves the window.
     const sizer = `<div class="oa-c2-sizer" aria-hidden="true">${offered.map(v => `<div class="oa-c2-description">${variantHtml(v)}</div>`).join('')}</div>`;
     const html = `<div class="oa-app oa-c2"><div class="oa-c2-head"><h1 data-heading>Przygotuj opis wizyty</h1><p class="oa-c2-route" data-oa-route>${esc(connectionLabel())}</p></div><div class="oa-c2-body"><div class="oa-c2-columns"><section class="oa-c2-sources"><div class="oa-c2-label" data-source-heading>Treść pól</div><div class="oa-c2-stack"><div class="oa-c2-cards" data-cards>${cards}</div><div class="oa-c2-rules" data-rules hidden><textarea readonly spellcheck="false" aria-label="Zasady i źródła"></textarea></div></div><button type="button" class="oa-btn oa-c2-details" data-action="rules" title="Instrukcje, zamówione sekcje i zatwierdzone źródła. Dla panelu program dołącza również zestawienie parametrów i cytatów z tych źródeł.">Pokaż zasady i źródła</button></section><section class="oa-c2-options"><div class="oa-c2-label" id="oa-c2-mode-${op.id}">Sposób opracowania</div><div class="oa-c2-grid" role="group" aria-labelledby="oa-c2-mode-${op.id}">${tiles}</div><div class="oa-c2-descwrap"><div class="oa-c2-description" data-description aria-live="polite"></div>${sizer}</div></section></div></div><div class="oa-c2-error" data-error role="alert" hidden></div><label class="oa-ack oa-c2-ack"><input type="checkbox" id="oa-compose-ack"><span data-ack-text>Sprawdzone: źródła i wybrany zakres opracowania.</span></label><footer class="oa-footer"><span class="oa-footnote" data-foot>Pola wizyty pozostaną bez zmian.</span>${button('Anuluj', 'cancel')}${button('Przygotuj podgląd', 'generate', 'primary', '', 'disabled')}</footer></div>`;
-    const win = makeWindow('opisai-compose', 'OpisAI — przygotuj opis wizyty', 1040, 690, html, () => composeClosed(op)); state.active = win;
+    const win = makeWindow('opisai-compose', 'OpisAI — przygotuj opis wizyty', 1040, 690, html, () => composeClosed(op)); state.active = win; escapeCloses(win);
     const root = win.content, ack = $('#oa-compose-ack', root), send = $('[data-action="generate"]', root), foot = $('[data-foot]', root);
     op.win = win; let resetShown = false, preview = null;
     const showReset = on => { resetShown = on; foot.textContent = on ? 'Zmieniło się to, co zostanie wysłane — zaznacz potwierdzenie ponownie.' : 'Pola wizyty pozostaną bez zmian.'; foot.classList.toggle('oa-c2-reset', on); };
@@ -155,7 +167,7 @@
     if (workspace && !workspace.finished) finishWorkspace(workspace);
     const ws = {finished: false, onClose}; ws.win = makeWindow('opisai-review', title, width, height, html, () => ws.finished ? undefined : ws.onClose?.());
     if (ws.win.options) Object.assign(ws.win.options, {minWidth: 420, minHeight: 400}); // DocumentWorkspace.setMinimumSize(420, 400)
-    workspace = ws; return ws;
+    escapeCloses(ws.win); workspace = ws; return ws;
   }
   function finishWorkspace(ws) { if (!ws || ws.finished) return; ws.finished = true; clearInterval(ws.clock); clearTimeout(ws.timer); ws.win.close(); if (workspace === ws) workspace = null; }
   function progressHtml(kind) {
@@ -214,6 +226,7 @@
         recoveryDialog({code: 'cancelled', title: 'Anulowano przygotowanie', explanation: 'Nie wpisano wyniku do pól wizyty.', next: 'Możesz wrócić do zachowanej notatki. Nie uruchamiam nowego żądania bez Twojego zatwierdzenia.', action: 'review', actionLabel: 'Wróć do notatki', note: Doc().sentSource(g.request.sources)}); }, 700 * speed);
     }
     state.job = {token, cancel}; setPhase('processing'); showStream(stream, false); paint();
+    setTimeout(() => { if (!ws.finished && !cancelling) $(stream ? '[data-action="hide-stream"]' : '[data-action="show-stream"]', root)?.focus(); }, 0);
     step(() => { shown = 0; $('[data-message]', root).textContent = 'Odbieram odpowiedź…';
       const tick = () => { if (state.job?.token !== token || cancelling) return; shown = Math.min(total, shown + Math.max(24, Math.ceil(total / 40))); paint();
         if (shown < total) ws.timer = setTimeout(tick, 60 * speed);
@@ -262,7 +275,8 @@
     const ws = {finished: false, cancelling: false}; let win = null;
     const cancel = () => { if (ws.finished || ws.cancelling) return false; ws.cancelling = true; $('[data-action="cancel"]', win.content).disabled = true; $('[data-heading]', win.content).textContent = 'Anuluję operację'; $('[data-message]', win.content).textContent = 'Wynik nie zostanie wpisany. Czekam, aż bieżący transport zwolni zasoby.'; return false; };
     win = makeWindow('opisai-progress', 'OpisAI — odczyt wizyty', 740, 540, progressHtml('reading'), () => ws.finished ? undefined : cancel());
-    ws.win = win; state.active = win; startClock(ws, win.content); bind(win.content, 'cancel', cancel);
+    ws.win = win; state.active = win; startClock(ws, win.content); bind(win.content, 'cancel', cancel); escapeCloses(win);
+    setTimeout(() => { if (!ws.finished && !ws.cancelling) $('[data-action="cancel"]', win.content)?.focus(); }, 0);
     ws.timer = setTimeout(() => { ws.finished = true; clearInterval(ws.clock); win.close(); if (state.active === win) state.active = null; (ws.cancelling ? cancelled : done)?.(); }, 500 * docSpeed());
   }
 
@@ -416,11 +430,11 @@
       const box = $('[data-notes]', root); box.hidden = !notes.length;
       $('[data-notes-count]', root).textContent = `Uwagi do treści: ${notes.length} · informacyjne, nie blokują wpisania`;
       $('[data-action="notes"] span', root).textContent = notesOpen ? 'Wróć do wyniku' : notes.length > 2 ? `Pokaż wszystkie (${notes.length})` : 'Szczegóły uwag';
-      $('[data-note-list]', root).innerHTML = notes.slice(0, 2).map(note => `<div class="oa-rv-note"><span class="oa-rv-ellipsis" title="${esc(note.title + '\n' + note.quote + '\n' + note.message)}">${esc(note.title + (note.quote ? ': „' + note.quote + '”' : '') + ' — ' + note.message.split('\n')[0])}</span>${linkButton('Pokaż w tekście', 'note-' + note.key.replace(/[^\w:-]/g, '_'), `data-note="${esc(note.key)}" aria-label="${esc('Pokaż w tekście: ' + note.title + ' ' + note.quote)}"`)}</div>`).join('');
+      keepFocus(root, () => { $('[data-note-list]', root).innerHTML = notes.slice(0, 2).map(note => `<div class="oa-rv-note"><span class="oa-rv-ellipsis" title="${esc(note.title + '\n' + note.quote + '\n' + note.message)}">${esc(note.title + (note.quote ? ': „' + note.quote + '”' : '') + ' — ' + note.message.split('\n')[0])}</span>${linkButton('Pokaż w tekście', 'note-' + note.key.replace(/[^\w:-]/g, '_'), `data-note="${esc(note.key)}" aria-label="${esc('Pokaż w tekście: ' + note.title + ' ' + note.quote)}"`)}</div>`).join(''); });
       $$('[data-note]', $('[data-note-list]', root)).forEach(el => el.addEventListener('click', () => showNote(notes.find(x => x.key === el.dataset.note))));
       result.notes = notes; if (!notes.length && notesOpen) { notesOpen = false; draw(); }
-      tabsEl.innerHTML = [...result.keys.map(k => `<button type="button" role="tab" class="oa-tab ${result.tab === k && !notesOpen ? 'active' : ''}" data-tab="${k}" aria-selected="${result.tab === k}" title="${esc(result.full[k] + (result.selected.includes(k) ? '' : ' — Pole pozostanie bez zmian'))}">${esc(result.captions[k] + (result.selected.includes(k) ? '' : ' · bez zmian'))}</button>`),
-        `<button type="button" role="tab" class="oa-tab ${result.tab === 'details' ? 'active' : ''}" data-tab="details" aria-selected="${result.tab === 'details'}" title="Źródło, parametry i kontrole — ${controls.count} uwag do sprawdzenia">Szczegóły${!dict && controls.count ? ' · ' + controls.count : ''}</button>`].join('');
+      keepFocus(root, () => { tabsEl.innerHTML = [...result.keys.map(k => `<button type="button" role="tab" class="oa-tab ${result.tab === k && !notesOpen ? 'active' : ''}" data-tab="${k}" aria-selected="${result.tab === k}" title="${esc(result.full[k] + (result.selected.includes(k) ? '' : ' — Pole pozostanie bez zmian'))}">${esc(result.captions[k] + (result.selected.includes(k) ? '' : ' · bez zmian'))}</button>`),
+        `<button type="button" role="tab" class="oa-tab ${result.tab === 'details' ? 'active' : ''}" data-tab="details" aria-selected="${result.tab === 'details'}" title="Źródło, parametry i kontrole — ${controls.count} uwag do sprawdzenia">Szczegóły${!dict && controls.count ? ' · ' + controls.count : ''}</button>`].join(''); });
       tabsEl.hidden = notesOpen;
       $$('[data-tab]', tabsEl).forEach(tab => tab.addEventListener('click', () => { result.tab = tab.dataset.tab; draw(); }));
       apply.disabled = !(n && ack.checked); $('span', apply).innerHTML = dict ? 'Wpisz samą notatkę' : n === total ? '✓&nbsp; Wpisz do pól' : `✓&nbsp; Wpisz wybrane (${n})`;
@@ -431,7 +445,11 @@
       if (result.tab === 'details' && details === 'controls' && !notesOpen) { const t = $('[data-controls]', body); if (t && t.value !== controls.text) t.value = controls.text; }
     }
     function changed() { ack.checked = false; allow.checked = false; result.error = ''; updateChrome(); } // ReviewPage._changed
-    function draw() {
+    function draw() { keepFocus(root, render); }
+    function focusEditor(options) { // the inline preview or the field's first visible editor (StructuredFieldEditor's focus proxy)
+      ($('.oa-rv-preview', body) || $$('[data-block]:not([readonly]), [data-plain]', body).find(el => !el.closest('[hidden]')))?.focus(options);
+    }
+    function render() {
       if (notesOpen) { body.innerHTML = notesHtml(); bindNotes(); updateChrome(); return; }
       const key = result.tab;
       if (key === 'details') { body.innerHTML = detailsHtml(); bindDetails(); updateChrome(); return; }
@@ -442,7 +460,7 @@
       bindField(key); updateChrome();
     }
     function bindField(key) {
-      bind(body, 'toggle-field', () => { result.selected = result.selected.includes(key) ? result.selected.filter(k => k !== key) : result.keys.filter(k => k === key || result.selected.includes(k)); changed(); draw(); });
+      bind(body, 'toggle-field', () => { const on = !result.selected.includes(key); result.selected = on ? result.keys.filter(k => k === key || result.selected.includes(k)) : result.selected.filter(k => k !== key); changed(); draw(); if (on) focusEditor(); });
       bind(body, 'compare', () => { result.compare[key] = !result.compare[key]; draw(); });
       bind(body, 'edit-field', () => { result.previewing[key] = false; draw(); $('[data-block]', body)?.focus(); });
       bind(body, 'copy-field', () => copyText(fieldText(result, key), $('[data-action="copy-field"]', body)));
@@ -498,7 +516,7 @@
     bind(root, 'compose', () => { const fields = Object.fromEntries(result.selected.filter(k => String(result.edited[k]).trim()).map(k => [k, result.edited[k]])); if (!Object.keys(fields).length || !completeReview(result, 'regenerate', ws)) return; composeFromDictation(result, fields); });
     bind(root, 'continue', () => { const key = result.selected[0]; if (result.selected.length !== 1 || !completeReview(result, 'continue', ws)) return; dictate({field: key, base: result.edited[key], snapshot: result.snapshot, session: result.session, continuation: true, direct: true, review: result}); });
     draw();
-    setTimeout(() => ($('[data-block]:not([readonly]), [data-plain], .oa-rv-preview', body))?.focus({preventScroll: true}), 0);
+    setTimeout(() => focusEditor({preventScroll: true}), 0);
   }
   function completeReview(result, outcome, ws, closing = false) { // one outcome; the host closes after it
     if (result.outcome) return false; result.outcome = outcome;
@@ -530,13 +548,13 @@
   function exchangeDialog(result) { // ui/response_exchange.py, with the shortened prompt and the demo's sample answer
     const g = result.generated, text = `OPISAI — POLECENIE I ODPOWIEDŹ AI\nPrzykładowa odpowiedź demonstracji, bez AI. Przypisane treści są dostępne w podglądzie dokumentacji.\n\nWersja OpisAI: ${VERSION}\nModel: przykład demonstracyjny\n\n=== POLECENIE WYSŁANE DO AI ===\n${Doc().OUTLINE_NOTE}\n\n${g.prompt}\n\n=== ODPOWIEDŹ — PRZYKŁAD DEMONSTRACJI ===\n${JSON.stringify(g.response, null, 1)}`;
     const html = `<div class="oa-app oa-mb"><h2 class="oa-ex-title">Polecenie i odpowiedź AI</h2><p class="oa-muted">Przykładowa odpowiedź demonstracji, bez AI. Przypisane treści są dostępne w podglądzie dokumentacji.</p><textarea readonly class="oa-rv-doc oa-ex-text" aria-label="Polecenie i oryginalna odpowiedź AI — tylko do odczytu">${esc(text)}</textarea><p class="oa-muted">Kliknij tekst, a następnie naciśnij Ctrl+A i Ctrl+C, albo użyj przycisku kopiowania.</p><footer class="oa-footer"><span class="oa-pg-gap"></span>${button('Zamknij', 'close')}${button('Kopiuj całość', 'copy-all', 'primary', '', 'aria-label="Kopiuj polecenie, odpowiedź i raport"')}</footer></div>`;
-    const win = makeWindow('opisai-exchange', 'OpisAI — polecenie i odpowiedź AI', 960, 680, html); bind(win.content, 'close', () => win.close()); bind(win.content, 'copy-all', () => copyText(text, $('[data-action="copy-all"]', win.content)));
+    const win = makeWindow('opisai-exchange', 'OpisAI — polecenie i odpowiedź AI', 960, 680, html); escapeCloses(win); bind(win.content, 'close', () => win.close()); bind(win.content, 'copy-all', () => copyText(text, $('[data-action="copy-all"]', win.content)));
   }
 
   /* Write (application/writer.py, coordinator._written): field check, write, control read, receipt. */
   function writeChanges(plan) {
     const ws = {finished: false}, win = makeWindow('opisai-progress', 'OpisAI — wpisanie do pól', 740, 540, progressHtml('writing'), () => ws.finished ? undefined : false);
-    ws.win = win; startClock(ws, win.content); state.active = win;
+    ws.win = win; startClock(ws, win.content); state.active = win; escapeCloses(win);
     ws.timer = setTimeout(() => { ws.finished = true; clearInterval(ws.clock); win.close(); state.active = null; showReceipt(performWrite(plan)); }, 500 * docSpeed());
   }
   function performWrite(plan) {
@@ -583,7 +601,7 @@
       if (error) { messageBox({title: 'OpisAI — sprawdź komunikat', icon: 'warning', text: error}); return; }
       const changes = last.plan.changes.filter(c => verified.includes(c.key)).map(c => ({key: c.key, label: c.label, before: now[c.key], after: c.before}));
       const html = `<div class="oa-app oa-undo"><textarea readonly class="oa-rv-doc" aria-label="Zmiany do cofnięcia — tylko do odczytu">${esc(changes.map(c => `${c.label}:\nOBECNIE:\n${c.before}\nPRZYWRÓĆ:\n${c.after}`).join('\n\n'))}</textarea><footer class="oa-footer"><span class="oa-pg-gap"></span>${button('OK', 'ok', 'primary')}${button('Anuluj', 'cancel')}</footer></div>`;
-      const win = makeWindow('opisai-undo', 'OpisAI — potwierdź cofnięcie', 850, 600, html);
+      const win = makeWindow('opisai-undo', 'OpisAI — potwierdź cofnięcie', 850, 600, html); escapeCloses(win);
       bind(win.content, 'cancel', () => win.close());
       bind(win.content, 'ok', () => { win.close(); writeChanges({changes, snapshot: Object.fromEntries(changes.map(c => [c.key, c.before])), session: ctx.session, inverse: true}); });
       setTimeout(() => $('[data-action="ok"]', win.content)?.focus(), 0);
@@ -787,9 +805,10 @@
   function history() {
     let filter = '', selectedId = null, page = 'result';
     const html = `<div class="oa-app oa-hist"><input type="search" class="oa-hist-search" placeholder="Szukaj w źródłach, propozycji lub wyniku…" aria-label="Szukaj w historii dokumentów"><div class="oa-hist-split"><div class="oa-hist-list" role="listbox" tabindex="0" aria-label="Dokumenty w historii" data-list></div><div class="oa-hist-doc"><p class="oa-hist-summary" data-summary></p><div class="oa-tabs" role="tablist" aria-label="Zapisany dokument" data-doc-tabs></div><textarea readonly class="oa-rv-doc" data-doc-text aria-label="Zapisany dokument"></textarea></div></div><footer class="oa-footer">${button('Kopiuj wynik', 'copy-history', '', '', 'disabled')}${button('Usuń wpis', 'delete-history', '', '', 'disabled')}<span class="oa-pg-gap"></span>${button('Odśwież', 'refresh')}${button('Zamknij', 'close')}</footer></div>`;
-    const win = makeWindow('opisai-history', 'OpisAI — Historia dokumentów', 1100, 740, html, () => { historyRefresh = null; }), root = win.content;
+    const win = makeWindow('opisai-history', 'OpisAI — Historia dokumentów', 1100, 740, html, () => { historyRefresh = null; }), root = win.content; escapeCloses(win);
     const visible = () => state.history.filter(e => !filter || [historyStamp(e.ts), ...e.sources.map(s => s.text), ...e.proposal.map(f => f.text), ...(e.approved || e.reviewed).map(f => f.text)].join('\n').toLowerCase().includes(filter));
-    function draw() {
+    function draw() { keepFocus(root, render); }
+    function render() {
       const items = visible(), entry = items.find(e => e.id === selectedId) || items[0] || null; selectedId = entry?.id || null;
       $('[data-list]', root).innerHTML = items.map(e => `<button type="button" role="option" class="oa-hist-item ${e.id === selectedId ? 'selected' : ''}" aria-selected="${e.id === selectedId}" data-entry="${e.id}"><span>${esc(historyStamp(e.ts) + ' · ' + (HISTORY_MODE[e.mode] || 'Dokument'))}</span><span>${esc(HISTORY_STATUS[e.status] || 'Sprawdź wynik')}</span></button>`).join('');
       $$('[data-entry]', root).forEach(el => el.addEventListener('click', () => { selectedId = el.dataset.entry; draw(); }));
