@@ -1,241 +1,212 @@
 'use strict';
+// Pure models of the 0.12.0rc32 bubble: following and release (Bubble._tick),
+// gesture recognition (ui/bubble_gestures.py), the painted contour, the idle
+// jelly bounce (ui/bubble_motion.py) and its droplets (ui/bubble_splash.py).
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const {create} = require('../assets/orb-motion.js');
-const bounds = {minX:8, minY:8, maxX:1200, maxY:700};
-const fresh = options => create({x:100, y:100, bounds, ...options});
-function advance(motion, seconds, fps=60) {
-  for(let elapsed=0; elapsed<seconds-1e-9; elapsed+=1/fps)motion.step(Math.min(1/fps, seconds-elapsed));
+const {TICK, create, createGesture, contour, createJelly, splash, sampleDrop} = require('../assets/orb-motion.js');
+const fresh = options => create({x:100, y:100, ...options});
+function advance(motion, seconds, fps = 60) {
+  for (let elapsed = 0; elapsed < seconds - 1e-9; elapsed += 1 / fps) motion.step(Math.min(1 / fps, seconds - elapsed));
   return motion.snapshot();
 }
-function movingDrag(motion, fps=60) {
+function movingDrag(motion, fps = 60) {
   motion.begin();
-  for(let frame=1;frame<=fps/2;frame++) {
-    motion.follow(100+600*frame/fps,100+180*frame/fps);
-    motion.step(1/fps);
-  }
+  for (let frame = 1; frame <= fps / 2; frame++) { motion.follow(100 + 600 * frame / fps, 100 + 180 * frame / fps); motion.step(1 / fps); }
+}
+function points(d) {
+  const n = d.match(/-?[\d.]+/g).map(Number), p = [];
+  for (let i = 0; i < n.length; i += 2) p.push([n[i], n[i + 1]]);
+  return [p[0], ...p.filter((_, i) => i > 0 && i % 3 === 0)];
 }
 
-test('drag follows with spring lag, then settles at the held pointer',()=>{
-  const motion=fresh();motion.begin();motion.follow(400,250);
-  let state=motion.step(1/60);
-  assert.ok(state.x>100&&state.x<400,'one frame must move without teleporting');
-  assert.ok(state.y>100&&state.y<250);
-  assert.ok(state.moving);
-  state=advance(motion,2);
-  assert.equal(state.x,400);assert.equal(state.y,250);
-  assert.equal(state.moving,false,'a stationary drag must stop requesting frames');
-});
-
-test('release continues in the drag direction and comes to a finite rest',()=>{
-  const motion=fresh();movingDrag(motion);
-  const released=motion.snapshot();
-  motion.release({velocityX:600,velocityY:180});
-  const early=advance(motion,.1);
-  assert.ok(early.x>released.x+10);assert.ok(early.y>released.y);
-  const late=advance(motion,2);
-  assert.equal(late.mode,'idle');assert.equal(late.moving,false);
-  assert.ok(late.x<released.x+150,'release is a short glide, not a trip across the desktop');
-  assert.deepEqual(advance(motion,3),late);
-});
-
-test('a flick between display frames still carries momentum',()=>{
-  const motion=fresh();motion.begin();motion.follow(130,100);
-  motion.release({velocityX:900,velocityY:0});
-  assert.ok(advance(motion,.1).x>110);
-});
-
-test('coasting distance is consistent at 30, 60 and 144 Hz',()=>{
-  const positions=[30,60,144].map(fps=>{
-    const motion=fresh();motion.begin();motion.follow(140,110);
-    motion.release({velocityX:1100,velocityY:350});
-    return advance(motion,2,fps);
-  });
-  assert.ok(Math.max(...positions.map(s=>s.x))-Math.min(...positions.map(s=>s.x))<1);
-  assert.ok(Math.max(...positions.map(s=>s.y))-Math.min(...positions.map(s=>s.y))<1);
-  assert.ok(positions.every(s=>!s.moving));
-});
-
-test('desktop edges contain a fast release and absorb its rebound',()=>{
-  const tight={minX:8,minY:8,maxX:305,maxY:205};
-  const motion=fresh({x:300,y:200,bounds:tight});
-  motion.begin();motion.release({velocityX:1800,velocityY:1600});
-  let bounced=false;
-  for(let frame=0;frame<180;frame++){
-    const state=motion.step(1/60);
-    assert.ok(state.x>=8&&state.x<=305);assert.ok(state.y>=8&&state.y<=205);
-    if(state.vx<0&&state.vy<0)bounced=true;
+test('drag follows the pointer by 20 % per 33 ms tick and never overshoots it', () => {
+  const motion = fresh(); motion.begin(); motion.follow(400, 250);
+  const first = motion.step(TICK);
+  assert.ok(Math.abs(first.x - (100 + 300 * .2)) < 1e-9, 'one rc32 tick covers a fifth of the distance');
+  assert.ok(Math.abs(first.y - (100 + 150 * .2)) < 1e-9);
+  let previous = first.x;
+  for (let frame = 0; frame < 240; frame++) {
+    const state = motion.step(1 / 120);
+    assert.ok(state.x >= previous - 1e-9 && state.x <= 400, 'the approach is monotonic: no spring overshoot');
+    previous = state.x;
   }
-  assert.ok(bounced);assert.equal(motion.snapshot().moving,false);
+  const rest = motion.snapshot();
+  assert.equal(rest.x, 400); assert.equal(rest.y, 250); assert.equal(rest.moving, false, 'a held pointer stops the animation loop');
 });
 
-test('cancelling and catching a moving bubble stop the previous gesture',()=>{
-  const motion=fresh();movingDrag(motion);motion.release({velocityX:600});advance(motion,.05);
-  const caught=motion.begin();
-  assert.equal(caught.vx,0);assert.equal(caught.vy,0);
-  assert.equal(advance(motion,.2).x,caught.x);
-  motion.follow(500,300);advance(motion,.05);
-  const stopped=motion.stop();
-  assert.deepEqual(advance(motion,1),stopped);
+test('release glides with the bubble own velocity, which decays by 0.82 per tick, then stops', () => {
+  const motion = fresh(); movingDrag(motion);
+  const released = motion.release();
+  assert.equal(released.mode, 'coast'); assert.ok(released.vx > 0 && released.vy > 0, 'the glide keeps the smoothed drag direction');
+  const next = motion.step(TICK);
+  assert.ok(Math.abs(next.vx / released.vx - .82) < 1e-9, 'velocity decay per 33 ms is the rc32 throw decay');
+  const late = advance(motion, 2);
+  assert.equal(late.mode, 'idle'); assert.equal(late.moving, false);
+  assert.ok(late.x > released.x + 20 && late.x < released.x + 250, 'a short, finite glide');
+  assert.deepEqual(advance(motion, 2), late);
 });
 
-test('reduced motion uses direct dragging and disables release inertia',()=>{
-  const motion=fresh({reducedMotion:true});
-  motion.begin();let state=motion.follow(400,250);
-  assert.equal(state.x,400);assert.equal(state.y,250);assert.equal(state.moving,false);
-  motion.release({velocityX:1500,velocityY:900});
-  assert.equal(advance(motion,1).x,400);
-  motion.setReducedMotion(false);movingDrag(motion);motion.release({velocityX:600});
+test('a bubble that never moved has nothing to throw', () => {
+  const motion = fresh(); motion.begin();
+  const released = motion.release();
+  assert.equal(released.mode, 'idle'); assert.equal(released.moving, false);
+});
+
+test('glide distance is the same at 30, 60 and 144 Hz', () => {
+  const positions = [30, 60, 144].map(fps => {
+    const motion = fresh(); movingDrag(motion, 60); motion.release();
+    return advance(motion, 2, fps);
+  });
+  assert.ok(Math.max(...positions.map(s => s.x)) - Math.min(...positions.map(s => s.x)) < 1);
+  assert.ok(Math.max(...positions.map(s => s.y)) - Math.min(...positions.map(s => s.y)) < 1);
+});
+
+test('there are no desktop edges in the model: no clamping and no rebound', () => {
+  const motion = create({x:30, y:30}); motion.begin();
+  for (let frame = 1; frame <= 20; frame++) { motion.follow(30 - frame * 25, 30 - frame * 25); motion.step(1 / 60); }
+  const released = motion.release();
+  let previous = released;
+  for (let frame = 0; frame < 120; frame++) {
+    const state = motion.step(1 / 60);
+    assert.ok(state.vx <= 0 && state.vy <= 0, 'a glide never reverses at an edge');
+    assert.ok(state.x <= previous.x && state.y <= previous.y);
+    previous = state;
+  }
+  assert.ok(previous.x < 0 && previous.y < 0, 'the bubble may leave the desktop; the controller rescues it later');
+});
+
+test('catching a gliding bubble stops it at once', () => {
+  const motion = fresh(); movingDrag(motion); motion.release(); advance(motion, .05);
+  const caught = motion.begin();
+  assert.equal(caught.vx, 0); assert.equal(caught.vy, 0);
+  assert.equal(advance(motion, .3).x, caught.x);
+  const stopped = motion.stop();
+  assert.deepEqual(advance(motion, 1), stopped);
+});
+
+test('reduced motion follows directly and never glides or deforms', () => {
+  const motion = fresh({reducedMotion:true}); motion.begin();
+  const state = motion.follow(400, 250);
+  assert.equal(state.x, 400); assert.equal(state.y, 250); assert.equal(state.moving, false); assert.equal(state.stretch, 0);
+  motion.release(); assert.equal(advance(motion, 1).x, 400);
+  motion.setReducedMotion(false); movingDrag(motion); motion.release();
   assert.ok(motion.snapshot().moving);
-  const stopped=motion.setReducedMotion(true);
-  assert.equal(stopped.moving,false);assert.deepEqual(advance(motion,1),stopped);
+  const stopped = motion.setReducedMotion(true);
+  assert.equal(stopped.moving, false); assert.deepEqual(advance(motion, 1), stopped);
 });
 
-test('resizing clamps both the bubble and its current drag destination',()=>{
-  const motion=fresh();motion.begin();motion.follow(1000,650);advance(motion,.2);
-  motion.setBounds({minX:8,minY:8,maxX:250,maxY:180});
-  const state=advance(motion,2);
-  assert.equal(state.x,250);assert.equal(state.y,180);
-  motion.setBounds({minX:8,minY:8,maxX:-40,maxY:-20});
-  assert.equal(motion.snapshot().x,8);assert.equal(motion.snapshot().y,8);
+test('a delayed frame cannot accumulate seconds of motion', () => {
+  const motion = fresh(); movingDrag(motion); motion.release();
+  const before = motion.snapshot(), after = motion.step(30);
+  assert.ok(after.x - before.x < 150); assert.ok(Number.isFinite(after.x) && Number.isFinite(after.y));
 });
 
-test('a delayed frame cannot accumulate seconds of runaway motion',()=>{
-  const motion=fresh();motion.begin();motion.release({velocityX:1800});
-  const before=motion.snapshot(),after=motion.step(30);
-  assert.ok(after.x-before.x<80);
-  assert.ok(Number.isFinite(after.x)&&Number.isFinite(after.y));
+test('only the contour stretches: up to 45 % along the motion with a leading bump', () => {
+  const motion = fresh(); motion.begin();
+  let stretch = 0;
+  for (let frame = 1; frame <= 60; frame++) { motion.follow(100 + frame * 40, 100); stretch = Math.max(stretch, motion.step(1 / 60).stretch); }
+  assert.ok(stretch > .3 && stretch <= .45 + 1e-12, 'a fast drag shows a strong but capped stretch');
+  assert.ok(Math.abs(motion.snapshot().angle) < 1e-9, 'the ellipse points along the motion');
+  const right = points(contour({r:50, stretch:.44, angle:0}));
+  const xs = right.map(p => p[0]);
+  assert.ok(Math.abs(Math.max(...xs) - 50 * (1.44 + .25 * .44)) < .01, 'front: ellipse plus a quarter-stretch bump');
+  assert.ok(Math.abs(Math.min(...xs) + 50 * 1.44) < .01, 'back: the plain ellipse');
+  const side = right.reduce((p, q) => Math.abs(q[0]) < Math.abs(p[0]) && q[1] > 0 ? q : p);
+  assert.ok(Math.abs(side[1] - 50 * (1 - .44 / 1.44)) < .01, 'area-preserving short axis across the motion');
+  const front = right.filter(p => p[0] > 35).map(p => Math.abs(p[1])), back = right.filter(p => p[0] < -35).map(p => Math.abs(p[1]));
+  assert.ok(Math.max(...front) > Math.max(...back), 'drop shape: the leading half is fuller');
+  for (const [x, y] of points(contour({r:50}))) assert.ok(Math.abs(Math.hypot(x, y) - 50) < .01, 'at rest the outline is a circle');
 });
 
-// These checks use visible ellipse dimensions and axes. They deliberately do
-// not duplicate the spring equation or require a particular internal state.
-const openBounds={minX:8,minY:8,maxX:2400,maxY:2000};
-const elastic=options=>create({x:600,y:600,bounds:openBounds,diameter:100,...options});
-function dragFor(motion,pointer,vx,vy,seconds=.35,fps=60){
-  const start={...pointer},states=[];
-  for(let elapsed=0;elapsed<seconds-1e-9;){
-    const dt=Math.min(1/fps,seconds-elapsed);elapsed+=dt;
-    pointer.x=start.x+vx*elapsed;pointer.y=start.y+vy*elapsed;
-    motion.follow(pointer.x,pointer.y);states.push(motion.step(dt));
-  }
-  return states;
-}
-function shapeMatrix(state){
-  const c=Math.cos(state.angle),s=Math.sin(state.angle),a=state.stretch,b=state.squash;
-  return [a*c*c+b*s*s,(a-b)*c*s,a*s*s+b*c*c];
-}
-function validShape(state){
-  for(const key of ['stretch','squash','angle'])assert.ok(Number.isFinite(state[key]),key+' must be finite');
-  assert.ok(state.stretch>=1&&state.stretch<=1.65+1e-9,'stretch must remain within the safe visible range');
-  assert.ok(state.squash>0);assert.ok(Math.abs(state.stretch*state.squash-1)<1e-9,'stretch preserves the apparent area');
-}
-function circular(state){
-  validShape(state);assert.equal(state.stretch,1);assert.equal(state.squash,1);
-}
-function aligned(state,angle){
-  assert.ok(Math.abs(Math.cos(state.angle-angle))>.96,'the long axis must follow the drag direction, modulo a half turn');
-}
-function contained(state,diameter,limits){
-  validShape(state);
-  const radius=diameter/2,cx=state.x+radius,cy=state.y+radius;
-  const ex=radius*Math.hypot(state.stretch*Math.cos(state.angle),state.squash*Math.sin(state.angle));
-  const ey=radius*Math.hypot(state.stretch*Math.sin(state.angle),state.squash*Math.cos(state.angle));
-  assert.ok(cx-ex>=limits.minX-1e-6&&cx+ex<=limits.maxX+diameter+1e-6,'the visible ellipse must fit horizontally');
-  assert.ok(cy-ey>=limits.minY-1e-6&&cy+ey<=limits.maxY+diameter+1e-6,'the visible ellipse must fit vertically');
-}
-
-test('ordinary central dragging visibly stretches the bubble by at least twenty percent',()=>{
-  for(const speed of [400,550,700]){
-    const motion=elastic(),pointer={x:600,y:600};motion.begin();
-    const states=dragFor(motion,pointer,speed,0);
-    states.forEach(validShape);
-    assert.ok(states.at(-1).stretch>1.2,`${speed} px/s must look stretched, not almost circular`);
-    assert.ok(states.at(-1).squash<.84,'the perpendicular axis contracts with the stretch');
+test('the stretch follows the direction of motion', () => {
+  for (const angle of [Math.PI / 2, -Math.PI / 4, Math.PI]) {
+    const motion = fresh(); motion.begin();
+    for (let frame = 1; frame <= 30; frame++) { motion.follow(100 + 900 * Math.cos(angle) * frame / 60, 100 + 900 * Math.sin(angle) * frame / 60); motion.step(1 / 60); }
+    assert.ok(Math.cos(motion.snapshot().angle - angle) > .999);
   }
 });
 
-test('horizontal, vertical and diagonal drags stretch along their actual axes',()=>{
-  const shapes=[0,Math.PI/2,Math.PI/4,-Math.PI/4].map(angle=>{
-    const motion=elastic(),pointer={x:600,y:600};motion.begin();
-    const state=dragFor(motion,pointer,550*Math.cos(angle),550*Math.sin(angle)).at(-1);
-    validShape(state);assert.ok(state.stretch>1.2);aligned(state,angle);return state;
-  });
-  assert.ok(Math.max(...shapes.map(s=>s.stretch))-Math.min(...shapes.map(s=>s.stretch))<.02,'equal-speed drags have comparable deformation in every direction');
+// ui/bubble_gestures.py decisions, with the same cases as rc32's tests.
+function gesture() { const g = createGesture(); const session = g.start([100, 200], 10, {distance:10}); return {g, session}; }
+test('a click tolerates small motion; the excursion threshold starts a pending drag', () => {
+  let {g} = gesture();
+  assert.deepEqual(g.move([104, 204], 10.1), []); assert.deepEqual(g.release([105, 203], 10.15), ['click']);
+  ({g} = gesture());
+  assert.deepEqual(g.move([105, 205], 10.05), []); assert.equal(g.phase, 'pending'); assert.equal(g.holdPending, false);
+  assert.ok(Math.abs(g.nextDeadline - 10.18) < 1e-9);
+  assert.deepEqual(g.advance(10.179), []); assert.deepEqual(g.advance(10.18), ['drag-start']); assert.deepEqual(g.position, [105, 205]);
+});
+test('release before the 180 ms drag delay cancels: no click, hold, move or drop', () => {
+  let {g} = gesture();
+  g.move([200, 200], 10.05); assert.deepEqual(g.release([200, 200], 10.179), ['cancel']); assert.deepEqual(g.advance(10.45), []);
+  ({g} = gesture());
+  g.move([120, 200], 10.04); g.move([100, 200], 10.08); assert.deepEqual(g.release([100, 200], 10.12), ['cancel'], 'an excursion stays latched');
+  ({g} = gesture());
+  for (let i = 0; i < 20; i++) g.move([i % 2 ? 104 : 96, 200], 10.01 + i * .005);
+  assert.deepEqual(g.release([100, 200], 10.15), ['click'], 'jitter is distance from the press, not path length');
+});
+test('a drag starts from the remembered position and ends with one drop', () => {
+  const {g} = gesture();
+  g.move([120, 200], 10.04); g.move([140, 230], 10.10);
+  assert.deepEqual(g.advance(10.18), ['drag-start']); assert.deepEqual(g.position, [140, 230]);
+  assert.deepEqual(g.move([150, 240], 10.2), ['drag-move']); assert.deepEqual(g.release([170, 260], 10.25), ['drop']);
+  assert.deepEqual(g.release([170, 260], 10.26), []);
+});
+test('hold fires once at 450 ms and then ignores movement', () => {
+  let {g} = gesture();
+  assert.ok(g.holdPending); assert.ok(Math.abs(g.nextDeadline - 10.45) < 1e-9);
+  assert.deepEqual(g.advance(10.449), []); assert.deepEqual(g.advance(10.45), ['hold']); assert.equal(g.phase, 'held');
+  assert.deepEqual(g.advance(11), []); assert.deepEqual(g.move([400, 500], 11.1), []); assert.deepEqual(g.release([400, 500], 11.2), []);
+  ({g} = gesture()); assert.deepEqual(g.release([100, 200], 10.449), ['click']);
+  ({g} = gesture()); assert.deepEqual(g.release([100, 200], 10.45), ['cancel'], 'a late hold timer cannot become a click');
+  g.start([100, 200], 10, {distance:10, allowHold:false});
+  assert.equal(g.nextDeadline, null); assert.deepEqual(g.release([100, 200], 15), ['click'], 'without hold a long press is a click');
+});
+test('stale timers and repeated cancels have no effect', () => {
+  const {g, session} = gesture();
+  g.cancel();
+  const newer = g.start([100, 200], 10.1, {distance:10});
+  g.move([120, 200], 10.12);
+  assert.deepEqual(g.advance(10.18, session), []); assert.deepEqual(g.advance(10.28, newer), ['drag-start']);
+  assert.deepEqual(g.cancel(), ['cancel']); assert.deepEqual(g.cancel(), []); assert.deepEqual(g.release([1, 1], 11), []);
 });
 
-test('sharp axis changes and reversals keep the visible shape continuous',()=>{
-  for(const angle of [Math.PI/2,Math.PI]){
-    const motion=elastic(),pointer={x:600,y:600};motion.begin();
-    const before=dragFor(motion,pointer,600,0).at(-1),turn=dragFor(motion,pointer,600*Math.cos(angle),600*Math.sin(angle));
-    let previous=shapeMatrix(before);
-    for(const state of turn){
-      validShape(state);const current=shapeMatrix(state);
-      assert.ok(Math.hypot(...current.map((value,i)=>value-previous[i]))<.25,'one display frame cannot abruptly flip or reset the shape');
-      previous=current;
-    }
-    assert.ok(turn.at(-1).stretch>1.2);aligned(turn.at(-1),angle);
+// Recorded from the Python originals (opisai_app/ui/bubble_motion.py, bubble_splash.py).
+test('the jelly bounce reproduces rc32 JellyBounce frames', () => {
+  const model = createJelly(250, 50), frames = [];
+  for (let i = 0; i < 240; i++) frames.push(model.advance(1 / 60));
+  const expect = {20:[66.540673, 1.018809, 0, 0], 40:[253.493568, .930129, .232905, 1], 120:[265.868585, .682628, 1, 2], 200:[251.567813, .956886, 0, 3]};
+  for (const [index, [offset, scaleY, contact, impacts]] of Object.entries(expect)) {
+    const f = frames[index];
+    assert.ok(Math.abs(f.offset - offset) < 1e-5, `offset at frame ${index}`); assert.ok(Math.abs(f.scaleY - scaleY) < 1e-5);
+    assert.ok(Math.abs(f.contact - contact) < 1e-5); assert.equal(f.impactCount, impacts);
+    assert.ok(Math.abs(f.scaleX * f.scaleY - 1) < 1e-12, 'squash preserves the area');
   }
+  assert.ok(Math.abs(frames[40].impactSpeed - 741.354) < 1e-3);
 });
-
-test('release preserves the loaded shape before a finite elastic return to a circle',()=>{
-  const motion=elastic(),pointer={x:600,y:600};motion.begin();
-  const before=dragFor(motion,pointer,550,0).at(-1),released=motion.release({velocityX:550});
-  assert.ok(before.stretch>1.2);assert.deepEqual(shapeMatrix(released),shapeMatrix(before),'lifting the pointer must not reset the shape');
-  const first=motion.step(1/60);assert.ok(first.stretch>1.15,'recovery takes visible time rather than one abrupt frame');
-  const late=advance(motion,2);circular(late);assert.equal(late.moving,false);
-  assert.deepEqual(advance(motion,1),late,'a settled shape must not restart its animation');
-});
-
-test('shape recovery keeps requesting frames after translation is already idle, then stops',()=>{
-  const motion=elastic();motion.begin();motion.follow(760,600);
-  let resting=null;
-  for(let frame=0;frame<120;frame++){
-    const state=motion.step(1/60);
-    if(state.x===760&&state.vx===0&&state.vy===0){resting=state;break;}
+test('the jelly bounce is independent of frame rate and settles', () => {
+  const models = [createJelly(330), createJelly(330), createJelly(330)];
+  for (let i = 0; i < 96; i++) models[0].advance(1 / 30);
+  for (let i = 0; i < 384; i++) models[1].advance(1 / 120);
+  for (let i = 0; i < 32; i++) for (const dt of [.0125, .025, .0625]) models[2].advance(dt);
+  for (const model of models.slice(1)) {
+    assert.ok(Math.abs(model.frame.offset - models[0].frame.offset) < 1e-8); assert.ok(Math.abs(model.frame.scaleY - models[0].frame.scaleY) < 1e-8);
   }
-  assert.ok(resting&&resting.stretch>1.001,'a stopped body can still hold elastic deformation');
-  const released=motion.release();assert.equal(released.mode,'idle');assert.equal(released.vx,0);assert.equal(released.vy,0);
-  assert.ok(released.moving,'the animation loop must remain alive for the shape alone');
-  let state=released,frames=0;
-  while(state.moving&&frames<120){state=motion.step(1/60);frames++;assert.equal(state.x,released.x);assert.equal(state.y,released.y);}
-  assert.ok(frames>1&&frames<120,'shape-only recovery must run for a finite number of frames');
-  circular(state);assert.equal(state.moving,false);
+  const model = createJelly(250);
+  let frame = model.advance(10); assert.ok(frame.offset < 12, 'a stalled tick has bounded catch-up');
+  for (let i = 0; i < 400 && !frame.settled; i++) frame = model.advance(1 / 30);
+  assert.ok(frame.settled); assert.ok(frame.impactCount >= 2 && frame.impactCount <= 6);
 });
-
-test('stop and reduced motion immediately remove deformation without reviving it later',()=>{
-  for(const reset of ['stop','reduced']){
-    const motion=elastic(),pointer={x:600,y:600};motion.begin();
-    assert.ok(dragFor(motion,pointer,600,0).at(-1).stretch>1.2);
-    const state=reset==='stop'?motion.stop():motion.setReducedMotion(true);
-    circular(state);assert.equal(state.moving,false);assert.deepEqual(advance(motion,1),state);
-    if(reset==='reduced'){
-      motion.follow(950,720);const direct=motion.snapshot();circular(direct);
-      assert.equal(direct.x,950);assert.equal(direct.y,720);assert.equal(direct.moving,false);
-      motion.setReducedMotion(false);circular(motion.snapshot());assert.equal(motion.snapshot().moving,false);
-    }
-  }
-});
-
-test('the complete stretched ellipse stays inside every desktop edge and corner',()=>{
-  const tight={minX:8,minY:8,maxX:408,maxY:308};
-  for(const diameter of [75,100,125])for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]]){
-    const motion=elastic({x:208,y:158,bounds:tight,diameter}),pointer={x:208,y:158};motion.begin();
-    const length=Math.hypot(dx,dy),vx=1000*dx/length,vy=1000*dy/length;
-    for(const state of dragFor(motion,pointer,vx,vy,.5))contained(state,diameter,tight);
-    contained(motion.release({velocityX:vx,velocityY:vy}),diameter,tight);
-    for(let frame=0;frame<120;frame++)contained(motion.step(1/60),diameter,tight);
-    assert.equal(motion.snapshot().moving,false);
-  }
-});
-
-test('deformation scales with bubble diameter and responds to a changed size',()=>{
-  const shapes=[75,100,125].map(diameter=>{
-    const motion=elastic({diameter}),pointer={x:600,y:600};motion.begin();
-    return dragFor(motion,pointer,diameter*5.5,0).at(-1);
-  });
-  assert.ok(shapes.every(state=>state.stretch>1.2));
-  assert.ok(Math.max(...shapes.map(s=>s.stretch))-Math.min(...shapes.map(s=>s.stretch))<.015,'the same drag in bubble-diameters per second has the same visual elasticity');
-  const resized=elastic();resized.setDiameter(125);resized.begin();
-  const state=dragFor(resized,{x:600,y:600},125*5.5,0).at(-1);
-  assert.ok(Math.abs(state.stretch-shapes[2].stretch)<1e-9,'changing size updates the deformation scale used by subsequent dragging');
+test('impact droplets follow rc32 counts and launch values', () => {
+  const burst = changes => splash({centerX:600, floorY:900, radius:50, halfWidth:68, scaleY:.68, impactSpeed:700, impactIndex:0, ...changes});
+  for (const [speed, impact, count] of [[179, 0, 0], [180, 0, 4], [699, 0, 4], [700, 0, 6], [700, 1, 4], [300, 1, 2], [349, 2, 0], [350, 2, 2], [1200, 3, 0]])
+    assert.equal(burst({impactSpeed:speed, impactIndex:impact}).length, count, `${speed} px/s, impact ${impact}`);
+  const [first, second] = burst({});
+  assert.ok(Math.abs(first.x - 538.443397) < 1e-5 && Math.abs(first.y - 885.174129) < 1e-5);
+  assert.ok(Math.abs(first.vx + 150.48774) < 1e-5 && Math.abs(first.vy + 132.559057) < 1e-5 && Math.abs(first.radius - 2.213257) < 1e-5);
+  assert.ok(second.vx > 0 && Math.abs(second.vx) !== Math.abs(first.vx), 'small deterministic asymmetry');
+  const sample = sampleDrop(first, .08);
+  assert.ok(Math.abs(sample.x - 526.941573) < 1e-5 && Math.abs(sample.y - 878.089404) < 1e-5); assert.equal(sample.phase, 'flight');
+  assert.equal(sampleDrop(first, first.lifetime + .01), null);
 });
