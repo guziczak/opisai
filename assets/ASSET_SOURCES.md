@@ -17,6 +17,13 @@ Earlier versions used Windows 11 Bloom images from Microsoft's press gallery. Th
 
 All SVGs are embedded locally by `Icons.svg(name, size, extraClass)`. No third-party icon font, remote image endpoint or tracking request is used.
 
+## Klinika XP mock-up icons
+
+`clinic-icons.js` holds the 47 icons of the Klinika XP test mock `kxp_mock.c` 2.4.1 (OpisAI-resources). They were converted 1:1 to 32-unit SVG on 2026-10-31 by compiling the mock's shared `ui_icon()` drawing code with a painter that records rectangles, lines, ellipses and polygons instead of pixels.
+
+- Source: the mock's own vector drawings of generic functions (calendar, clock, scales, thermometer, microphone, tubes, case bags…), not artwork of the Klinika XP publisher.
+- No bitmap, photograph or external request is used. The patient photo slot shows the mock's "zdjęcie niedostępne" placeholder; the AI-generated photo embedded in `kxp_mock.c` is not used.
+
 ## Typography
 
 The desktop prefers locally installed Segoe UI Variable / Segoe UI. Microsoft Selawik is bundled as a fallback for systems without Segoe UI. Microsoft describes Selawik as an open-source replacement for Segoe UI; its README also notes differences in kerning and hinting.

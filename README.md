@@ -2,16 +2,16 @@
 
 [Otwórz demo](https://guziczak.github.io/opisai/)
 
-Demonstracja przeglądarkowa OpisAI, dostosowana do przebiegu pracy aplikacji **0.12.0rc32**. Interfejs gabinetu jest osadzony we własnym pulpicie demonstracyjnym z motywami Horyzont i ikonami przygotowanymi dla OpisAI.
+Demonstracja przeglądarkowa OpisAI, dostosowana do przebiegu pracy aplikacji **0.12.0rc32**. Okno Kliniki XP jest makietą odtworzoną z testowego mocka `kxp_mock.c` 2.4.1, czyli z układu prawdziwego programu, z fikcyjnymi danymi. Całość działa na własnym pulpicie demonstracyjnym z motywami Horyzont.
 
 ## Przebieg wizyty
 
-1. Edytuj wywiad, badanie i rozpoznanie w Klinice XP.
-2. Kliknij bąbelek OpisAI i sprawdź odczytane źródła.
+1. W Klinice XP opis wizyty jest w osobnym podoknie „Rejestracja wizyty: Wywiad - Badanie - Diagnoza” (F2). Edytuj w nim wywiad, badanie i diagnozę.
+2. Kliknij bąbelek OpisAI i sprawdź odczytane źródła. OpisAI czyta tylko otwarte podokno opisu i nie otwiera wizyty za Ciebie; gdy podokna nie ma, pokazuje błąd jak aplikacja.
 3. Wybierz wariant Bogato lub Wiernie, zatwierdź materiał i rozpocznij opracowanie.
 4. Przejrzyj wynik, porównaj go ze źródłem, popraw tekst i wybierz pola do wpisania.
 5. Zatwierdź przegląd. Wpis zostanie wykonany wyłącznie wtedy, gdy stan pól zgadza się z odczytanym wcześniej.
-6. Zapisz wizytę osobno w Klinice. Historię i cofanie wpisów znajdziesz w OpisAI.
+6. Zapisz wizytę osobno w Klinice (OK w podoknie albo „Zapisz wizytę”). Zapisana wizyta otwiera się w przeglądzie tylko do odczytu; ponowna edycja wymaga „Przejdź do edycji”. Historię i cofanie wpisów znajdziesz w OpisAI.
 
 Przytrzymanie bąbelka uruchamia przykładowe dyktowanie. Można zatrzymać, poprawić i kontynuować transkrypcję, przygotować z niej opis albo przejść do wpisania surowej notatki.
 
@@ -26,11 +26,21 @@ Przytrzymanie bąbelka uruchamia przykładowe dyktowanie. Można zatrzymać, pop
 
 Wszystkie funkcje dotyczą pulpitu demonstracyjnego. Przeglądarka nie zmienia konfiguracji Windows, sieci ani urządzeń na komputerze odwiedzającego. Tryb pełnoekranowy jest dostępny w Ustawieniach; część skrótów klawiaturowych może przejąć system lub przeglądarka.
 
+## Klinika XP (makieta)
+
+Układ, etykiety i zachowanie okna pochodzą z `kxp_mock.c` 2.4.1 z repozytorium zasobów OpisAI, odtworzonego ze zdjęć prawdziwej Kliniki XP. To niezależna rekonstrukcja do pokazania pracy z OpisAI, a nie produkt BRI ani kompletna Klinika XP. Nie zawiera grafik wydawcy; ikony są przeniesionymi 1:1 rysunkami mocka.
+
+- Okno „Przebieg wizyty – Zwierzę domowe”: menu, pasek narzędzi (Zapisz wizytę, Na razie zatrzymaj, Anuluj), ramki NOWA WIZYTA / WŁAŚCICIEL / ZWIERZĘ, miejsce na zdjęcie, etapy wizyty 1–9 i historia wizyt pacjenta.
+- Podokno opisu z trzema sekcjami i ich narzędziami (Mowa, Zredaguj, Typowe… OK, ANULUJ). Narzędzia Kliniki nie są odtworzone: otwierają ręczny wpis dopisywany do sekcji. Wysokość pól zmienia się przeciągnięciem separatora.
+- Tryby jak w mocku: nowa wizyta, edycja, zapisana wizyta w przeglądzie tylko do odczytu i historia po anulowaniu. „Na razie zatrzymaj” chowa podokno bez zapisu; F2 je przywraca.
+- F2 — opis wizyty, F4 — nowa wizyta z danymi (data, godzina, typ, lekarz, waga, temperatura), Ctrl+L — lista wizyt z filtrami i przeglądem dowolnej wizyty.
+- Moduły spoza zdjęć (Leczenie, Rozliczenie, Multimedia, Apteka, Finanse…) są wyłączone albo pokazują informację, że nie są odwzorowane. Wydruki nie są generowane.
+
 ## Dane i granice demonstracji
 
 Generowanie jest lokalnym formatowaniem przykładu, a dyktowanie odtwarza zapisaną transkrypcję. Demo nie łączy się z usługami AI, nie prosi o klucze API i nie włącza mikrofonu. Dowolny tekst wprowadzony przez użytkownika pozostaje źródłem wyniku; przykład Fistaszka nie zastępuje innej notatki.
 
-Wizyta, dokumenty i ustawienia pulpitu są zapisywane w `localStorage`, pod kluczami zaczynającymi się od `opisai.demo.`. Ustawienia OpisAI są zapisywane pod kluczem `opisai-demo-settings-v12`. Historia operacji OpisAI pozostaje w bieżącej karcie i jest czyszczona po odświeżeniu strony. Ustawienia → Prywatność i zabezpieczenia → Przywróć ustawienia usuwa dane demonstracji, w tym oba zestawy ustawień. Do testowania należy używać fikcyjnych danych.
+Wizyty makiety Kliniki, dokumenty i ustawienia pulpitu są zapisywane w `localStorage`, pod kluczami zaczynającymi się od `opisai.demo.` (wizyty: `opisai.demo.visit.v3`; dawny klucz `opisai.demo.visit.v2` jest usuwany przy przywróceniu przykładu). Ustawienia OpisAI są zapisywane pod kluczem `opisai-demo-settings-v12`. Historia operacji OpisAI pozostaje w bieżącej karcie i jest czyszczona po odświeżeniu strony. Ustawienia → Prywatność i zabezpieczenia → Przywróć ustawienia usuwa dane demonstracji, w tym oba zestawy ustawień. Do testowania należy używać fikcyjnych danych.
 
 ## Struktura
 
@@ -40,7 +50,8 @@ Wizyta, dokumenty i ustawienia pulpitu są zapisywane w `localStorage`, pod kluc
 | `assets/shell.js`, `assets/windows.css` | Pulpit, okna, pasek zadań i wspólne kontrolki |
 | `assets/desktop-apps.js` | Ustawienia, pomoc i terminal demonstracyjny |
 | `assets/files-apps.js`, `assets/files-apps.css` | Eksplorator, lokalne dokumenty, Kosz i Notatnik |
-| `assets/clinic.js`, `assets/clinic.css` | Wizyta i interfejs Kliniki |
+| `assets/clinic.js`, `assets/clinic.css` | Makieta Kliniki XP: przebieg wizyty, podokno opisu, przegląd tylko do odczytu, lista wizyt |
+| `assets/clinic-icons.js` | Ikony makiety Kliniki przeniesione z `kxp_mock.c` |
 | `assets/opisai.js`, `assets/opisai.css` | Bąbelek, przygotowanie, dyktowanie, przegląd i ustawienia OpisAI |
 | `assets/orb-motion.js` | Niezależny od DOM model sprężyny, bezwładności i granic ruchu bąbelka |
 | `assets/icons.js`, `assets/fonts/`, `assets/desktop-*.svg` | Zasoby wizualne |
@@ -62,6 +73,8 @@ Najważniejsze ścieżki do sprawdzenia w przeglądarce:
 
 - Przygotowanie → zmiana źródła unieważnia zatwierdzenie → opracowanie → edycja przeglądu → wpis → cofnięcie.
 - Zmiana pola w Klinice w trakcie przeglądu → konflikt zatrzymuje wpis.
+- Zamknięte podokno opisu (ANULUJ albo „Na razie zatrzymaj”) → kliknięcie bąbelka kończy się błędem „Nie znaleziono podokna opisu wizyty”.
+- OK w podoknie → przegląd tylko do odczytu → „Przejdź do edycji” (F2); Ctrl+L → przegląd innej wizyty; F4 → nowa wizyta.
 - Dyktowanie → zakończenie → kontynuacja / opracowanie / wpisanie notatki.
 - Minimalizowanie i przywracanie, maksymalizacja, zmiana rozmiaru, przyciąganie i menu klawiaturowe.
 - Zapis i ponowne otwarcie notatki, przeniesienie do Kosza i przywrócenie.
