@@ -21,15 +21,15 @@
     błonyy: 'błony', porfirryna: 'porfiryna', wilgotneee: 'wilgotne', wymiotty: 'wymioty'
   };
   const UNKNOWN_TERMS = new Set(['fancy']);
-  const MAIN_TITLE = '[DEMO] Klinika XP w. 5.40.01.01 - [Przebieg wizyty - Zwierzę domowe]';
-  const REVIEW_TITLE = '[DEMO] Klinika XP w. 5.40.01.01 — PRZEGLĄD WIZYTY (TYLKO DO ODCZYTU)';
+  const MAIN_TITLE = '[DEMO] Klinika XP - [Przebieg wizyty - Zwierzę domowe]';
+  const REVIEW_TITLE = '[DEMO] Klinika XP — PRZEGLĄD WIZYTY (TYLKO DO ODCZYTU)';
   const SUB_TITLE = '[DEMO] Rejestracja wizyty: Wywiad - Badanie - Diagnoza';
   const LIST_TITLE = '[DEMO] Klinika XP — Wizyty';
   const NO_EDITOR = 'Nie znaleziono podokna opisu wizyty. Otwórz wizytę w Klinice i spróbuj ponownie.';
+  const WINDOW_CHANGED = 'Zmieniło się okno, proces programu lub mapowanie pól. Odczytaj pola ponownie.';
   const DOCTOR = 'Anna Nowak';
   const VISIT_TYPES = ['Badanie', 'Kontrola', 'Profilaktyka', 'Obserwacja', 'Diagnostyka', 'Badanie i profilaktyka'];
   const MENUS = ['OPCJE', 'PRZEBIEG WIZYTY – ZWIERZĘ DOMOWE', 'ZWIERZĘTA', 'KLIENCI', 'WIZYTY', 'Dane główne', 'Apteka', 'Finanse', 'Leczenie', 'Profilaktyka', 'Organizacja pracy', 'Dodatkowe', 'Administrator', 'Pomoc'];
-  const DISABLED_MENUS = new Set([2, 3, 6, 7, 8, 9, 10, 11, 12]);
   const SIDE = [['start', 'Początek', 'caseStart'], ['visit', 'Przebieg wizyty', 'caseVisit'], ['treatment', 'Leczenie', 'caseTreat'], ['billing', 'Rozliczenie', 'caseBill'], ['media', 'Multimedia', 'monitors'], ['next', 'Następna…', 'caseNext']];
   const STEPS = [['1. Badanie', 'therm', 91], ['2. Szybka diagnoza', 'bookCheck', 130], ['3. Profilaktyka', 'syringe', 112], ['4. Obserwacja', 'search', 104], ['5. Diagnostyka', 'tubes', 104], ['6. Bad. dodatkowe', 'window', 130], ['7. Kont. leczenia', 'docs', 133], ['8. Dalej', 'next', 89], ['9. Anuluj', 'close', 89]];
   const SECTION_ICONS = { wywiad: 'chat', badanie: 'therm', diagnoza: 'diag' };
@@ -40,10 +40,13 @@
     diagnoza: [['Wybierz', 'search'], ['Choroby', 'diag'], ['Diagnoza AI', 'ai'], ['Porady', 'book']]
   };
   const TOOL_WIDTHS = [58, 65, 70, 70, 63, 65];
+  const pad = n => String(n).padStart(2, '0');
+  /* Fistaszek is 1 year 9 months old on the visit date, as the sample history says. */
+  const BORN = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 21); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`; })();
   const PATIENTS = [
-    { id: 1, owner: 'Marta Wiśniewska', address: 'ul. Przykładowa 1, Wrocław', phone: 'tel. 000 000 000', name: 'Fistaszek', species: 'szczur, odmiana hodowlana (fancy rat)', sex: 'samiec', colour: 'kapturowa, czarno-biała', months: 21, weight: '0.420', chip: '000012345' },
-    { id: 2, owner: 'Katarzyna Zielińska', address: 'ul. Przykładowa 2, Wrocław', phone: 'tel. 000 000 000', name: 'Mela', species: 'kot europejski krótkowłosy', sex: 'samica', colour: 'szylkretowa', months: 62, weight: '4.100', chip: '000012346' },
-    { id: 3, owner: 'Piotr Malinowski', address: 'ul. Przykładowa 3, Wrocław', phone: 'tel. 000 000 000', name: 'Bruno', species: 'pies, mieszaniec', sex: 'samiec', colour: 'rudy', months: 44, weight: '18.500', chip: '000012347' }
+    { id: 1, owner: 'Marta Wiśniewska', address: 'ul. Przykładowa 1, Wrocław', phone: 'tel. 000 000 000', name: 'Fistaszek', species: 'szczur, odmiana hodowlana (fancy rat)', sex: 'samiec', colour: 'kapturowa, czarno-biała', born: BORN, weight: '0.420', chip: '000012345' },
+    { id: 2, owner: 'Katarzyna Zielińska', address: 'ul. Przykładowa 2, Wrocław', phone: 'tel. 000 000 000', name: 'Mela', species: 'kot europejski krótkowłosy', sex: 'samica', colour: 'szylkretowa', born: '2021-07-15', weight: '4.100', chip: '000012346' },
+    { id: 3, owner: 'Piotr Malinowski', address: 'ul. Przykładowa 3, Wrocław', phone: 'tel. 000 000 000', name: 'Bruno', species: 'pies, mieszaniec', sex: 'samiec', colour: 'rudy', born: '2023-02-03', weight: '18.500', chip: '000012347' }
   ];
   const SEED_VISITS = [
     { id: 'V-140', patient: 1, occurred: '2026-08-12 16:40', type: 'Profilaktyka', number: '140/2026', doctor: DOCTOR, weight: '0.45', temperature: '', fields: { wywiad: 'Kontrola okresowa. Apetyt dobry, aktywny, bez kichania.', badanie: 'Stan ogólny dobry, sierść gładka, oddech spokojny, bez wydzieliny z nozdrzy. Masa 450 g.', diagnoza: 'Zdrowy, bez zmian chorobowych.' } },
@@ -51,11 +54,10 @@
     { id: 'V-151', patient: 2, occurred: '2026-09-02 09:30', type: 'Kontrola', number: '151/2026', doctor: DOCTOR, weight: '4.1', temperature: '38.6', fields: { wywiad: 'Kontrola po zmianie karmy. Apetyt dobry, wymiotów brak.', badanie: 'Stan ogólny dobry, brzuch miękki, niebolesny. Śluzówki różowe.', diagnoza: 'Bez zmian chorobowych.' } },
     { id: 'V-158', patient: 3, occurred: '2026-09-20 18:05', type: 'Badanie', number: '158/2026', doctor: DOCTOR, weight: '18.5', temperature: '38.9', fields: { wywiad: 'Kuleje na lewą kończynę piersiową od wczoraj, po zabawie w parku.', badanie: 'Bolesność przy zginaniu nadgarstka lewego, bez obrzęku. Pozostałe kończyny bez zmian.', diagnoza: 'Stłuczenie nadgarstka lewego, do kontroli.' } }
   ];
-  const pad = n => String(n).padStart(2, '0');
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const displayDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : (iso || '');
   const newDraft = (patient = 1, { empty = false } = {}) => ({ id: null, patient, meta: { date: today(), time: '10:15', type: 'Badanie', doctor: DOCTOR, number: '', weight: patient === 1 && !empty ? '0.42' : '', temperature: patient === 1 && !empty ? '37.8' : '' }, fields: patient === 1 && !empty ? { ...DEFAULT_FIELDS } : { wywiad: '', badanie: '', diagnoza: '' } });
-  const initialState = () => ({ visits: JSON.parse(JSON.stringify(SEED_VISITS)), current: newDraft(1), loaded: null, mode: 'new', editorOpen: true, editorHidden: false, activeField: 'badanie', spelling: true, ignoredWords: [], historyAll: false, historyAscending: false, weights: [17, 72, 11], sequence: 160 });
+  const initialState = () => ({ visits: JSON.parse(JSON.stringify(SEED_VISITS)), current: newDraft(1), loaded: null, mode: 'new', editorOpen: true, editorHidden: false, activeField: 'badanie', spelling: true, ignoredWords: [], weights: [17, 72, 11], sequence: 160 });
   function loadState() {
     const base = initialState();
     try {
@@ -67,7 +69,8 @@
   let state = loadState();
   let mainWindow = null, mainRoot = null, editorWindow = null, editorRoot = null, listWindow = null, listRoot = null;
   let spellPopup = null, popupPinned = false, hoverTimer = null, hideTimer = null, lastCorrection = null, closingEditor = false, statusText = '';
-  const undoStack = [], editTimers = new Map(), composing = new Set();
+  const fieldUndo = {}, editTimers = new Map(), composing = new Set();
+  let editorSession = 0;
   const esc = text => window.Shell ? Shell.escape(String(text ?? '')) : String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const kx = (name, size = 24, extra = '') => window.KxpIcons ? KxpIcons.svg(name, size, extra) : '';
   const icon = (name, size = 16) => window.Icons ? Icons.svg(name, size) : '';
@@ -82,12 +85,17 @@
   const announce = (field, source) => emit('clinic:change', { field, fields: getFields(), source: source || 'manual' });
   const toast = text => window.Shell?.toast(text);
   function plural(n, one, few, many) { const t = n % 100, u = n % 10; return n === 1 ? one : (u >= 2 && u <= 4 && (t < 12 || t > 14)) ? few : many; }
+  function monthsBetween(from, to) { const a = new Date(from + 'T12:00:00'), b = new Date((to || today()) + 'T12:00:00'); let m = (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth(); if (b.getDate() < a.getDate()) m -= 1; return Math.max(0, m); }
   function ageText(months) { const y = Math.floor(months / 12), m = months % 12, parts = []; if (y) parts.push(`${y} ${plural(y, 'rok', 'lata', 'lat')}`); if (m || !y) parts.push(`${m} ${plural(m, 'miesiąc', 'miesiące', 'miesięcy')}`); return parts.join(' i '); }
-  function birthDate(months) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - months); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`; }
-  function pushUndo(before, after) {
-    if (KEYS.every(key => before[key] === after[key])) return;
-    undoStack.push({ before: { ...before }, after: { ...after } });
-    if (undoStack.length > 60) undoStack.shift();
+  function noteManualEdit(key, before, after) {
+    const u = fieldUndo[key], now = Date.now();
+    if (!u || now - u.at > 1000 || u.after !== before) fieldUndo[key] = { before, after, at: now }; else { u.after = after; u.at = now; }
+  }
+  function undoField(key) {
+    const u = fieldUndo[key]; if (!u || state.current.fields[key] !== u.after || !writable()) return false;
+    fieldUndo[key] = { before: u.after, after: u.before, at: 0 }; state.current.fields[key] = u.before;
+    renderField(key); const el = fieldElement(key); if (el) restoreSelection(el, { start: u.before.length, end: u.before.length });
+    persist(); renderEditorChrome(); announce(key, 'manual'); return true;
   }
   function fieldElement(key) { return editorRoot?.querySelector(`[data-clinic-field="${key}"]`) || null; }
   function selectionOffsets(el) {
@@ -148,8 +156,7 @@
     }).join('') || '<p class="kxp-h-empty">Brak zapisanych wizyt dla tego pacjenta.</p>';
   }
   function patientVisits() {
-    const list = state.visits.filter(v => v.patient === state.current.patient).sort((a, b) => a.occurred.localeCompare(b.occurred) * (state.historyAscending ? 1 : -1));
-    return state.historyAll ? list : list.slice(0, 30);
+    return state.visits.filter(v => v.patient === state.current.patient).sort((a, b) => b.occurred.localeCompare(a.occurred)).slice(0, 30);
   }
   function savedViewHTML() {
     const v = state.loaded; if (!v) return '';
@@ -168,7 +175,7 @@
     const tools = [['extra', 'Dodatkowe', 'star', 66], ['print', 'Wydruki', 'print', 66], ['ops', 'Operacje', 'bolt', 68, true], [ro ? 'edit' : 'save', ro ? 'Przejdź do edycji' : 'Zapisz wizytę', ro ? 'pen' : 'check', 90], [ro ? 'close-view' : 'hold', ro ? 'Zamknij' : 'Na razie zatrzymaj', ro ? 'folder' : 'pause', 108], ['cancel', 'Anuluj', 'folder', 66, true]];
     mainRoot.dataset.mode = state.mode;
     mainRoot.innerHTML = `
-      <nav class="kxp-menubar" aria-label="Menu Kliniki XP">${MENUS.map((label, i) => `<button class="kxp-menu${i === 1 ? ' is-current' : ''}" data-menu="${i}" ${DISABLED_MENUS.has(i) ? 'disabled' : ''}>${esc(i === 1 && ro ? label + ' (TYLKO DO ODCZYTU)' : label)}</button>`).join('')}</nav>
+      <nav class="kxp-menubar" aria-label="Menu Kliniki XP">${MENUS.map((label, i) => `<button class="kxp-menu${i === 1 ? ' is-current' : ''}" data-menu="${i}">${esc(i === 1 && ro ? label + ' (TYLKO DO ODCZYTU)' : label)}</button>`).join('')}</nav>
       <div class="kxp-toolbar" role="toolbar" aria-label="Wizyta">${tools.map(([id, label, ico, w, sep]) => id === 'cancel' && ro ? '' : `<button class="kxp-action${sep ? ' has-separator' : ''}" style="width:${w}px" data-kxp="${id}">${kx(ico, 26)}<span>${esc(label)}</span></button>`).join('')}</div>
       <div class="kxp-canvas-scroll"><div class="kxp-canvas">
         <section class="kxp-panel kxp-visit-card" aria-label="${cardTitle}"><header>${cardTitle}</header>
@@ -185,13 +192,13 @@
           <div class="kxp-text kxp-gap">Płatnik VAT: nie</div><div class="kxp-text kxp-balance">Saldo: 0,00 zł</div></section>
         <section class="kxp-panel kxp-animal" aria-label="Zwierzę"><header>ZWIERZĘ<span class="kxp-chip">ID: ${esc(p.chip)}</span><button class="kxp-head-tool" data-kxp="meta" title="Dane wizyty">${kx('pen', 18)}</button><button class="kxp-head-tool" data-kxp="photo" title="Zdjęcie">${kx('camera', 18)}</button><button class="kxp-head-tool" data-kxp="patient-list" title="Karta zwierzęcia">${kx('clipboard', 18)}</button></header>${kx('dog', 24, 'kxp-panel-icon')}
           <div class="kxp-data kxp-strong">${esc(p.name)}</div><div class="kxp-data kxp-strong">${esc(p.species)}</div>
-          <div class="kxp-text">Płeć: ${esc(p.sex)}  Maść: ${esc(p.colour)}</div><div class="kxp-text">Wiek: ${esc(ageText(p.months))} (${esc(birthDate(p.months))})</div><div class="kxp-text kxp-strong">Waga: ${esc(p.weight)} kg</div>
+          <div class="kxp-text">Płeć: ${esc(p.sex)}  Maść: ${esc(p.colour)}</div><div class="kxp-text">Wiek: ${esc(ageText(monthsBetween(p.born, m.date)))} (${esc(displayDate(p.born))})</div><div class="kxp-text kxp-strong">Waga: ${esc(p.weight)} kg</div>
           <button class="kxp-info" data-kxp="patient-list" title="Informacje o zwierzęciu">${kx('info', 21)}</button></section>
         <button class="kxp-photo" data-kxp="photo" title="Zdjęcie zwierzęcia">${kx('camera', 56)}<span>zdjęcie niedostępne</span></button>
         <nav class="kxp-side" aria-label="Etapy">${SIDE.map(([id, label, ico]) => ro && (id === 'start' || id === 'next') ? '' : `<button class="kxp-side-item${(ro ? id === 'visit' : id === 'start') ? ' is-selected' : ''}" data-side="${id}"><span>${esc(label)}</span>${kx(ico, 22)}</button>`).join('')}</nav>
         ${ro ? savedViewHTML() : `
         <div class="kxp-pager" role="tablist" aria-label="Przebieg wizyty">${STEPS.map(([label, ico, w], i) => `<button class="kxp-step${i === 0 && editorVisible() ? ' is-selected' : ''}" style="width:${w}px" data-step="${i}" role="tab" aria-selected="${i === 0 && editorVisible()}">${kx(ico, 23)}<span>${esc(label)}</span></button>`).join('')}</div>
-        <div class="kxp-history-head"><b>Historia wizyt (${state.historyAll ? 'wszystkie' : 'ostatnie 30 wizyt'})</b><label class="kxp-check"><input type="checkbox" data-kxp="history-all" ${state.historyAll ? 'checked' : ''}>Pokaż wszystkie</label><button class="kxp-small" data-kxp="history-order">↕ Kolejność</button></div>
+        <div class="kxp-history-head"><b>Historia wizyt (ostatnie 30 wizyt)</b></div>
         <div class="kxp-history-icons">${['clipboard', 'syringe', 'docs'].map(ico => `<button data-kxp="list" title="Historia / wybór wizyty">${kx(ico, 22)}</button>`).join('')}</div>
         <div class="kxp-history" tabindex="0" aria-label="Historia wizyt">${historyLines(patientVisits())}</div>`}
       </div></div>
@@ -224,7 +231,7 @@
     open();
     state.editorHidden = false;
     if (editorWindow && editorRoot && document.contains(editorRoot)) { editorWindow.show(); editorWindow.focus(); persist(); renderMain(); return true; }
-    editorRoot = document.createElement('div'); editorRoot.className = 'kxp-editor-root';
+    editorRoot = document.createElement('div'); editorRoot.className = 'kxp-editor-root'; editorSession += 1;
     /* Below the visit card row of the main window, so both windows read as in the mock. */
     const width = Math.max(560, Math.min(1110, innerWidth - 120)), height = Math.max(400, Math.min(520, innerHeight - 300)), top = Math.max(8, Math.min(262, innerHeight - height - 56));
     editorWindow = Shell.createWindow({ id: 'clinic-editor', title: SUB_TITLE, icon: 'clinic', width, height, minWidth: 520, minHeight: 360, x: Math.max(8, Math.min(96, innerWidth - width - 8)), y: top, className: 'kxp-editor-window', content: editorRoot, resizable: true, maximizable: true, taskbar: false, owner: 'clinic', onClose: () => { if (closingEditor) return true; requestCancel(); return false; } });
@@ -251,7 +258,7 @@
     if (state.mode === 'saved' || state.mode === 'history') {
       if (!state.loaded) { newVisit(); return; }
       state.current = { id: state.loaded.id, patient: state.loaded.patient, meta: metaFromVisit(state.loaded), fields: { ...state.loaded.fields } };
-      state.mode = 'edit'; undoStack.length = 0; statusText = '';
+      state.mode = 'edit'; for (const k of KEYS) delete fieldUndo[k]; statusText = '';
     }
     openEditor();
   }
@@ -271,7 +278,7 @@
     if (!c.id) state.sequence += 1;
     state.visits = [record, ...state.visits.filter(v => v.id !== record.id)];
     state.loaded = record; state.current = { id: record.id, patient: record.patient, meta: metaFromVisit(record), fields: { ...record.fields } };
-    state.mode = 'saved'; undoStack.length = 0;
+    state.mode = 'saved'; for (const k of KEYS) delete fieldUndo[k];
     closeEditor();
     statusText = 'Zapisano wizytę. Teraz przegląd TYLKO DO ODCZYTU; ponowna edycja wymaga „Przejdź do edycji”.';
     refreshAll(); renderList();
@@ -280,7 +287,7 @@
   }
   function discardEditing() {
     const wasNew = state.current.id === null;
-    closeEditor(); undoStack.length = 0;
+    closeEditor(); for (const k of KEYS) delete fieldUndo[k];
     if (wasNew) { const last = state.visits.filter(v => v.patient === state.current.patient).sort((a, b) => b.occurred.localeCompare(a.occurred))[0] || null; state.loaded = last; state.current = last ? { id: last.id, patient: last.patient, meta: metaFromVisit(last), fields: { ...last.fields } } : newDraft(state.current.patient, { empty: true }); state.mode = 'history'; }
     else { state.current = { id: state.loaded.id, patient: state.loaded.patient, meta: metaFromVisit(state.loaded), fields: { ...state.loaded.fields } }; state.mode = 'saved'; }
     statusText = 'Anulowano edycję. Nie zapisano zmian.'; refreshAll(); announce(null, 'cancel');
@@ -298,7 +305,7 @@
   }
   function activateVisit(id, editAfter = false) {
     const v = state.visits.find(row => row.id === id); if (!v) return;
-    const go = () => { closeEditor(); state.loaded = v; state.current = { id: v.id, patient: v.patient, meta: metaFromVisit(v), fields: { ...v.fields } }; state.mode = 'saved'; statusText = ''; undoStack.length = 0; refreshAll(); open(); announce(null, 'switch'); if (editAfter) startEditing(); };
+    const go = () => { closeEditor(); state.loaded = v; state.current = { id: v.id, patient: v.patient, meta: metaFromVisit(v), fields: { ...v.fields } }; state.mode = 'saved'; statusText = ''; for (const k of KEYS) delete fieldUndo[k]; refreshAll(); open(); announce(null, 'switch'); if (editAfter) startEditing(); };
     if (writable() && editorWindow && dirty()) confirmDialog('Zmiana wizyty', 'Zmiana wizyty odrzuci bieżący bufor edycji. Kontynuować?', 'Kontynuuj', go); else go();
   }
   function syncMetaInputs() {
@@ -337,7 +344,7 @@
       const meta = { ...m, ...data, number: isNew ? '' : (data.number || m.number) };
       if (!metaValid(meta)) { d.host.querySelector('[data-meta-error]').textContent = 'Sprawdź datę, godzinę, typ i lekarza. Waga / temperatura: liczba bez jednostki albo puste pole.'; return; }
       d.win.close();
-      if (isNew) { closeEditor(); state.current = { ...newDraft(patient, { empty: true }), meta }; state.loaded = null; state.mode = 'new'; undoStack.length = 0; statusText = ''; state.activeField = 'wywiad'; refreshAll(); openEditor(); announce(null, 'new'); }
+      if (isNew) { closeEditor(); state.current = { ...newDraft(patient, { empty: true }), meta }; state.loaded = null; state.mode = 'new'; for (const k of KEYS) delete fieldUndo[k]; statusText = ''; state.activeField = 'wywiad'; refreshAll(); openEditor(); announce(null, 'new'); }
       else { state.current.meta = meta; statusText = 'Zmieniono dane w buforze. OK zapisuje całą wizytę.'; refreshAll(); }
     });
     setTimeout(() => d.host.querySelector('input:not([readonly]),select')?.focus(), 80);
@@ -406,14 +413,13 @@
       { label: 'Przegląd zapisanej wizyty — TYLKO DO ODCZYTU', icon: 'view', disabled: !state.loaded || state.mode === 'saved', onClick: () => state.loaded && activateVisit(state.loaded.id) },
       { label: 'Przejdź do edycji / opis', icon: 'edit', shortcut: 'F2', onClick: startEditing },
       { separator: true },
-      { label: 'Dane bieżącej wizyty…', icon: 'document', onClick: () => metaDialog(false) },
-      { label: 'Przywróć przykładowe dane…', icon: 'refresh', onClick: () => confirmDialog('Przywróć przykładowe dane', 'Wizyty, opis i ustawienia makiety zostaną zastąpione początkowym przykładem.', 'Przywróć', () => { reset(); toast('Przywrócono przykładową wizytę.'); }) }
+      { label: 'Dane bieżącej wizyty…', icon: 'document', onClick: () => metaDialog(false) }
     ], x, y);
   }
   function editMenu(x, y) {
     const key = state.activeField;
     Shell.menu([
-      { label: 'Cofnij', icon: 'undo', shortcut: 'Ctrl+Z', disabled: !undoStack.length, onClick: undoVisit },
+      { label: 'Cofnij', icon: 'undo', shortcut: 'Ctrl+Z', disabled: !(fieldUndo[key] && fieldUndo[key].after === state.current.fields[key]), onClick: () => undoField(key) },
       { separator: true },
       { label: 'Wytnij', icon: 'cut', shortcut: 'Ctrl+X', onClick: () => { focusField(key); document.execCommand('cut'); } },
       { label: 'Kopiuj', icon: 'copy', shortcut: 'Ctrl+C', onClick: copySelection },
@@ -440,7 +446,6 @@
       case 'patient-list': openList(state.current.patient); break;
       case 'list': openList(); break;
       case 'next': startEditing(); break;
-      case 'history-order': Shell.menu([{ label: 'Od najnowszych', checked: !state.historyAscending, onClick: () => { state.historyAscending = false; refreshAll(); } }, { label: 'Od najstarszych', checked: state.historyAscending, onClick: () => { state.historyAscending = true; refreshAll(); } }], x, y); break;
       default: break;
     }
   }
@@ -458,14 +463,13 @@
   function bindMain() {
     mainRoot.addEventListener('click', event => {
       const menu = event.target.closest('[data-menu]');
-      if (menu) { const i = Number(menu.dataset.menu), r = menu.getBoundingClientRect(); if (i === 4) openList(); else if (i === 13) aboutMock(); else if (!DISABLED_MENUS.has(i)) visitMenu(r.left, r.bottom); return; }
+      if (menu) { const i = Number(menu.dataset.menu), r = menu.getBoundingClientRect(); if (i === 4) openList(); else if (i === 13) aboutMock(); else if ([0, 1, 5].includes(i)) visitMenu(r.left, r.bottom); else notReproduced(MENUS[i]); return; }
       const side = event.target.closest('[data-side]'); if (side) { sideCommand(side.dataset.side); return; }
       const step = event.target.closest('[data-step]'); if (step) { stepCommand(Number(step.dataset.step)); return; }
       const visit = event.target.closest('[data-visit]'); if (visit && event.detail === 2) { activateVisit(visit.dataset.visit); return; }
-      const action = event.target.closest('[data-kxp]'); if (action && action.dataset.kxp !== 'history-all') command(action.dataset.kxp, event);
+      const action = event.target.closest('[data-kxp]'); if (action) command(action.dataset.kxp, event);
     });
     mainRoot.addEventListener('change', event => {
-      if (event.target.matches('[data-kxp="history-all"]')) { state.historyAll = event.target.checked; refreshAll(); return; }
       if (event.target.matches('[data-meta]')) { syncMetaInputs(); if (!metaValid(state.current.meta)) setStatus('Nieprawidłowe dane pomiaru / daty. Popraw je przed zapisaniem.'); else { statusText = 'Zmieniono dane w buforze. OK zapisuje całą wizytę.'; setStatus(statusText); } persist(); renderEditorChrome(); }
     });
     mainRoot.addEventListener('contextmenu', event => { if (event.target.closest('input')) return; event.preventDefault(); visitMenu(event.clientX, event.clientY); });
@@ -484,7 +488,7 @@
       const el = event.target.closest('[data-clinic-field]'); if (!el || !writable()) return;
       const key = el.dataset.clinicField, value = el.innerText.replace(/\r\n/g, '\n').replace(/ /g, ' '), before = getFields();
       if (state.current.fields[key] === value) return;
-      state.current.fields[key] = value; pushUndo(before, getFields()); persist(); renderEditorChrome(); announce(key, 'manual'); dismissSpelling();
+      noteManualEdit(key, before[key], value); state.current.fields[key] = value; persist(); renderEditorChrome(); announce(key, 'manual'); dismissSpelling();
       clearTimeout(editTimers.get(key)); editTimers.set(key, setTimeout(() => renderField(key, true), 650));
     });
     editorRoot.addEventListener('compositionstart', event => { const key = event.target.closest('[data-clinic-field]')?.dataset.clinicField; if (key) composing.add(key); });
@@ -499,7 +503,12 @@
       const split = event.target.closest('[data-splitter]'); if (split) dragSplitter(event, Number(split.dataset.splitter));
     });
     editorRoot.addEventListener('scroll', () => { if (spellPopup) dismissSpelling(); }, true);
-    editorRoot.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'z' && event.target.closest('[data-clinic-field]')) { event.preventDefault(); undoVisit(); } });
+    editorRoot.addEventListener('keydown', event => {
+      const ctrl = (event.ctrlKey || event.metaKey) && !event.altKey, key = event.key.toLowerCase();
+      if (ctrl && key === 'z' && event.target.closest('[data-clinic-field]')) { event.preventDefault(); undoField(event.target.closest('[data-clinic-field]').dataset.clinicField); }
+      else if (ctrl && key === 's') { event.preventDefault(); saveVisit(); }
+      else if (event.key === 'Escape' && !spellPopup) { event.preventDefault(); requestCancel(); }
+    });
   }
   function dragSplitter(event, index) {
     event.preventDefault();
@@ -520,30 +529,24 @@
   }
   function setFields(fields, options = {}) {
     if (!editorVisible() || !writable()) return { ok: false, reason: NO_EDITOR };
+    if (options.session !== undefined && options.session !== editorSession) return { ok: false, reason: WINDOW_CHANGED };
     const expected = options.expected;
     if (expected && KEYS.some(key => Object.prototype.hasOwnProperty.call(expected, key) && String(expected[key]) !== state.current.fields[key])) return { ok: false, reason: 'Treść wizyty zmieniła się od ostatniego odczytu. Odczytaj pola ponownie przed wpisaniem.' };
     if (!fields || KEYS.some(key => key in fields && typeof fields[key] !== 'string')) return { ok: false, reason: 'Nieprawidłowa treść pól wizyty.' };
-    const before = getFields(), changed = KEYS.filter(key => key in fields && fields[key] !== state.current.fields[key]);
+    const changed = KEYS.filter(key => key in fields && fields[key] !== state.current.fields[key]);
     if (!changed.length) return { ok: true, reason: 'Treść jest już aktualna.' };
-    changed.forEach(key => { state.current.fields[key] = fields[key]; clearTimeout(editTimers.get(key)); });
-    if (options.source !== 'undo') pushUndo(before, getFields());
+    changed.forEach(key => { state.current.fields[key] = fields[key]; clearTimeout(editTimers.get(key)); delete fieldUndo[key]; });
     dismissSpelling();
     changed.forEach(key => { renderField(key); const wrap = fieldElement(key)?.closest('.kxp-section'); wrap?.classList.remove('just-applied'); requestAnimationFrame(() => wrap?.classList.add('just-applied')); setTimeout(() => wrap?.classList.remove('just-applied'), 1300); });
     persist(); renderEditorChrome(); announce(changed.length === 1 ? changed[0] : null, options.source || 'external');
     return { ok: true, reason: 'Wpisano treść do pól wizyty.' };
-  }
-  function undoVisit() {
-    const entry = undoStack[undoStack.length - 1];
-    if (!entry) return toast('Brak zmian do cofnięcia.');
-    if (KEYS.some(key => state.current.fields[key] !== entry.after[key])) return toast('Nie można cofnąć zmiany: treść wizyty została zmodyfikowana.');
-    undoStack.pop(); setFields(entry.before, { expected: entry.after, source: 'undo' }); toast('Cofnięto ostatnią zmianę.');
   }
   function setSpellingEnabled(enabled) { state.spelling = !!enabled; dismissSpelling(); KEYS.forEach(key => renderField(key, true)); persist(); emit('clinic:spelling', { enabled: state.spelling }); }
   function markTarget(key, enabled = true) { editorRoot?.querySelectorAll('.kxp-section').forEach(el => el.classList.toggle('is-target', enabled && el.dataset.section === key)); }
   function reset() {
     const settings = { spelling: state.spelling };
     closeEditor(); listWindow?.close();
-    state = { ...initialState(), ...settings }; undoStack.length = 0; lastCorrection = null; statusText = ''; dismissSpelling();
+    state = { ...initialState(), ...settings }; for (const k of KEYS) delete fieldUndo[k]; lastCorrection = null; statusText = ''; dismissSpelling();
     try { localStorage.removeItem('opisai.demo.visit.v2'); } catch (_) {}
     persist();
     if (mainRoot) renderMain();
@@ -551,7 +554,7 @@
     announce(null, 'reset'); emit('clinic:focus', { field: state.activeField, fields: getFields() });
     return getFields();
   }
-  function context() { const p = patientOf(state.current.patient); return { editorOpen: editorVisible(), writable: writable() && editorVisible(), mode: state.mode, title: SUB_TITLE, mainTitle: state.mode === 'saved' ? REVIEW_TITLE : MAIN_TITLE, patient: p.name, owner: p.owner, visitNumber: state.current.id === null ? '<NOWY>' : state.current.meta.number, message: NO_EDITOR }; }
+  function context() { const p = patientOf(state.current.patient); return { editorOpen: editorVisible(), writable: writable() && editorVisible(), mode: state.mode, title: SUB_TITLE, mainTitle: state.mode === 'saved' ? REVIEW_TITLE : MAIN_TITLE, patient: p.name, owner: p.owner, visitNumber: state.current.id === null ? '<NOWY>' : state.current.meta.number, session: editorVisible() ? editorSession : 0, message: NO_EDITOR }; }
 
   /* ---------------------------------------------------------------- spelling card (OpisAI overlay) */
   function dismissSpelling() { clearTimeout(hoverTimer); clearTimeout(hideTimer); spellPopup?.remove(); spellPopup = null; popupPinned = false; }
@@ -584,7 +587,9 @@
     mainRoot = document.createElement('div'); mainRoot.className = 'kxp-app';
     const width = Math.max(360, Math.min(1214, innerWidth - 40)), height = Math.max(380, Math.min(800, innerHeight - 70));
     mainWindow = Shell.createWindow({ id: 'clinic', title: MAIN_TITLE, icon: 'clinic', width, height, minWidth: 600, minHeight: 360, x: innerWidth < 900 ? 8 : 16, y: innerHeight < 600 ? 8 : 12, className: 'kxp-window', content: mainRoot, resizable: true, maximizable: true, taskbar: true, onClose: () => { if (writable() && editorWindow && dirty()) { confirmDialog('Zamknąć Klinikę?', 'Odrzucić niezapisane zmiany tej wizyty?', 'Odrzuć i zamknij', () => { discardEditing(); mainWindow?.close(); }); return false; } closeEditor(); dismissSpelling(); mainWindow = null; mainRoot = null; emit('clinic:editor', { open: false, mode: state.mode }); return true; } });
-    renderMain(); bindMain(); return mainWindow;
+    renderMain(); bindMain();
+    if (innerWidth >= 900) mainWindow.maximize();
+    return mainWindow;
   }
   function onKey(event) {
     const id = Shell.activeWindow?.id || '';
@@ -593,7 +598,7 @@
     else if (event.key === 'F4') { event.preventDefault(); newVisit(); }
     else if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'l') { event.preventDefault(); openList(); }
   }
-  window.Clinic = { open, isOpen: () => !!(mainWindow && document.contains(mainWindow.el)), openEditor: startEditing, isEditorOpen: editorVisible, getContext: context, getFields, setFields, focusField, getActiveField: () => state.activeField, setSpellingEnabled, reset, markTarget, undo: undoVisit, getDefaultFields: () => ({ ...DEFAULT_FIELDS }), getSpellingEnabled: () => state.spelling };
+  window.Clinic = { open, isOpen: () => !!(mainWindow && document.contains(mainWindow.el)), openEditor: startEditing, isEditorOpen: editorVisible, getContext: context, getFields, setFields, focusField, getActiveField: () => state.activeField, setSpellingEnabled, reset, markTarget, getDefaultFields: () => ({ ...DEFAULT_FIELDS }), getSpellingEnabled: () => state.spelling };
   document.addEventListener('pointerdown', event => { if (spellPopup && !spellPopup.contains(event.target) && !event.target.closest('.clinic-spell')) dismissSpelling(); }, true);
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && spellPopup) { dismissSpelling(); event.stopPropagation(); } }, true);
   document.addEventListener('keydown', onKey);

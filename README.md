@@ -33,7 +33,9 @@ Układ, etykiety i zachowanie okna pochodzą z `kxp_mock.c` 2.4.1 z repozytorium
 - Okno „Przebieg wizyty – Zwierzę domowe”: menu, pasek narzędzi (Zapisz wizytę, Na razie zatrzymaj, Anuluj), ramki NOWA WIZYTA / WŁAŚCICIEL / ZWIERZĘ, miejsce na zdjęcie, etapy wizyty 1–9 i historia wizyt pacjenta.
 - Podokno opisu z trzema sekcjami i ich narzędziami (Mowa, Zredaguj, Typowe… OK, ANULUJ). Narzędzia Kliniki nie są odtworzone: otwierają ręczny wpis dopisywany do sekcji. Wysokość pól zmienia się przeciągnięciem separatora.
 - Tryby jak w mocku: nowa wizyta, edycja, zapisana wizyta w przeglądzie tylko do odczytu i historia po anulowaniu. „Na razie zatrzymaj” chowa podokno bez zapisu; F2 je przywraca.
-- F2 — opis wizyty, F4 — nowa wizyta z danymi (data, godzina, typ, lekarz, waga, temperatura), Ctrl+L — lista wizyt z filtrami i przeglądem dowolnej wizyty.
+- F2 — opis wizyty, F4 — nowa wizyta z danymi (data, godzina, typ, lekarz, waga, temperatura), Ctrl+L — lista wizyt z filtrami i przeglądem dowolnej wizyty. W podoknie Ctrl+S zapisuje, a Esc anuluje. Skróty działają, gdy fokus jest w oknie Kliniki; inaczej Ctrl+L przejmie przeglądarka.
+- Ctrl+Z cofa ostatnią zmianę w polu, jak w zwykłym polu tekstowym Windows. Wpis wykonany przez OpisAI czyści to cofanie; wpisy cofa się w OpisAI („Cofnij ostatni wpis”).
+- Wpis OpisAI wymaga tego samego podokna, które było odczytane: po zamknięciu i ponownym otwarciu opisu trzeba odczytać pola od nowa.
 - Moduły spoza zdjęć (Leczenie, Rozliczenie, Multimedia, Apteka, Finanse…) są wyłączone albo pokazują informację, że nie są odwzorowane. Wydruki nie są generowane.
 
 ## Dane i granice demonstracji
