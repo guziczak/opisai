@@ -34,152 +34,563 @@
   function makeWindow(id,title,width,height,html,onClose) {
     let win=windows.get(id);
     if(win?.el?.isConnected){win.setTitle(title);win.setContent(html);win.show();win.focus();}
-    else {win=Shell.createWindow({id,title,icon:'opisai',width,height,minWidth:Math.min(width,500),minHeight:Math.min(height,360),className:'oa-host oa-theme-'+preferences.theme,content:html,resizable:true,maximizable:true,taskbar:true,onClose:()=>{if(onClose)onClose();}});windows.set(id,win);}
+    else {win=Shell.createWindow({id,title,icon:'opisai',width,height,minWidth:Math.min(width,500),minHeight:Math.min(height,360),className:'oa-host oa-theme-'+preferences.theme,content:html,resizable:true,maximizable:true,taskbar:true,onClose:()=>onClose?.()});windows.set(id,win);}
     applyTheme(win); if(win?.el)win.el.dataset.oaWindow=id; holdPosition(); return win; // a work view stops the idle bounce where it is
   }
   function closeWin(id) { windows.get(id)?.close(); }
   function getFields() { return clone(window.Clinic?.getFields?.() || {wywiad:'',badanie:'',diagnoza:''}); }
   function validOption(options) {return options && typeof options==='object' && !('target' in options && options.target instanceof Element)?options:{};}
-  /* The compose view. The bubble stays at rest (blue "OpisAI") while it is open; its actions recall it. */
-  function prepare(options={}) {
-    options=typeof options==='string'?{field:options}:validOption(options);
-    beginOperation();if(!visitReady())return; // also "Odczytaj ponownie" and "Generuj opis" from the review
-    closeWin('opisai-review');
-    const snapshot=clone(options.snapshot||getFields());
-    const sources=clone(options.sources||snapshot);
-    const field=FIELDS[options.field]?options.field:null;
-    const variant={rich:preferences.rich,panel:preferences.panel,diagnosis:preferences.diagnosis};
-    if(field && field!=='badanie')variant.panel=false;
-    if(field==='diagnoza')variant.diagnosis=true;
-    const session=options.session??window.Clinic?.getContext?.().session;
-    const op={id:++state.token,snapshot,sources,variant,field,session,fromDictation:!!options.fromDictation,approved:false,details:false};
-    state.operation=op;state.review=null;
-    const cards=Object.entries(FIELDS).filter(([key])=>!field||key===field).map(([key,label])=>`<div class="oa-source-card ${key==='diagnoza'&&!variant.diagnosis?'out-of-scope':''}" data-source-card="${key}"><h3>${esc(label)}</h3><textarea data-source="${key}" aria-label="${esc(label)} — źródło do opracowania, edytowalne" spellcheck="false">${esc(sources[key]||'')}</textarea><div class="oa-source-status">${key==='diagnoza'&&!variant.diagnosis?'Poza wybranym zakresem — rozpoznanie nie będzie opracowywane.':''}</div></div>`).join('');
-    const html=`<div class="oa-app oa-compose"><header class="oa-header"><div class="oa-header-row"><div><h1>${field?'Przygotuj opis pola':'Przygotuj opis wizyty'}</h1><p class="oa-route">${icon('shield',13)} <span data-route>${esc(route())}</span></p></div>${button('Połączenie i model','connection','link small','settings')}</div></header><div class="oa-content"><div class="oa-compose-body"><section class="oa-source-panel"><div class="oa-section-label" data-source-heading>Treść pól</div><div data-sources>${cards}</div><textarea class="oa-rules" readonly aria-label="Zasady i źródła" hidden></textarea>${button('Pokaż zasady i źródła','rules','small','document')}</section><section class="oa-options-panel"><div class="oa-section-label">Sposób opracowania</div><div class="oa-variant-grid">${[true,false].map(rich=>`<div class="oa-variant-row-label">${rich?'Bogato':'Wiernie'}</div>${[0,1,2].map(col=>`<button class="oa-variant ${variant.rich===rich&&(variant.diagnosis?2:variant.panel?1:0)===col?'selected':''}" type="button" data-variant="${rich?'rich':'faithful'}-${col}" aria-label="${rich?'Bogato':'Wiernie'} — ${['sam opis','z panelem parametrów','z panelem i rozpoznaniem'][col]}" ${field&&((col===1&&field!=='badanie')||(col===2&&field==='wywiad'))?'disabled':''}><span class="oa-tick">${icon('check',13)}</span>${col===0?'Sam opis':col===1?'+ panel<br>parametrów':'+ panel<br>+ rozpoznanie'}</button>`).join('')}`).join('')}</div><div class="oa-variant-explanation" data-variant-description></div>${notice('Dane pacjenta i właściciela pozostają w oknie Kliniki. Sprawdź treść pól przed przygotowaniem opisu.')}<div style="margin-top:12px">${button('Ustawienia sekcji opisu','sections','link small','settings')}</div></section></div><div class="oa-notice error" data-compose-error hidden></div></div><div class="oa-ack-area">${check(`Sprawdzone: tylko te pola, bez danych osobowych właściciela i personelu.`,'oa-compose-ack')}<div class="oa-ack-note" data-ack-note>Potwierdzenie dotyczy pokazanych źródeł i wybranego zakresu.</div></div><footer class="oa-footer"><span class="oa-footnote" data-compose-foot>Pola wizyty pozostaną bez zmian.<br>OpisAI ${VERSION}</span>${button('Anuluj','cancel')}${button('Przygotuj podgląd','generate','primary','play','disabled')}</footer></div>`;
-    const win=makeWindow('opisai-compose','OpisAI — przygotuj opis wizyty',800,680,html,()=>{state.operation=null;});state.active=win;
-    const root=win.content,ack=$('#oa-compose-ack',root),submit=$('[data-action="generate"]',root);
-    function refresh(reset=false) {
-      if(reset){ack.checked=false;op.approved=false;$('[data-ack-note]',root).textContent='Zmieniła się treść lub zakres — zaznacz potwierdzenie ponownie.';}
-      const col=op.variant.diagnosis?2:op.variant.panel?1:0;
-      $$('[data-variant]',root).forEach(el=>{const [r,c]=el.dataset.variant.split('-');const active=(r==='rich')===op.variant.rich && Number(c)===col;el.classList.toggle('selected',active);el.setAttribute('aria-pressed',String(active));});
-      const style=op.variant.rich?'Bogato':'Wiernie';
-      $('[data-variant-description]',root).innerHTML=`<strong>${style} · ${col===0?'sam opis':col===1?'panel parametrów':'panel i rozpoznanie'}</strong>${op.variant.rich?'Uporządkowany, rozwinięty opis na podstawie przekazanych ustaleń. Rozpoznanie pozostaje propozycją do sprawdzenia.':'Uporządkowanie języka z zachowaniem informacji i znaczenia źródła.'}<span class="oa-muted">${col>0?'Panel zbiera parametry występujące w źródłach. Brakujących wartości nie uzupełniamy.':'Bez dodawania panelu parametrów.'}</span>`;
-      const diag=$('[data-source-card="diagnoza"]',root);if(diag){diag.classList.toggle('out-of-scope',!op.variant.diagnosis);$('.oa-source-status',diag).textContent=op.variant.diagnosis?'':'Poza wybranym zakresem — rozpoznanie nie będzie opracowywane.';}
-      const nonempty=Object.entries(op.sources).some(([key,value])=>(!field||field===key)&&(key!=='diagnoza'||op.variant.diagnosis)&&String(value).trim());
-      submit.disabled=!ack.checked||!nonempty;
-      $('.oa-rules',root).value=`ZASADY OPRACOWANIA\n\nZachowaj fakty, liczby, jednostki i przeczenia. Nie dopisuj nieobecnych ustaleń. Rozdziel dane z wizyty od wnioskowania.\n\nWARIANT: ${style}${col>0?' + panel parametrów':''}${col>1?' + rozpoznanie':''}\n\nŹRÓDŁA\n\n`+Object.entries(op.sources).filter(([key])=>(!field||key===field)&&(key!=='diagnoza'||op.variant.diagnosis)).map(([key,value])=>`${FIELDS[key]}:\n${value}`).join('\n\n');
-    }
-    $$('[data-source]',root).forEach(editor=>editor.addEventListener('input',()=>{op.sources[editor.dataset.source]=editor.value;refresh(true);}));
-    $$('[data-variant]',root).forEach(el=>el.addEventListener('click',()=>{const[r,c]=el.dataset.variant.split('-');const next={rich:r==='rich',panel:+c>0,diagnosis:+c===2};if(field==='diagnoza')next.diagnosis=true;const scopeChanged=next.panel!==op.variant.panel||next.diagnosis!==op.variant.diagnosis;op.variant=next;refresh(scopeChanged);}));
-    ack.addEventListener('change',()=>{op.approved=ack.checked;refresh();});
-    bind(root,'rules',()=>{op.details=!op.details;$('[data-sources]',root).hidden=op.details;$('.oa-rules',root).hidden=!op.details;$('[data-source-heading]',root).textContent=op.details?'Zasady i źródła':'Treść pól';$('[data-action="rules"] span',root).textContent=op.details?'Wróć do edycji źródeł':'Pokaż zasady i źródła';refresh();});
-    bind(root,'connection',()=>settings('connection'));bind(root,'sections',()=>settings('sections'));
-    bind(root,'cancel',()=>{win.close();state.operation=null;state.active=null;setPhase('idle');});
-    bind(root,'generate',()=>{if(submit.disabled||!ack.checked)return;op.approved=true;preferences.rich=op.variant.rich;preferences.panel=op.variant.panel;preferences.diagnosis=op.variant.diagnosis;savePreferences();win.close();generate(op);});
-    refresh();
+  /* ------------------------------------------------------------------ documentation workflow
+   * 0.12.0rc32 ui/workflow.py ComposeDialog and ProgressPage, ui/workspace.py DocumentWorkspace,
+   * ui/review.py ReviewPage with ui/structured_review.py, ui/coordinator.py (write, receipts,
+   * undo, history) and ui/recovery.py. The document itself comes from assets/opisai-document.js. */
+  const Doc = () => window.OpisAIDocument;
+  const DOC_KEYS = ['badanie', 'wywiad', 'diagnoza']; // configured order: exam, history, diagnosis
+  const DOC_FIELD = {badanie: 'Badanie kliniczne', wywiad: 'Wywiad', diagnoza: 'Diagnoza'};
+  const DOC_SECTION = {badanie: 'Opis badania i ocena', wywiad: 'Opis wywiadu', diagnoza: 'Rozpoznanie robocze'};
+  const DOC_TAB = {badanie: 'Badanie', wywiad: 'Wywiad', diagnoza: 'Rozpoznanie'};
+  const VARIANT_KEY = 'opisai.demo.variant.v1'; // config generation_variant: the last approved whole-visit choice
+  const WINDOW_CHANGED = 'Zmieniło się okno, proces programu lub mapowanie pól. Odczytaj pola ponownie.';
+  const RECEIPT_NOTE = 'To wynik wpisania do kontrolek, nie potwierdzenie zapisu wizyty w bazie Kliniki.';
+  const docSpeed = () => preferences.animations === false || matchMedia('(prefers-reduced-motion: reduce)').matches ? .35 : 1;
+  const pick = (values, keys) => Object.fromEntries(keys.map(key => [key, String(values?.[key] ?? '')]));
+  const lines = text => Math.max(1, String(text).split('\n').length);
+  const normal = text => String(text).replace(/\s+/g, ' ').trim().toLowerCase(); // also the settings search
+  function connectionLabel() { const p = preferences.provider; return [p === 'Lokalny' ? 'Lokalny (offline)' : p, p === 'Lokalny' ? 'Lokalnie (offline)' : preferences.transport, p === 'ChatGPT' ? 'model wybrany w ChatGPT UI' : preferences.model].join(' · '); }
+  function clinicTitle() { const c = window.Clinic?.getContext?.() || {}; return c.title ? `${c.title.replace(/^\[DEMO\]\s*/, '')} — ${c.patient}${c.visitNumber === '<NOWY>' ? ' [NOWA]' : ' · ' + c.visitNumber}` : 'Okno docelowe'; }
+  function rememberedVariant() { try { const v = JSON.parse(localStorage.getItem(VARIANT_KEY) || 'null'); if (v && ['rich', 'panel', 'diagnosis'].every(k => typeof (v[k] ?? false) === 'boolean')) return Doc().variant(v); } catch (_) {} return Doc().variant({}); }
+  function rememberVariant(v) { try { localStorage.setItem(VARIANT_KEY, JSON.stringify(Doc().variant(v))); } catch (_) {} }
+  function docScope(field) { // legacy_ui._trigger: sources, outputs and what the matrix may offer
+    if (field === null) return {sources: DOC_KEYS, outputs: ['badanie', 'wywiad'], panel: true, diagnosis: true, required: false};
+    if (field === 'diagnoza') return {sources: DOC_KEYS, outputs: [], panel: false, diagnosis: true, required: true};
+    return {sources: [field], outputs: [field], panel: field === 'badanie', diagnosis: false, required: false};
   }
-  const SAMPLE = {
-    wywiad:'Szczur, samiec, fancy rat, 1 rok 9 mies., ok. 420 g. Od ~2 tygodni nasilające się kichanie i świszczący oddech, czerwonobrązowa wydzielina (porfiryna) wokół nozdrzy i oczu. Apatyczny, mniej je, chudnie. Ściółka z trocin sosnowych.',
-    badanie:'Stan ogólny obniżony, postawa zgarbiona, sierść nastroszona. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. BCS 2/5. T 37,8°C, HR ok. 360/min.',
-    diagnoza:'Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.'
-  };
-  const normal=text=>String(text).replace(/\s+/g,' ').trim().toLowerCase();
-  const polish=text=>String(text).replace(/nastroszna/g,'nastroszona').replace(/Osłuchwo/g,'Osłuchowo').replace(/rzęzenia/g,'rzężenia').replace(/rózowe/g,'różowe').replace(/osłuchowoo/g,'osłuchowo').replace(/temperatuta/g,'temperatura').replace(/[ \t]+\n/g,'\n').trim();
-  function formatSources(op) {
-    const output={};
-    const keys=op.field?[op.field]:['wywiad','badanie',...(op.variant.diagnosis?['diagnoza']:[])];
-    for(const key of keys){
-      let text=polish(op.sources[key]||'');
-      if(normal(text)===normal(SAMPLE[key])){
-        if(key==='wywiad')text=op.variant.rich?'Pacjent: szczur, samiec, odmiana hodowlana (fancy rat), w wieku 1 roku i 9 miesięcy, o masie ciała około 420 g.\n\nOd około dwóch tygodni występują nasilające się kichanie i świszczący oddech. Wokół nozdrzy i oczu widoczna jest czerwonobrązowa wydzielina porfirynowa. Zgłoszono apatię, zmniejszony apetyt i spadek masy ciała. Zwierzę utrzymywane jest na ściółce z trocin sosnowych.':'Szczur, samiec, fancy rat, 1 rok i 9 miesięcy, masa ciała ok. 420 g. Od ok. 2 tygodni nasilające się kichanie i świszczący oddech. Porfiryna wokół nozdrzy i oczu. Apatia, zmniejszony apetyt i chudnięcie. Ściółka z trocin sosnowych.';
-        if(key==='badanie')text=op.variant.rich?'Stan ogólny obniżony. Zwierzę przyjmuje zgarbioną postawę; sierść nastroszona. Wokół nozdrzy i w kątach oczu widoczna zaschnięta porfiryna.\n\nOddech przyspieszony, z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi stwierdzono rzężenia i świsty. Kondycja ciała: BCS 2/5. Temperatura: 37,8 °C. Częstość pracy serca: około 360/min.':'Stan ogólny obniżony, postawa zgarbiona, sierść nastroszona. Zaschnięta porfiryna wokół nozdrzy i w kątach oczu. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchowo nad polami płucnymi rzężenia i świsty. BCS 2/5. Temperatura 37,8 °C, HR ok. 360/min.';
-        if(key==='diagnoza')text='Rozpoznanie robocze na podstawie notatki:\nPodejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.\n\nRozpoznanie wymaga oceny lekarza prowadzącego.';
+  const composeSources = op => op.scope.sources.map(k => ({id: (k === 'diagnoza' ? 'diagnosis:' : 'standard:') + k, field: k, label: DOC_FIELD[k], role: k === 'diagnoza' ? 'diagnosis' : 'standard', text: op.texts[k] || '', included: k !== 'diagnoza' || op.variant.diagnosis}));
+  const composeRequest = op => ({mode: op.variant.rich ? 'rich' : 'faithful', panel: op.variant.panel, diagnosis: op.variant.diagnosis, sources: composeSources(op),
+    outputs: [...op.scope.outputs, ...(op.variant.diagnosis ? ['diagnoza'] : [])], panelTarget: op.variant.panel ? 'badanie' : '', snapshot: op.snapshot});
+  const linkButton = (label, action, extra = '') => `<button type="button" class="oa-link-btn" data-action="${esc(action)}" ${extra}>${label}</button>`;
+
+  /* MacroController.on_trigger: the sub-window is read first (SafeCoordinator.capture shows "Odczytuję
+   * pola"), then one compose window. A dictation summary handed over here (_compose_dictation) waits
+   * behind the bubble ("Sprawdź") when the read is cancelled or its window or field changed. */
+  function prepare(options = {}) {
+    options = typeof options === 'string' ? {field: options} : validOption(options);
+    const back = options.dictationReturn, restore = () => { if (back) { back.outcome = null; state.review = back; setPhase('review'); } };
+    beginOperation(); if (!visitReady()) { restore(); return; }
+    readVisit(() => {
+      if (!visitReady()) { restore(); return; }
+      if (back) { // DictationGenerationInput.apply: the same window and the dictated field unchanged
+        const ctx = window.Clinic?.getContext?.() || {}, now = getFields(), problem = ctx.session !== back.session ? 'Zmieniła się wizyta lub okno docelowe. Transkrypcja pozostaje w podsumowaniu dyktowania.'
+          : back.keys.some(k => now[k] !== String(back.snapshot?.[k] ?? '')) ? 'Pole wizyty zmieniło się podczas dyktowania. Sprawdź je przed dalszym opracowaniem transkrypcji.' : '';
+        if (problem) { restore(); messageBox({title: 'OpisAI — sprawdź komunikat', icon: 'warning', text: problem}); return; }
       }
-      if(text || op.field)output[key]=text;
-    }
-    if(op.variant.panel && 'badanie' in output){
-      const source=Object.entries(op.sources).filter(([key])=>(!op.field||key===op.field)&&(key!=='diagnoza'||op.variant.diagnosis)).map(([,value])=>value).join('\n'),rows=[];
-      const temp=source.match(/(?:\bT\s*|temperatura\s*:?\s*)(\d{2}[,.]\d)\s*°?\s*C/i);
-      const hr=source.match(/(?:\bHR|czynność serca|częstość pracy serca)\s*:?[ \t]*(?:ok\.?\s*)?(\d{2,3})\s*\/\s*min/i);
-      const bcs=source.match(/\bBCS\s*:?\s*(\d\s*\/\s*\d)/i);
-      const mass=source.match(/(?:ok\.?\s*)?(\d{2,4}(?:[,.]\d+)?)\s*(kg|g)\b/i);
-      if(temp&&preferences.panelRows.temperature)rows.push('Temperatura: '+temp[1].replace('.',',')+' °C');if(hr&&preferences.panelRows.heart)rows.push('Czynność serca: ok. '+hr[1]+'/min');if(bcs&&preferences.panelRows.bcs)rows.push('BCS: '+bcs[1]);if(mass&&preferences.panelRows.mass)rows.push('Masa ciała: '+mass[1]+' '+mass[2]);
-      if(rows.length)output.badanie='Parametry ze źródeł\n'+rows.join('\n')+'\n\nBadanie kliniczne\n'+output.badanie;
-    }
-    return output;
+      openCompose(options);
+    }, restore);
   }
-  function generate(op) {
-    if(!op?.approved)return;
-    const token=++state.token;state.operation=op;state.review=null;
-    const outputs=formatSources(op),fullText=Object.entries(outputs).map(([key,value])=>`${FIELDS[key]}\n${value}`).join('\n\n');
-    const html=`<div class="oa-app"><div class="oa-content"><div class="oa-progress-center"><div class="oa-progress-mark">${icon('opisai',34)}</div><div class="oa-progress-title" data-progress-title>Przygotowuję źródła</div><div class="oa-progress-sub">${esc(route())}</div><div class="oa-progress-track"><div data-progress-bar></div></div><div class="oa-progress-steps"><span class="active" data-step="0">Odczyt pól</span><span data-step="1">Opracowanie</span><span data-step="2">Sprawdzenie wyniku</span></div></div>${notice('Powstaje wersja robocza. W następnym oknie sprawdzisz tekst i zdecydujesz o wpisaniu.')}<div style="margin-top:14px;text-align:center">${button('Pokaż tekst na żywo','live','primary','eye')}</div><section class="oa-live-preview ${preferences.livePreview?'open':''}"><div class="oa-live-head"><span>Wersja robocza</span>${button('Ukryj','hide-live','link small')}</div><pre data-stream></pre></section></div><footer class="oa-footer"><span class="oa-footnote">Pola wizyty pozostają bez zmian.</span>${button('Anuluj','cancel')}</footer></div>`;
-    const win=makeWindow('opisai-progress','OpisAI — przygotowanie opisu',610,540,html);state.active=win;const root=win.content;
-    bind(root,'live',()=>{$('.oa-live-preview',root).classList.add('open');preferences.livePreview=true;savePreferences();});bind(root,'hide-live',()=>{$('.oa-live-preview',root).classList.remove('open');preferences.livePreview=false;savePreferences();});
-    let done=0;
-    const timer=setInterval(()=>{
-      if(token!==state.token){clearInterval(timer);if(state.job?.token===token)state.job=null;return;}
-      done+=1;const progress=Math.min(100,done/28*100),step=done<5?0:done<23?1:2;
-      $('[data-progress-bar]',root).style.width=progress+'%';
-      $('[data-progress-title]',root).textContent=['Czytam zatwierdzone pola','Przygotowuję opis wizyty','Sprawdzam strukturę i parametry'][step];
-      $$('[data-step]',root).forEach(x=>x.classList.toggle('active',Number(x.dataset.step)===step));
-      $('[data-stream]',root).textContent=fullText.slice(0,Math.floor(fullText.length*Math.max(0,(done-4)/21)));
-      const live=$('.oa-live-preview',root);live.scrollTop=live.scrollHeight;
-      if(done>=28){clearInterval(timer);state.job=null;win.close();const result={id:op.id,snapshot:op.snapshot,sources:op.sources,session:op.session,output:outputs,variant:op.variant,field:op.field,mode:'generation',route:route(),created:new Date().toISOString()};state.review=result;review(result);}
-    },preferences.animations?120:35);
-    const cancel=()=>{if(state.job?.token!==token)return;++state.token;clearInterval(timer);state.job=null;win.close();state.active=null;state.operation=null;setPhase('idle');toast('Przygotowanie opisu anulowane. Pola wizyty pozostają bez zmian.');};
-    state.job={token,cancel};setPhase('processing');bind(root,'cancel',cancel);
-  }
-  function review(result) {
-    const keys=Object.keys(result.output);if(!keys.length){state.review=null;setPhase('idle');toast('Brak treści do sprawdzenia. Uzupełnij źródła.');return;}
-    state.review=result;setPhase('review'); // amber "Sprawdź" for the whole review
-    result.edited=result.edited||clone(result.output);result.selected=result.selected||keys.slice();result.tab=result.tab||keys[0];result.compare=!!result.compare;
-    const isDict=result.mode==='dictation';
-    const html=`<div class="oa-app oa-review"><header class="oa-header"><div class="oa-header-row"><div><h1>${isDict?'Sprawdź transkrypcję':'Sprawdź opis przed wpisaniem'}</h1><p>Sprawdź fakty, liczby i przeczenia. Treść „Do wpisania” możesz poprawić.</p></div><span class="oa-version">${VERSION}</span></div></header><nav class="oa-tabs" aria-label="Pola wyniku">${keys.map(key=>`<button class="oa-tab ${result.tab===key?'active':''}" data-tab="${key}">${esc(FIELDS[key])}</button>`).join('')}<button class="oa-tab ${result.tab==='details'?'active':''}" data-tab="details">Szczegóły</button></nav><div class="oa-content oa-review-body" data-review-body></div><div class="oa-notice error oa-review-warning" data-write-error hidden></div><div class="oa-ack-area">${check(isDict?'Transkrypcja i właściwa wizyta sprawdzone. Zatwierdzam wpisanie tej notatki.':'Tekst przygotowany przez AI i właściwa wizyta sprawdzone. Zatwierdzam dokładnie te zmiany.','oa-review-ack')}<div class="oa-ack-note" data-review-ack-note></div></div><footer class="oa-footer"><span class="oa-footnote">Wpisanie do pól nie zapisuje wizyty w Klinice.</span>${button('Odrzuć','reject')}${isDict?button('Kontynuuj dyktowanie','continue','','mic'):''}${isDict?button('Generuj opis','compose','primary','document'):''}${button(isDict?'Wpisz samą notatkę':'Wpisz do pól','apply',isDict?'':'primary','check','disabled')}</footer></div>`;
-    const win=makeWindow('opisai-review',`OpisAI — ${isDict?'przegląd transkrypcji':'podgląd wyniku'}`,1000,660,html,()=>{if(state.review){state.review=null;state.active=null;if(state.phase==='review')setPhase('idle');}});state.active=win;const root=win.content,ack=$('#oa-review-ack',root),apply=$('[data-action="apply"]',root);
-    function invalidate(){ack.checked=false;apply.disabled=true;$('[data-review-ack-note]',root).textContent='Treść lub zakres zmienione — sprawdź i potwierdź ponownie.';}
-    function draw(){
-      const body=$('[data-review-body]',root);$$('[data-tab]',root).forEach(tab=>tab.classList.toggle('active',tab.dataset.tab===result.tab));
-      if(result.tab==='details'){
-        body.innerHTML=`<section class="oa-review-details"><h2>Pochodzenie i zakres wyniku</h2><dl><dt>Sposób przygotowania</dt><dd>${isDict?'Przykładowa transkrypcja':esc(result.route)}</dd><dt>Wariant</dt><dd>${isDict?'Sama notatka':`${result.variant.rich?'Bogato':'Wiernie'}${result.variant.panel?' · panel parametrów':''}${result.variant.diagnosis?' · rozpoznanie':''}`}</dd><dt>Zakres</dt><dd>${keys.map(k=>esc(FIELDS[k])).join(', ')}</dd><dt>Źródła</dt><dd>Treść sprawdzona w oknie przygotowania.</dd><dt>Stan pól Kliniki</dt><dd>Kontrolowany ponownie przed wpisaniem.</dd></dl>${notice('Jest to demonstracja interfejsu. Tekst przygotowano lokalnie na podstawie przykładu lub wpisanych źródeł. Żadne dane nie zostały wysłane do usługi AI.')}<h3>Zatwierdzone źródła</h3><pre>${esc(Object.entries(result.sources).filter(([k])=>keys.includes(k)).map(([k,v])=>FIELDS[k]+':\n'+v).join('\n\n'))}</pre><h3>Kontrola przed wpisaniem</h3><p class="oa-muted">Program sprawdzi, czy od odczytu nie zmieniły się pola w oknie wizyty. Wynik możesz poprawić i wybrać pola, które mają zostać zastąpione.</p></section>`;return;
-      }
-      const key=result.tab,included=result.selected.includes(key);
-      body.innerHTML=`<div class="oa-review-top"><span class="oa-status">${included?'Do wpisania':'Poza zakresem wpisu'} · ${esc(FIELDS[key])}</span>${button(included?'Pomiń to pole':'Uwzględnij pole','toggle-field','link small',included?'close':'check')}</div><div class="oa-review-split"><section class="oa-review-side oa-comparison" ${result.compare?'':'hidden'}><div class="oa-editor-head"><select aria-label="Rodzaj porównania"><option value="sources">Źródła użyte do przygotowania</option><option value="before">Pole przed wpisaniem</option></select></div><textarea readonly spellcheck="false" aria-label="Źródło do porównania">${esc(result.sources[key]||'')}</textarea></section><section class="oa-review-side"><div class="oa-editor-head"><span>Do wpisania</span>${button(result.compare?'Ukryj porównanie':'Porównaj','compare','link small','eye')}${button('Kopiuj','copy','link small','copy')}</div><textarea data-output="${key}" spellcheck="false" aria-label="Dokładna treść do wpisania: ${esc(FIELDS[key])}">${esc(result.edited[key]||'')}</textarea></section></div><div class="oa-review-info">${icon('info',13)}<span>${isDict?'Możesz wpisać samą notatkę albo przygotować na jej podstawie opis wizyty.':result.variant.panel&&key==='badanie'?'Panel zawiera parametry odczytane z zatwierdzonych źródeł. Sprawdź ich wartości i jednostki.':'Do pola trafi dokładnie tekst widoczny powyżej.'}</span></div>`;
-      $('[data-output]',body).addEventListener('input',e=>{result.edited[key]=e.target.value;invalidate();});
-      $('select',body).addEventListener('change',e=>{$('.oa-comparison textarea',body).value=e.target.value==='before'?(result.snapshot[key]||''):(result.sources[key]||'');});
-      bind(body,'compare',()=>{result.compare=!result.compare;draw();});
-      bind(body,'copy',()=>copyText(result.edited[key],$('[data-action="copy"]',body)));
-      bind(body,'toggle-field',()=>{result.selected=included?result.selected.filter(k=>k!==key):[...result.selected,key];invalidate();draw();});
+  function openCompose(options) { // ComposeDialog: editable source copies, the six-variant matrix and the RODO acknowledgement
+    const field = DOC_KEYS.includes(options.field) ? options.field : null, scope = docScope(field), snapshot = pick(options.snapshot || getFields(), scope.sources);
+    const preferred = Doc().variant(options.variant || rememberedVariant()), projected = Doc().forCapabilities(preferred, scope);
+    const op = {id: ++state.token, snapshot, texts: {...snapshot, ...pick({...snapshot, ...(options.sources || {})}, scope.sources)}, scope, field, preferred, projected, variant: projected,
+      session: options.session ?? window.Clinic?.getContext?.().session, context: clinicTitle(), remember: field === null, dictation: options.dictationReturn || null, fingerprint: null, details: false, finished: false};
+    state.operation = op; state.review = null; setPhase('idle');
+    const cards = scope.sources.map(k => `<div class="oa-c2-card" data-source-card="${k}"><h3>${esc(DOC_FIELD[k])}</h3><textarea data-source="${k}" spellcheck="false" placeholder="Brak treści. Możesz uzupełnić to pole." aria-label="${esc(DOC_FIELD[k])} — źródło do opracowania, edytowalne">${esc(op.texts[k])}</textarea><div class="oa-c2-status" data-status hidden></div></div>`).join('');
+    const offered = []; // the enabled tiles' variants (VariantDescription)
+    const tiles = [true, false].map(rich => `<div class="oa-c2-row" title="${esc(Doc().modeSummary(rich))}">${rich ? 'Bogato' : 'Wiernie'}</div>` + [0, 1, 2].map(col => {
+      const v = {rich, panel: col > 0 && scope.panel, diagnosis: col === 2 || scope.required}, sub = col === 0 ? (scope.required ? 'Rozpoznanie' : 'Sam opis') : col === 1 ? '+ panel\nparametrów' : scope.panel ? '+ panel\n+ rozpoznanie' : '+ rozpoznanie';
+      const enabled = col === 0 || (col === 1 && scope.panel) || (col === 2 && scope.diagnosis && !scope.required), name = (rich ? 'Bogato' : 'Wiernie') + ' — ' + sub.replace('\n', ' ');
+      if (enabled) offered.push(v);
+      const tip = !enabled ? (col === 1 ? 'Parametry życiowe nie są dostępne dla wskazanych pól.' : scope.required ? 'Rozpoznanie robocze jest już uwzględnione w tym trybie.' : 'Rozpoznanie robocze nie jest dostępne dla wskazanych pól.') : v.diagnosis ? name + '. Rozpoznanie robocze to propozycja AI do sprawdzenia.' : name;
+      return `<button type="button" class="oa-c2-tile" data-tile="${JSON.stringify(v).replace(/"/g, '&quot;')}" aria-label="${esc(name)}" title="${esc(tip)}" ${enabled ? '' : 'aria-disabled="true" tabindex="-1"'}><span class="oa-c2-tick" aria-hidden="true">${icon('check', 12)}</span>${esc(sub).replace('\n', '<br>')}</button>`;
+    }).join('')).join('');
+    const variantHtml = v => { const [first, ...rest] = Doc().describeVariant(v), name = v.rich ? 'Bogato' : 'Wiernie'; return `<p><b>${name}</b>${esc(first.slice(name.length))}</p>` + rest.map(line => `<p>${esc(line)}</p>`).join(''); };
+    // VariantDescription: every enabled tile's text keeps its space, so another choice never moves the window.
+    const sizer = `<div class="oa-c2-sizer" aria-hidden="true">${offered.map(v => `<div class="oa-c2-description">${variantHtml(v)}</div>`).join('')}</div>`;
+    const html = `<div class="oa-app oa-c2"><div class="oa-c2-head"><h1 data-heading>Przygotuj opis wizyty</h1><p class="oa-c2-route" data-oa-route>${esc(connectionLabel())}</p></div><div class="oa-c2-body"><div class="oa-c2-columns"><section class="oa-c2-sources"><div class="oa-c2-label" data-source-heading>Treść pól</div><div class="oa-c2-stack"><div class="oa-c2-cards" data-cards>${cards}</div><div class="oa-c2-rules" data-rules hidden><textarea readonly spellcheck="false" aria-label="Zasady i źródła"></textarea></div></div><button type="button" class="oa-btn oa-c2-details" data-action="rules" title="Instrukcje, zamówione sekcje i zatwierdzone źródła. Dla panelu program dołącza również zestawienie parametrów i cytatów z tych źródeł.">Pokaż zasady i źródła</button></section><section class="oa-c2-options"><div class="oa-c2-label" id="oa-c2-mode-${op.id}">Sposób opracowania</div><div class="oa-c2-grid" role="group" aria-labelledby="oa-c2-mode-${op.id}">${tiles}</div><div class="oa-c2-descwrap"><div class="oa-c2-description" data-description aria-live="polite"></div>${sizer}</div></section></div></div><div class="oa-c2-error" data-error role="alert" hidden></div><label class="oa-ack oa-c2-ack"><input type="checkbox" id="oa-compose-ack"><span data-ack-text>Sprawdzone: źródła i wybrany zakres opracowania.</span></label><footer class="oa-footer"><span class="oa-footnote" data-foot>Pola wizyty pozostaną bez zmian.</span>${button('Anuluj', 'cancel')}${button('Przygotuj podgląd', 'generate', 'primary', '', 'disabled')}</footer></div>`;
+    const win = makeWindow('opisai-compose', 'OpisAI — przygotuj opis wizyty', 1040, 690, html, () => composeClosed(op)); state.active = win;
+    const root = win.content, ack = $('#oa-compose-ack', root), send = $('[data-action="generate"]', root), foot = $('[data-foot]', root);
+    op.win = win; let resetShown = false, preview = null;
+    const showReset = on => { resetShown = on; foot.textContent = on ? 'Zmieniło się to, co zostanie wysłane — zaznacz potwierdzenie ponownie.' : 'Pola wizyty pozostaną bez zmian.'; foot.classList.toggle('oa-c2-reset', on); };
+    function refresh() {
+      const sources = composeSources(op), has = sources.some(s => s.included && s.text.trim());
+      for (const s of sources) { const card = $(`[data-source-card="${s.field}"]`, root), status = $('[data-status]', card), text = !s.included ? 'Poza wybranym zakresem — diagnoza nie będzie opracowywana.' : !s.text.trim() ? 'Puste pole — możesz je uzupełnić.' : ''; card.classList.toggle('out-of-scope', !s.included); status.textContent = text; status.hidden = !text; }
+      $$('[data-tile]', root).forEach(tile => { const on = tile.getAttribute('aria-disabled') !== 'true' && Doc().sameVariant(JSON.parse(tile.dataset.tile), op.variant); tile.classList.toggle('selected', on); tile.setAttribute('aria-pressed', String(on)); });
+      $('[data-description]', root).innerHTML = variantHtml(op.variant);
+      const local = preferences.provider === 'Lokalny', route = connectionLabel(), service = route.split('·')[0].trim() || 'wskazanej usługi AI';
+      $('[data-oa-route]', root).textContent = route;
+      if (has) {
+        preview = Doc().plan(composeRequest(op));
+        $('[data-heading]', root).textContent = local ? 'Przygotuj opis' : 'Przygotuj opis z AI'; $('span', send).textContent = local ? 'Przygotuj podgląd' : 'Wyślij i przygotuj podgląd';
+        $('[data-ack-text]', root).textContent = local ? 'Sprawdzone: tylko te pola, według wybranych ustawień, bez danych osobowych właściciela i personelu.' : `Sprawdzone: wysyłam do ${service} tylko te pola, bez danych osobowych właściciela i personelu.`;
+        ack.parentElement.title = 'Potwierdzenie dotyczy treści tych pól i usługi AI, a przy panelu także zestawienie parametrów ze źródeł. Sama zmiana stylu Bogato/Wiernie go nie odznacza.';
+        $('[data-rules] textarea', root).value = Doc().OUTLINE_NOTE + '\n\n' + Doc().promptOutline(preview);
+      } else { preview = null; $('[data-rules] textarea', root).value = ''; }
+      const error = $('[data-error]', root); error.hidden = has; error.textContent = has ? '' : 'Uzupełnij treść pola objętego wybranym zakresem.';
+      const fingerprint = has ? Doc().consentScope(sources, op.variant, {route, provider: preferences.provider}) : '';
+      if (fingerprint !== op.fingerprint) { op.fingerprint = fingerprint; if (ack.checked) { ack.checked = false; showReset(true); } }
+      send.disabled = !(ack.checked && preview);
     }
-    $$('[data-tab]',root).forEach(tab=>tab.addEventListener('click',()=>{result.tab=tab.dataset.tab;draw();}));
-    ack.addEventListener('change',()=>{apply.disabled=!ack.checked||!result.selected.length;if(ack.checked)$('[data-review-ack-note]',root).textContent='';});
-    bind(root,'reject',()=>{win.close();state.review=null;state.active=null;setPhase('idle');});
-    bind(root,'apply',()=>{
-      if(!ack.checked||!result.selected.length)return;
-      const changes={};result.selected.forEach(key=>changes[key]=result.edited[key]);
-      if(Object.values(changes).some(value=>!String(value).trim())){
-        const err=$('[data-write-error]',root);err.hidden=false;err.innerHTML=icon('info',16)+'<div>Puste pole nie zastąpi dotychczasowej treści. Uzupełnij wynik lub pomiń to pole.</div>';return;
-      }
-      const applied=Clinic.setFields(changes,{expected:result.snapshot,session:result.session,source:'OpisAI'});
-      if(!applied.ok){const err=$('[data-write-error]',root);err.hidden=false;const reason=applied.reason||'Pola nie odpowiadają wcześniejszemu odczytowi. Odczytaj pola ponownie.';err.innerHTML=icon('info',16)+`<div><strong>${/^Zmieniło się okno/.test(reason)?'Zmieniło się okno wizyty.':/^Nie znaleziono/.test(reason)?'Nie ma okna wizyty.':'Zmieniła się treść wizyty.'}</strong><br>${esc(reason)}</div>`+button('Odczytaj ponownie','reread','small');bind(err,'reread',()=>{win.close();state.review=null;prepare({field:result.field});});invalidate();return;}
-      const record={id:result.id,time:stamp(),mode:result.mode,variant:result.variant,route:result.route||'Przykładowe dyktowanie',before:clone(result.snapshot),after:clone(changes),session:result.session,status:'Wpis potwierdzony'};
-      state.lastWrite=record;if(preferences.history)state.history.unshift(record);
-      state.review=null;state.operation=null;win.close();state.active=null;setPhase('done');if(result.selected[0])Clinic.focusField(result.selected[0]);
-      Shell.notify({title:'OpisAI — gotowe',message:`Wpisano ${result.selected.length===1?'tekst do pola':`tekst do ${result.selected.length} pól`}. Wizyta czeka na zapis w Klinice.`,icon:'opisai',actionLabel:'Cofnij wpis',onAction:undo});
+    $$('[data-source]', root).forEach(editor => editor.addEventListener('input', () => { op.texts[editor.dataset.source] = editor.value; refresh(); }));
+    $$('[data-tile]', root).forEach(tile => tile.addEventListener('click', () => { if (tile.getAttribute('aria-disabled') === 'true') return; const v = JSON.parse(tile.dataset.tile); if (Doc().sameVariant(v, op.variant)) return; op.variant = v; refresh(); }));
+    ack.addEventListener('change', () => { if (ack.checked && resetShown) showReset(false); refresh(); });
+    bind(root, 'rules', () => { op.details = !op.details; $('[data-cards]', root).hidden = op.details; $('[data-rules]', root).hidden = !op.details; $('[data-source-heading]', root).textContent = op.details ? 'Zasady i źródła' : 'Treść pól'; $('[data-action="rules"]', root).textContent = op.details ? '← Wróć do edycji źródeł' : 'Pokaż zasady i źródła'; });
+    bind(root, 'cancel', () => win.close());
+    bind(root, 'generate', () => {
+      refresh(); if (!ack.checked || !preview || op.finished) return;
+      const requested = Doc().sameVariant(op.variant, op.projected) ? op.preferred : op.variant; // a forced projection keeps the preference
+      state.resume = {texts: {...op.texts}, note: Doc().sentSource(composeSources(op)), variant: requested, field: op.field, snapshot: op.snapshot, session: op.session};
+      if (op.remember && !op.scope.required) rememberVariant(requested);
+      op.finished = true; op.dictation = null; win.close(); generate(op);
     });
-    bind(root,'compose',()=>{win.close();state.review=null;prepare({sources:{...result.snapshot,...result.edited},snapshot:result.snapshot,session:result.session,fromDictation:true});});
-    bind(root,'continue',()=>{win.close();state.review=null;dictate({field:result.field||keys[0],base:result.edited[result.field||keys[0]],snapshot:result.snapshot,session:result.session,continuation:true,direct:true});});
+    refresh(); setTimeout(() => (op.texts[scope.sources[0]] ? $$('[data-tile]', root).find(t => t.classList.contains('selected')) : $('[data-source]', root))?.focus(), 0);
+  }
+  function composeClosed(op) { // Anuluj or ×: nothing was sent; a dictation summary comes back
+    if (op.finished) return; op.finished = true; state.resume = null;
+    if (state.operation === op) state.operation = null; state.active = null; setPhase('idle');
+    if (op.dictation) { const back = op.dictation; setTimeout(() => review(back), 0); }
+  }
+
+  /* One OpisAI window per operation: progress, then the review in the same window and geometry. */
+  let workspace = null;
+  function openWorkspace(title, width, height, html, onClose) {
+    if (workspace && !workspace.finished) finishWorkspace(workspace);
+    const ws = {finished: false, onClose}; ws.win = makeWindow('opisai-review', title, width, height, html, () => ws.finished ? undefined : ws.onClose?.());
+    workspace = ws; return ws;
+  }
+  function finishWorkspace(ws) { if (!ws || ws.finished) return; ws.finished = true; clearInterval(ws.clock); clearTimeout(ws.timer); ws.win.close(); if (workspace === ws) workspace = null; }
+  function progressHtml(kind) {
+    const generation = kind === 'generation', steps = generation ? `<div class="oa-pg-steps" data-steps>${['Odczyt', 'Generowanie', 'Sprawdzenie', 'Gotowe'].map((n, i) => `<span data-step="${i}" title="${['Odczyt okna i pól', 'Odpowiedź wybranego AI', 'Sprawdzenie struktury i parametrów', 'Podgląd gotowy do sprawdzenia'][i]}"></span>`).join('')}</div>` : '';
+    const stream = generation ? `<section class="oa-pg-stream" data-stream-region><div class="oa-pg-stream-head"><span class="oa-muted" data-caption>Wersja robocza</span>${linkButton('Wcześniej', 'earlier', 'hidden aria-label="Przewiń odpowiedź o stronę wcześniej"')}${linkButton('Do najnowszego', 'latest', 'hidden')}${linkButton('Ukryj', 'hide-stream', 'aria-label="Ukryj tekst na żywo" title="Schowaj podgląd generowanej odpowiedzi"')}</div><div class="oa-pg-doc" data-doc tabindex="0" aria-label="Niesprawdzony podgląd odpowiedzi — bez wpisywania do pól"><p class="oa-pg-waiting">Tu na bieżąco pojawi się treść odpowiedzi.</p></div></section>` : '';
+    const heading = generation ? 'Powstaje opis wizyty' : kind === 'writing' ? 'Wpisuję zatwierdzony wynik' : 'Odczytuję pola';
+    const message = generation ? 'Łączę się z wybranym serwisem…' : kind === 'writing' ? 'Kontrola pól → wpisanie → odczyt kontrolny.' : 'Sprawdzam okno i treść pól…';
+    return `<div class="oa-app oa-pg"><div class="oa-pg-head"><span class="oa-spinner" role="img" aria-label="Operacja w toku"></span><h1 data-heading>${heading}</h1><span class="oa-muted" data-elapsed>Czas: 00:00</span></div>${generation ? `<div class="oa-muted oa-pg-line" data-route></div>` : ''}<div class="oa-pg-line" data-message aria-live="polite">${message}</div>${steps}${stream}<div class="oa-pg-actions">${generation ? button('Pokaż tekst na żywo', 'show-stream', 'primary oa-pg-big', '', 'title="Zobacz na żywo, jak powstaje opis wizyty"') : ''}<span class="oa-pg-gap"></span>${button('Anuluj', 'cancel', '', '', kind === 'writing' ? 'disabled' : '')}</div><div class="oa-muted oa-pg-foot">${kind === 'writing' ? 'Wpisanie do pól nie zapisuje wizyty.' : 'Pola wizyty pozostają bez zmian.'}</div></div>`;
+  }
+  function startClock(ws, root) { const started = Date.now(); const tick = () => { const s = Math.floor((Date.now() - started) / 1000); $('[data-elapsed]', root).textContent = `Czas: ${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }; tick(); ws.clock = setInterval(tick, 1000); }
+  function setSteps(root, active) { $$('[data-step]', root).forEach((el, i) => { el.textContent = (i < active ? '✓  ' : i === active ? '●  ' : '○  ') + ['Odczyt', 'Generowanie', 'Sprawdzenie', 'Gotowe'][i]; el.classList.toggle('active', i === active); }); }
+  function streamHtml(sections, shown, live) {
+    let budget = shown; const out = [];
+    for (const s of sections) {
+      if (budget <= 0 && out.length) break;
+      const visible = s.text.slice(0, Math.max(0, budget)); budget -= s.text.length;
+      if (!visible) continue;
+      const active = live && budget < 0, fresh = active ? Math.min(visible.length, 36) : 0;
+      out.push(`<div class="oa-pg-sec"><div class="oa-pg-sec-title">${esc(s.label)}${active ? ' <span aria-hidden="true">•</span>' : ''}</div><div class="oa-pg-sec-body">${esc(visible.slice(0, visible.length - fresh))}<span class="oa-pg-new">${esc(visible.slice(visible.length - fresh))}</span></div></div>`);
+    }
+    return out.join('');
+  }
+
+  /* Generation (simulated): the local panel first, then the "response", checks and the review. */
+  function generate(op) {
+    if (!op) return;
+    const g = Doc().generate(composeRequest(op)), token = ++state.token, speed = docSpeed(), panel = g.plan.initialPanel;
+    const result = {id: op.id, mode: 'generation', generated: g, snapshot: op.snapshot, session: op.session, context: op.context, route: connectionLabel(), variant: {...op.variant}, field: op.field, created: new Date()};
+    const stream = preferences.livePreview !== false, ws = openWorkspace('OpisAI — przygotowuję wersję roboczą', 740, stream && panel ? 740 : 540, progressHtml('generation'), () => { cancel(); return false; });
+    const root = ws.win.content, doc = $('[data-doc]', root); state.active = ws.win; state.operation = op; state.review = null;
+    const route = connectionLabel().split('·').map(x => x.trim()); if (route[0] === 'Lokalny (offline)') route.splice(0, 2, 'Lokalnie');
+    $('[data-route]', root).textContent = route.join(' · '); setSteps(root, 1); startClock(ws, root);
+    const initial = g.sections.map(s => ({label: s.label, text: s.leaves.map(l => l.panel ? `${l.name}:\n${panel.text}` : '').filter(Boolean).join('')})).filter(s => s.text);
+    const final = g.sections.map(s => ({label: s.label, text: s.leaves.map(l => [l.name, l.panel ? panel.text : '', l.text, l.inference]).map(([name, ...body]) => { const b = body.filter(x => x.trim()).join('\n\n'); return b ? name + ':\n' + b : ''; }).filter(Boolean).join('\n\n')})).filter(s => s.text);
+    const total = final.reduce((n, s) => n + s.text.length, 0);
+    let shown = -1, following = true, cancelling = false;
+    function paint() {
+      const caption = $('[data-caption]', root);
+      if (shown < 0) { if (initial.length) { doc.innerHTML = streamHtml(initial, Infinity, false); caption.textContent = 'Panel z danych i ustawień · oczekuję na AI'; caption.title = 'Wiersze panelu pochodzą ze źródeł i skonfigurowanego wzorca. Wzorzec nie potwierdza wykonania badania.'; } }
+      else { doc.innerHTML = streamHtml(final, shown, shown < total); caption.textContent = 'Wersja robocza'; caption.title = ''; }
+      if (following) doc.scrollTop = doc.scrollHeight; scrollControls();
+    }
+    function scrollControls() { const scrollable = doc.scrollHeight > doc.clientHeight + 2; $('[data-action="earlier"]', root).hidden = !scrollable; $('[data-action="earlier"]', root).disabled = doc.scrollTop <= 0; const latest = $('[data-action="latest"]', root); latest.textContent = shown >= 0 ? 'Do najnowszego' : 'Na dół'; latest.hidden = !scrollable || doc.scrollTop + doc.clientHeight >= doc.scrollHeight - 2; }
+    function showStream(visible, user) { if (user && cancelling) return; $('[data-stream-region]', root).hidden = !visible; $('[data-action="show-stream"]', root).hidden = visible; if (user) { preferences.livePreview = visible; savePreferences(); $(visible ? '[data-action="hide-stream"]' : '[data-action="show-stream"]', root)?.focus(); } }
+    doc.addEventListener('scroll', () => { following = doc.scrollTop + doc.clientHeight >= doc.scrollHeight - 4; scrollControls(); });
+    bind(root, 'earlier', () => { doc.scrollTop -= doc.clientHeight * .9; }); bind(root, 'latest', () => { doc.scrollTop = doc.scrollHeight; following = true; scrollControls(); });
+    bind(root, 'hide-stream', () => showStream(false, true)); bind(root, 'show-stream', () => showStream(true, true));
+    bind(root, 'cancel', () => cancel());
+    function step(fn, delay) { ws.timer = setTimeout(() => { if (state.job?.token === token && !cancelling) fn(); }, delay * speed); }
+    function cancel() { // ProgressPage.request_close: cancellation, then the recovery report
+      if (cancelling || ws.finished) return; cancelling = true; clearTimeout(ws.timer);
+      // ProgressPage.request_close, then SafeCoordinator.cancel words it for the generation
+      $('[data-action="cancel"]', root).disabled = true; $('[data-heading]', root).textContent = 'Anuluję generowanie';
+      $('[data-message]', root).textContent = 'Wynik nie zostanie wpisany. Czekam, aż transport zwolni zasoby.';
+      setTimeout(() => { if (state.job?.token === token) state.job = null; finishWorkspace(ws); state.operation = null; state.active = null; setPhase('idle');
+        recoveryDialog({code: 'cancelled', title: 'Anulowano przygotowanie', explanation: 'Nie wpisano wyniku do pól wizyty.', next: 'Możesz wrócić do zachowanej notatki. Nie uruchamiam nowego żądania bez Twojego zatwierdzenia.', action: 'review', actionLabel: 'Wróć do notatki', note: Doc().sentSource(g.request.sources)}); }, 700 * speed);
+    }
+    state.job = {token, cancel}; setPhase('processing'); showStream(stream, false); paint();
+    step(() => { shown = 0; $('[data-message]', root).textContent = 'Odbieram odpowiedź…';
+      const tick = () => { if (state.job?.token !== token || cancelling) return; shown = Math.min(total, shown + Math.max(24, Math.ceil(total / 40))); paint();
+        if (shown < total) ws.timer = setTimeout(tick, 60 * speed);
+        else step(() => { setSteps(root, 2); $('[data-message]', root).textContent = 'Sprawdzam strukturę odpowiedzi i sygnały wymagające uwagi…';
+          step(() => { setSteps(root, 4); $('.oa-spinner', root).classList.add('stopped'); $('[data-message]', root).textContent = 'Odpowiedź gotowa do przeglądu. Pola wizyty pozostają bez zmian.';
+            step(() => { state.job = null; clearInterval(ws.clock); review(result); }, 350); }, 650); }, 250); };
+      tick(); }, 1400);
+  }
+
+  /* Recovery (ui/recovery.py): a report and explicit next steps, never an automatic resend. */
+  const hexId = () => Array.from({length: 32}, () => (Math.random() * 16 | 0).toString(16)).join(''); // uuid4().hex
+  const RUNTIME_KEY = {ChatGPT: 'chatgpt', Claude: 'claude.ai-pw', Gemini: 'gemini-pw', Lokalny: 'local'}; // ProviderSpec.runtime_key of the demo's routes
+  function recoveryDialog(issue) {
+    const writing = !!issue.writing, delivery = issue.delivery || 'unknown', backend = preferences.provider === 'Gemini' && preferences.transport === 'API' ? 'gemini' : RUNTIME_KEY[preferences.provider] || '';
+    // enrich_recovery_issue: the sanitized rows in DIAGNOSTIC_LABELS order; the grid shows the compact captions.
+    const rows = [['Wersja OpisAI', VERSION], ['ID zdarzenia', hexId()], ['ID operacji', issue.operation || hexId()], ['Etap', writing ? 'writing' : 'generating'], ...(backend ? [['Usługa', backend]] : []), ['Kod błędu', issue.code], ['Stan odpowiedzi', delivery, 'Odpowiedź']];
+    const status = writing ? 'Wynik wpisania nie został potwierdzony. Sprawdź pola w Klinice i dziennik operacji. Nie ponawiaj wpisania automatycznie.' : {not_sent: 'Nie wysłano notatki do AI. Pola wizyty pozostają bez zmian.', not_retried: 'Nie wysłano notatki ponownie. Pola wizyty pozostają bez zmian.', received: 'Odebrano odpowiedź serwisu. Pola wizyty pozostają bez zmian. Nie wysłano notatki ponownie.'}[delivery] || 'Pola wizyty pozostają bez zmian. Nie ponawiam wysyłania automatycznie. Poprzednie żądanie mogło dotrzeć do serwisu.';
+    const report = rows.map(([k, v]) => `${k}: ${v}`).join('\n');
+    const extra = `<div class="oa-mb-report"><div class="oa-mb-report-head"><strong>Raport diagnostyczny</strong>${linkButton('Do zdjęcia', 'photo', 'title="Pokaż pełny raport do zdjęcia; ukryj opis i zachowany tekst."')}${linkButton('Kopiuj raport', 'copy-report', 'aria-label="Kopiuj pełny raport diagnostyczny"')}</div><dl>${rows.map(([k, v, compact]) => `<dt title="${esc(k)}">${esc(compact || k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div>${issue.note ? `${linkButton('Pokaż zachowaną notatkę', 'note')}<div class="oa-mb-note" data-note hidden><pre>${esc(issue.note)}</pre>${button('Kopiuj zachowaną notatkę', 'copy-note', 'small')}</div>` : ''}`;
+    const act = () => { if (issue.action === 'review') retryGeneration(); else if (issue.action === 'fresh') { state.resume = null; describe(); } else if (issue.action === 'journal') messageBox({title: 'Dziennik', icon: 'info', text: 'Brak niezamkniętych lub niepotwierdzonych operacji.'}); };
+    const buttons = [{label: 'Zamknij', action: 'close', default: true}, ...(issue.action ? [{label: issue.actionLabel, action: 'act', primary: true, onClick: act}] : [])];
+    const box = messageBox({id: 'opisai-recovery', title: 'OpisAI — ' + (writing ? 'sprawdź wpisanie' : 'następny krok'), icon: 'warning', heading: issue.title, text: issue.explanation + '\n\n' + issue.next, informative: status, extra, buttons, width: 960});
+    const root = box.content;
+    bind(root, 'copy-report', () => copyText(report, $('[data-action="copy-report"]', root)));
+    bind(root, 'photo', () => { const on = root.classList.toggle('oa-mb-photo'); $('[data-action="photo"]', root).textContent = on ? 'Wróć do opisu' : 'Do zdjęcia'; box.fit(); });
+    bind(root, 'note', () => { const note = $('[data-note]', root), open = note.hidden; note.hidden = !open; $('[data-action="note"]', root).textContent = (open ? 'Ukryj' : 'Pokaż') + ' zachowaną notatkę'; box.fit(); });
+    bind(root, 'copy-note', () => copyText(issue.note, $('[data-action="copy-note"]', root)));
+    return box;
+  }
+  /* _retry_generation: read the visit again; resume the retained note only on the same, unchanged fields. */
+  function retryGeneration() {
+    const saved = state.resume; if (!saved) { describe(); return; }
+    const conflict = reason => recoveryDialog({code: 'resume_context_changed', title: 'Sprawdź bieżącą wizytę', explanation: reason,
+      next: 'Zachowaną notatkę możesz skopiować poniżej. Wczytaj bieżącą wizytę, aby zacząć od jej aktualnych pól. Nie przenoszę starej notatki do innej wizyty.', action: 'fresh', actionLabel: 'Wczytaj bieżącą wizytę', delivery: 'not_retried', note: saved.note});
+    beginOperation();
+    readVisit(() => {
+      const ctx = window.Clinic?.getContext?.() || {}, now = getFields();
+      if (!ctx.editorOpen) { conflict('Nie udało się ponownie odczytać podokna wizyty. Otwórz właściwe podokno w Klinice.'); return; }
+      if (ctx.session !== saved.session || Object.keys(saved.snapshot).some(k => now[k] !== saved.snapshot[k])) { conflict('Zmieniło się okno docelowe, jego proces lub odczytane pola. Wczytaj je ponownie.'); return; }
+      openCompose({field: saved.field, snapshot: saved.snapshot, sources: saved.texts, variant: saved.variant, session: saved.session});
+    }, () => conflict('Anulowano sprawdzenie wizyty. Zachowana notatka nie została wysłana ponownie.'));
+  }
+  /* SafeCoordinator._call_read: DocumentWorkspace(reading=True) while the fields are read. Anuluj or the
+   * window's × only requests cancellation (a COM read cannot be killed); the caller then gets Cancelled. */
+  function readVisit(done, cancelled) {
+    const ws = {finished: false, cancelling: false}; let win = null;
+    const cancel = () => { if (ws.finished || ws.cancelling) return false; ws.cancelling = true; $('[data-action="cancel"]', win.content).disabled = true; $('[data-heading]', win.content).textContent = 'Anuluję operację'; $('[data-message]', win.content).textContent = 'Wynik nie zostanie wpisany. Czekam, aż bieżący transport zwolni zasoby.'; return false; };
+    win = makeWindow('opisai-progress', 'OpisAI — odczyt wizyty', 740, 540, progressHtml('reading'), () => ws.finished ? undefined : cancel());
+    ws.win = win; state.active = win; startClock(ws, win.content); bind(win.content, 'cancel', cancel);
+    ws.timer = setTimeout(() => { ws.finished = true; clearInterval(ws.clock); win.close(); if (state.active === win) state.active = null; (ws.cancelling ? cancelled : done)?.(); }, 500 * docSpeed());
+  }
+
+  /* Message boxes (ui/shell.py MessageBox): icon, heading, text, optional technical details. */
+  /* shell.NoticeIcon: severity by shape and glyph in its colour on a light tint, no external assets. */
+  function noticeIcon(kind) {
+    const shape = kind === 'warning' ? '<path d="M18 3 34 31H2Z"/>' : '<circle cx="18" cy="18" r="15"/>';
+    const glyph = kind === 'warning' ? '<path d="M18 13v9M18 27v.01"/>' : kind === 'critical' ? '<path d="M12 12l12 12M24 12 12 24"/>' : kind === 'question' ? '<text x="18" y="26" text-anchor="middle" font-size="23" font-weight="700" fill="currentColor" stroke="none">?</text>' : '<path d="M18 11v.01M18 17v8"/>';
+    return `<svg class="oa-mb-icon ${kind}" width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="${{warning: 'Ostrzeżenie', critical: 'Błąd', question: 'Pytanie'}[kind] || 'Informacja'}"><g fill="currentColor" fill-opacity=".1" stroke="currentColor" stroke-width="1.8">${shape}</g><g fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round">${glyph}</g></svg>`;
+  }
+  /* Message boxes (ui/shell.py MessageBox): icon, heading, text, optional technical details; the window fits its content. */
+  function messageBox({id = 'opisai-message', title, icon: kind = 'info', heading, text, informative = '', details = '', extra = '', buttons = [{label: 'OK', action: 'close', primary: true, default: true}], width = 760, onClose = null}) {
+    heading = heading ?? ({warning: 'Sprawdź przed kontynuacją', critical: 'Nie udało się wykonać operacji', question: 'Potwierdzenie'}[kind] || 'Informacja');
+    const html = `<div class="oa-app oa-mb"><div class="oa-mb-body">${noticeIcon(kind)}<div class="oa-mb-words"><h2>${esc(heading)}</h2><p class="oa-mb-text">${esc(text)}</p>${informative ? `<p class="oa-mb-info">${esc(informative)}</p>` : ''}${details ? `<div class="oa-mb-details" data-details hidden><div class="oa-mb-details-head"><span class="oa-muted">Szczegóły techniczne</span>${linkButton('Kopiuj', 'copy-details')}</div><pre>${esc(details)}</pre></div>` : ''}${extra}</div></div><footer class="oa-footer oa-mb-footer">${details ? linkButton('Pokaż szczegóły', 'toggle-details', 'aria-label="Rozwiń szczegóły techniczne"') : ''}<span class="oa-pg-gap"></span>${buttons.map(b => button(esc(b.label), 'mb-' + b.action, b.primary ? 'primary' : '')).join('')}</footer></div>`;
+    closeWin(id);
+    const estimate = 150 + 22 * (lines(text) + Math.ceil(String(text).length / 90) + (informative ? 2 : 0)) + (extra ? 160 : 0);
+    const win = makeWindow(id, title, width, Math.min(640, estimate), html, () => { if (!box.done) { box.done = true; onClose?.(null); } });
+    if (win.options) win.options.minHeight = Math.min(win.options.minHeight ?? 200, 180);
+    const root = win.content, box = {win, content: root, done: false, close: () => win.close(), fit: () => requestAnimationFrame(() => { // CompactDialog._fit_content: the natural height of the content
+      const inner = $('.oa-mb', root), body = $('.oa-mb-body', root); if (!inner || !body || !win.el?.isConnected || win.maximized) return;
+      const chrome = win.el.offsetHeight - root.clientHeight; inner.style.height = 'auto'; inner.style.flex = body.style.flex = 'none';
+      const natural = inner.offsetHeight; inner.style.height = inner.style.flex = body.style.flex = '';
+      win.setBounds?.({height: Math.min(innerHeight - 60, chrome + natural)});
+    })};
+    for (const b of buttons) bind(root, 'mb-' + b.action, () => { box.done = true; win.close(); b.onClick?.(); onClose?.(b.action); });
+    bind(root, 'toggle-details', () => { const d = $('[data-details]', root), open = d.hidden; d.hidden = !open; const t = $('[data-action="toggle-details"]', root); t.textContent = open ? 'Ukryj szczegóły' : 'Pokaż szczegóły'; t.setAttribute('aria-label', open ? 'Zwiń szczegóły techniczne' : 'Rozwiń szczegóły techniczne'); box.fit(); });
+    bind(root, 'copy-details', () => copyText(details, $('[data-action="copy-details"]', root)));
+    root.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); win.close(); } });
+    box.fit(); setTimeout(() => $(`[data-action="mb-${(buttons.find(b => b.default) || buttons.at(-1)).action}"]`, root)?.focus(), 0);
+    return box;
+  }
+
+  /* Review (ui/review.py ReviewPage with ui/structured_review.py): the proposal as fixed subsection
+   * headings, panel rows with their origin and AI inference blocks; notes, field choice, approval. */
+  /* review._transcription_metadata: the recorded session (TranscriptionSource), never the generation settings. */
+  function transcriptionMetadata(source) {
+    if (!source) { const missing = 'Brak informacji o transkrypcji'; return {main: missing, details: missing, tooltip: 'Nie zapisano danych źródłowych tej sesji dyktowania.'}; }
+    if (source.backend === 'chatgpt_browser') return {main: 'Transkrypcja: ChatGPT w przeglądarce · model niepotwierdzony', details: 'Silnik: ChatGPT — dyktowanie w przeglądarce (próba)\nModel: niepotwierdzony\nJęzyk: ustawienie w ChatGPT\nTryb: dyktowanie do pola wiadomości',
+      tooltip: 'Tekst odczytano z dyktowania w zalogowanym ChatGPT. Interfejs WWW nie potwierdza użytego modelu rozpoznawania mowy. Tekst może pojawić się dopiero po zakończeniu nagrania.'};
+    const engine = {gemini: 'Gemini Live', local_whisper: 'Lokalny Whisper'}[source.backend] || String(source.backend || ''), raw = String(source.language || '').trim(), lower = raw.toLowerCase();
+    const language = lower === 'pl' || lower === 'pl-pl' ? 'Polski (pl-PL)' : source.backend === 'local_whisper' && (!lower || lower === 'auto') ? 'Automatyczny (auto)' : raw || 'Brak informacji o ustawieniu';
+    const mode = {transcribe: 'Transkrypcja (transcribe)', agent: 'Asystent głosowy (agent)', realtime: 'Transkrypcja lokalna na żywo (realtime)', whisper_cpp: 'Transkrypcja lokalna (whisper_cpp)'}[source.mode] || String(source.mode || '');
+    const rows = [`Silnik: ${engine}`, `Model sesji: ${source.model}`, `Język ustawiony: ${language}`, `Tryb: ${mode}`, ...(source.realtime_model ? ['Model podglądu na żywo: ' + source.realtime_model] : [])];
+    return {main: `Transkrypcja: ${engine} · Model sesji: ${source.model}\nJęzyk ustawiony: ${language}`, details: rows.join('\n'),
+      tooltip: (source.backend === 'gemini' ? 'Model sesji to identyfikator zaakceptowany przy połączeniu Gemini Live.' : 'Model sesji to identyfikator modelu pomyślnie zainicjalizowanego przez lokalny silnik.') + ' Nie jest to niezależna weryfikacja tożsamości modelu. Język jest ustawieniem lub podpowiedzią tej sesji, a nie wykrytym językiem nagrania.'};
+  }
+  function dictationSourceFallback() { // a result without its TranscriptionSource: the configured engine
+    const engine = String(preferences.transcriber || '');
+    if (/gemini/i.test(engine)) return {backend: 'gemini', model: 'gemini-3.5-transcribe-live', language: 'pl-PL', mode: 'transcribe', realtime_model: ''};
+    if (/whisper/i.test(engine)) return {backend: 'local_whisper', model: 'large-v3', language: 'pl', mode: 'realtime', realtime_model: 'small'};
+    return {backend: 'chatgpt_browser', model: '', language: 'auto', mode: 'dictation', realtime_model: ''};
+  }
+  function prepareReview(result) {
+    result.outcome = null; result.error = ''; result.ack = false;
+    if (result.keys) return result;
+    if (result.mode === 'dictation') { // the dictation summary: one plain field, its transcript as the source
+      const key = result.field, text = String(result.output?.[key] ?? ''), before = String(result.snapshot?.[key] ?? ''), source = result.transcription?.backend ? result.transcription : null;
+      // The request's sent source: the transcript (with the edited text for a continuation), as the session reports it.
+      const sent = source && typeof result.sources?.[key] === 'string' ? result.sources[key] : before && text.startsWith(before) ? text.slice(before.length).trim() : text;
+      Object.assign(result, {keys: [key], edited: {[key]: text}, original: {[key]: text}, captions: {[key]: 'Dyktowanie — ' + DOC_SECTION[key]}, full: {[key]: 'Dyktowanie — ' + DOC_SECTION[key]},
+        sent, selected: [key], compare: {[key]: true}, previewing: {}, tab: key, context: result.context || clinicTitle(), transcriptionView: transcriptionMetadata(source || dictationSourceFallback())});
+      return result;
+    }
+    const g = result.generated;
+    Object.assign(result, {doc: Doc().reviewDocument(g), keys: g.sections.map(s => s.key), captions: Object.fromEntries(g.sections.map(s => [s.key, s.tab])), full: Object.fromEntries(g.sections.map(s => [s.key, s.label])),
+      original: Object.fromEntries(g.sections.map(s => [s.key, s.text])), sent: Doc().sentSource(g.request.sources), selected: g.sections.map(s => s.key), compare: {},
+      previewing: Object.fromEntries(Object.keys(g.removed).map(k => [k, true])), tab: g.sections[0]?.key});
+    return result;
+  }
+  const fieldText = (result, key) => result.doc ? result.doc.renderField(key) : String(result.edited[key] ?? '');
+  function review(result) {
+    if (!result) return;
+    prepareReview(result);
+    if (!result.keys.length) { state.review = null; setPhase('idle'); toast('Brak treści do sprawdzenia. Uzupełnij źródła.'); return; }
+    state.review = result; state.operation = null; setPhase('review');
+    const title = `OpisAI ${VERSION} — sprawdź i zatwierdź wynik`, html = reviewHtml(result);
+    let ws = workspace && !workspace.finished && result.mode === 'generation' && workspace.win.el?.isConnected ? workspace : null;
+    if (ws) { ws.win.setTitle(title); ws.win.setContent(html); }
+    else ws = openWorkspace(title, 1000, 560, html);
+    ws.onClose = () => { rejectReview(result, ws, true); };
+    state.active = ws.win;
+    if (!result.historyId) recordHistory(result, 'generated');
+    reviewView(result, ws);
+  }
+  function reviewHtml(result) {
+    const dict = result.mode === 'dictation', g = result.generated, tm = result.transcriptionView;
+    const info = 'Sprawdź fakty, liczby i negacje. Treść „Do wpisania” możesz poprawić — właśnie ten tekst trafi do pola.' + (g?.findings.some(f => f.code === 'inference_review') ? ' Sprawdź także rozpoznania i propozycje AI.' : '');
+    const footer = dict ? `${button('Wpisz samą notatkę', 'apply', '', '', 'disabled title="Wpisz sprawdzoną treść do wybranych pól bez generowania opisu."')}${button('Odrzuć', 'reject')}<span class="oa-footnote oa-rv-dnote">Wpisanie do pól nie zapisuje wizyty w Klinice.</span><span class="oa-pg-gap"></span>${button('Kontynuuj dyktowanie', 'continue', '', '', 'title="Wróć do dyktowania w wybranym polu, zachowując poprawiony tekst."')}${button('Generuj opis', 'compose', 'primary', '', 'title="Otwórz przygotowanie opisu z bieżącą treścią wybranych pól. W następnym oknie wybierzesz wariant, sprawdzisz źródła i rozpoczniesz generowanie."')}`
+      : `<span class="oa-footnote oa-rv-note">Wpisanie do pól nie zapisuje wizyty w Klinice.</span>${button('Odrzuć', 'reject')}${button('✓&nbsp; Wpisz do pól', 'apply', 'primary', '', 'disabled')}`;
+    return `<div class="oa-app oa-rv"><div class="oa-rv-head"><div class="oa-muted oa-rv-line" title="${esc(result.context)}&#10;Okno, z którego odczytano pola do tego podglądu.">${esc(result.context)}</div><div class="oa-rv-summary"><span data-summary></span>${dict ? '' : '<span class="oa-muted oa-rv-model" title="Model: przykład demonstracyjny — bez AI&#10;Nazwa zgłoszona przez transport, nie niezależna weryfikacja modelu.">Model: przykład demonstracyjny — bez AI</span>'}</div>${dict ? `<div class="oa-muted oa-rv-pre" title="${esc(tm.tooltip)}">${esc(tm.main)}</div>` : ''}<div class="oa-muted oa-rv-info">${esc(info)}</div><div class="oa-muted" data-components hidden></div><div class="oa-rv-notes" data-notes hidden><div class="oa-rv-notes-row"><span data-notes-count></span>${button('Szczegóły uwag', 'notes', 'small', '', 'aria-label="Pokaż wszystkie uwagi do treści"')}</div><div data-note-list></div></div></div><div class="oa-tabs oa-rv-tabs" role="tablist" aria-label="Pola wyniku" data-tabs></div><div class="oa-rv-body" data-body></div>${g?.request.panel ? '<div class="oa-muted oa-rv-pstatus" data-panel-status></div>' : ''}<label class="oa-ack" data-allow-row hidden><input type="checkbox" data-allow-empty><span>Zezwalam na wyczyszczenie pola, dla którego zatwierdzony wynik jest pusty.</span></label><label class="oa-ack"><input type="checkbox" id="oa-review-ack" data-review-ack><span>${dict ? 'Transkrypcja i właściwa wizyta sprawdzone. Zatwierdzam wpisanie tej notatki.' : 'Tekst przygotowany przez AI i właściwa wizyta sprawdzone. Zatwierdzam dokładnie te zmiany.'}</span></label><div class="oa-c2-error" data-review-error role="alert" hidden></div><footer class="oa-footer oa-rv-footer">${footer}</footer></div>`;
+  }
+  function reviewNotes(result) { // QualityNote list: unresolved panel rows, then preservation issues of the selected write
+    const notes = [];
+    if (result.doc) {
+      for (const b of result.doc.panelIssues(result.selected)) notes.push({key: 'panel:' + b.id, title: 'Parametr ' + (b.metadata.label || ''), quote: b.metadata.quotes?.[0] || b.text, message: Doc().panelIssueDescription(b.metadata) || 'Wartość parametru jest niejednoznaczna.', block: b.id, target: b.target});
+      const edited = Object.fromEntries(result.keys.map(k => [k, fieldText(result, k)]));
+      result.preservation = Doc().checkPreservation(result.generated.contract, result.snapshot, edited, result.selected);
+      for (const i of result.preservation.issues) notes.push({key: i.id, title: i.source_label, quote: i.quote, message: i.message, field: Object.keys(DOC_FIELD).find(k => DOC_FIELD[k] === i.source_label)});
+    }
+    return notes;
+  }
+  function controlsText(result) {
+    const g = result.generated, parts = [], issues = result.preservation?.issues || [];
+    if (g?.findings.length) parts.push('Kontrole odpowiedzi AI przed ręcznymi zmianami:\n\n' + g.findings.map(f => f.message + (f.evidence ? '\nŹródło: ' + f.evidence : '')).join('\n\n'));
+    if (issues.length) parts.push('Zachowanie wzmianek w bieżącym wyniku:\n\n' + issues.map(i => `${i.source_label}: „${i.quote}”\n${i.message}`).join('\n\n'));
+    if (result.error) parts.push('Nie można zatwierdzić wyniku:\n\n' + result.error);
+    return {text: parts.join('\n\n') || 'Automatyczne kontrole nie wykryły ostrzeżeń. To nie dowodzi poprawności treści.', count: (g?.findings.length || 0) + issues.length};
+  }
+  function structuredEditorHtml(result, key) {
+    const doc = result.doc, selected = result.selected.includes(key), ro = selected ? '' : 'readonly';
+    return doc.fieldLeaves(key).map(leaf => {
+      const blocks = leaf.blocks.map(id => doc.blocks.get(id)), opens = [], body = [];
+      for (const b of blocks) {
+        const bid = esc(b.id), caption = esc(blockCaption(doc, b)), tip = esc(blockTooltip(b));
+        if (b.kind === 'panel_row') {
+          body.push(`<div class="oa-se-row"><label class="oa-se-name" for="oa-b-${bid}">${esc(b.metadata.label || 'Parametr')}</label><input id="oa-b-${bid}" type="text" data-block="${bid}" value="${esc(b.text)}" ${ro} title="${tip}" aria-label="${esc(leaf.name + ' — ' + (b.metadata.label || 'Parametr'))}"><span class="oa-se-origin" data-origin="${bid}" title="${tip}">${caption}</span></div>`);
+          if (Doc().blockNeedsReview(b)) { const issue = Doc().panelIssueDescription(b.metadata); if (issue) body.push(`<div class="oa-se-issue">${esc(issue)}</div>`); }
+          continue;
+        }
+        const blank = Doc().originallyBlank(b), open = !blank || !!b.text.trim() || result.opened?.[b.id];
+        if (blank) opens.push(`<button type="button" class="oa-link-btn" data-open="${bid}" ${open ? 'hidden' : ''} ${selected ? '' : 'disabled'}>${b.kind === 'inference' ? 'Dodaj wniosek' : 'Dodaj treść'}</button>`);
+        const placeholder = blank ? (b.kind === 'inference' ? 'Wpisz własną ocenę lub wniosek' : 'Wpisz własne uzupełnienie opisu') : selected ? 'Tutaj możesz poprawić wynik przed wpisaniem.' : 'Propozycja nie jest wybrana do wpisania.';
+        body.push(`<div class="oa-se-block" data-row="${bid}" ${open ? '' : 'hidden'}><div class="oa-se-bhead">${b.kind === 'inference' ? '<span class="oa-muted">Wnioskowanie</span>' : ''}<span class="oa-pg-gap"></span><span class="oa-se-origin" data-origin="${bid}" title="${tip}">${caption}</span>${blank ? `<button type="button" class="oa-link-btn" data-dismiss="${bid}" ${selected ? '' : 'disabled'}>${b.text.trim() ? 'Usuń' : 'Anuluj'}</button>` : ''}</div><textarea data-block="${bid}" spellcheck="false" rows="${Math.min(7, Math.max(2, lines(b.text)))}" placeholder="${esc(placeholder)}" ${ro} title="${tip}" aria-label="${esc(leaf.name + (b.kind === 'inference' ? ' — wnioskowanie' : ' — treść'))}">${esc(b.text)}</textarea></div>`);
+        if (blank && !b.text && result.removedText?.[b.id] !== undefined) body.push(`<button type="button" class="oa-link-btn oa-se-undo" data-undo-removal="${bid}" ${selected ? '' : 'disabled'} aria-label="${esc('Cofnij usunięcie: ' + leaf.name + (b.kind === 'inference' ? ' — wnioskowanie' : ' — treść'))}">${b.kind === 'inference' ? 'Cofnij usunięcie wniosku' : 'Cofnij usunięcie treści'}</button>`);
+      }
+      return `<div class="oa-se-leaf"><div class="oa-se-title"><strong>${esc(leaf.name)}</strong><span class="oa-pg-gap"></span>${opens.join('')}</div>${body.join('')}</div>`;
+    }).join('');
+  }
+  function blockCaption(doc, b) { const caption = Doc().originCaption(b); return Doc().blockNeedsReview(b) && caption !== 'Uwaga' ? caption + ' · uwaga' : caption; }
+  function blockTooltip(b) {
+    let details = (b.metadata.quotes || []).join('\n'); const original = String(b.metadata.original_text ?? '');
+    if (original.trim() && b.text !== original) details = 'Pierwotna propozycja: ' + original + (details ? '\n' + details : '');
+    const issues = Doc().panelIssueDescription(b.metadata); if (issues) details += (details ? '\n' : '') + issues;
+    return details;
+  }
+  function removalPreviewHtml(result, key) { // InlineRemovalPreview: removed repetitions struck through until the field is edited
+    const g = result.generated, section = g.sections.find(s => s.key === key), removed = g.removed[key];
+    return `<div class="oa-rv-preview" tabindex="0" aria-label="Podgląd z usuniętymi powtórzeniami: ${esc(result.full[key])}">${section.leaves.map(l => {
+      const panel = l.panel ? g.panel.text : '', narrative = l.id === removed.leaf ? removed.pieces.map(p => p.removed ? `<del>${esc(p.text)}</del>` : esc(p.text)).join('').trim() : esc(l.text);
+      const body = [esc(panel), narrative, esc(l.inference)].filter(x => x.trim()).join('\n\n'); return body ? `${esc(l.name)}:\n${body}` : '';
+    }).filter(Boolean).join('\n\n')}</div>`;
+  }
+  function reviewView(result, ws) {
+    const root = ws.win.content, dict = result.mode === 'dictation', g = result.generated, ack = $('[data-review-ack]', root), allow = $('[data-allow-empty]', root), apply = $('[data-action="apply"]', root);
+    let details = 'source', notesOpen = false;
+    const tabsEl = $('[data-tabs]', root), body = $('[data-body]', root);
+    function updateChrome() {
+      const n = result.selected.length, total = result.keys.length, notes = reviewNotes(result), controls = controlsText(result);
+      $('[data-summary]', root).textContent = (dict ? 'Dyktowanie · ' : `Podgląd · ${result.variant.rich ? 'Bogato' : 'Wiernie'} · `) + `Do wpisania: ${n}/${total} pól`;
+      const inference = result.doc?.inferenceCount || 0, components = $('[data-components]', root); components.textContent = inference ? `Wnioskowanie: ${inference} fragmentów` : ''; components.hidden = !inference;
+      const box = $('[data-notes]', root); box.hidden = !notes.length;
+      $('[data-notes-count]', root).textContent = `Uwagi do treści: ${notes.length} · informacyjne, nie blokują wpisania`;
+      $('[data-action="notes"] span', root).textContent = notesOpen ? 'Wróć do wyniku' : notes.length > 2 ? `Pokaż wszystkie (${notes.length})` : 'Szczegóły uwag';
+      $('[data-note-list]', root).innerHTML = notes.slice(0, 2).map(note => `<div class="oa-rv-note"><span class="oa-rv-ellipsis" title="${esc(note.title + '\n' + note.quote + '\n' + note.message)}">${esc(note.title + (note.quote ? ': „' + note.quote + '”' : '') + ' — ' + note.message.split('\n')[0])}</span>${linkButton('Pokaż w tekście', 'note-' + note.key.replace(/[^\w:-]/g, '_'), `data-note="${esc(note.key)}" aria-label="${esc('Pokaż w tekście: ' + note.title + ' ' + note.quote)}"`)}</div>`).join('');
+      $$('[data-note]', $('[data-note-list]', root)).forEach(el => el.addEventListener('click', () => showNote(notes.find(x => x.key === el.dataset.note))));
+      result.notes = notes; if (!notes.length && notesOpen) { notesOpen = false; draw(); }
+      tabsEl.innerHTML = [...result.keys.map(k => `<button type="button" role="tab" class="oa-tab ${result.tab === k && !notesOpen ? 'active' : ''}" data-tab="${k}" aria-selected="${result.tab === k}" title="${esc(result.full[k] + (result.selected.includes(k) ? '' : ' — Pole pozostanie bez zmian'))}">${esc(result.captions[k] + (result.selected.includes(k) ? '' : ' · bez zmian'))}</button>`),
+        `<button type="button" role="tab" class="oa-tab ${result.tab === 'details' ? 'active' : ''}" data-tab="details" aria-selected="${result.tab === 'details'}" title="Źródło, parametry i kontrole — ${controls.count} uwag do sprawdzenia">Szczegóły${!dict && controls.count ? ' · ' + controls.count : ''}</button>`].join('');
+      tabsEl.hidden = notesOpen;
+      $$('[data-tab]', tabsEl).forEach(tab => tab.addEventListener('click', () => { result.tab = tab.dataset.tab; draw(); }));
+      apply.disabled = !(n && ack.checked); $('span', apply).innerHTML = dict ? 'Wpisz samą notatkę' : n === total ? '✓&nbsp; Wpisz do pól' : `✓&nbsp; Wpisz wybrane (${n})`;
+      if (dict) { const fields = result.selected.filter(k => String(result.edited[k]).trim()); $('[data-action="compose"]', root).disabled = !fields.length; $('[data-action="continue"]', root).disabled = result.selected.length !== 1; }
+      $('[data-allow-row]', root).hidden = !result.selected.some(k => String(result.snapshot[k] || '').trim() && !fieldText(result, k).trim());
+      const status = $('[data-panel-status]', root); if (status) status.textContent = 'Panel parametrów jest częścią opisu badania.' + (Object.values(result.previewing).some(Boolean) ? ' Przekreślone fragmenty nie trafią do pola.' : '');
+      const err = $('[data-review-error]', root); err.hidden = !result.error; err.textContent = result.error;
+      if (result.tab === 'details' && details === 'controls' && !notesOpen) { const t = $('[data-controls]', body); if (t && t.value !== controls.text) t.value = controls.text; }
+    }
+    function changed() { ack.checked = false; allow.checked = false; result.error = ''; updateChrome(); } // ReviewPage._changed
+    function draw() {
+      if (notesOpen) { body.innerHTML = notesHtml(); bindNotes(); updateChrome(); return; }
+      const key = result.tab;
+      if (key === 'details') { body.innerHTML = detailsHtml(); bindDetails(); updateChrome(); return; }
+      const selected = result.selected.includes(key), compare = !!result.compare[key], previewing = result.previewing[key], caption = result.full[key];
+      const action = selected ? 'Pozostaw bez zmian' : 'Użyj propozycji', short = selected ? 'Pomiń' : 'Wybierz';
+      const editor = dict ? `<textarea class="oa-rv-plain" data-plain="${key}" spellcheck="false" ${selected ? '' : 'readonly'} placeholder="${selected ? 'Tutaj możesz poprawić wynik przed wpisaniem.' : 'Propozycja nie jest wybrana do wpisania.'}" aria-label="Dokładna treść do wpisania: ${esc(caption)}">${esc(result.edited[key])}</textarea>` : previewing ? removalPreviewHtml(result, key) : `<div class="oa-se" role="group" aria-label="Dokładna treść do wpisania: ${esc(caption)}">${structuredEditorHtml(result, key)}</div>`;
+      body.innerHTML = `<div class="oa-rv-field">${dict ? `<div class="oa-rv-status"><span class="oa-muted">${selected ? 'Do wpisania' : 'Pole pozostanie bez zmian'}</span>${linkButton(action, 'toggle-field', `aria-label="${esc(action + ': ' + result.captions[key])}"`)}</div>` : ''}<div class="oa-rv-split ${compare ? 'comparing' : ''}"><section class="oa-rv-compare" ${compare ? '' : 'hidden'}><select data-compare-kind aria-label="Rodzaj porównania: ${esc(caption)}" title="Zatwierdzone źródła lub wcześniejsza zawartość pola: ${esc(caption)}"><option value="sources">Źródła użyte do przygotowania</option><option value="before">Pole przed wpisaniem</option></select><textarea readonly data-compare-text spellcheck="false" aria-label="Zatwierdzone źródła użyte do przygotowania: ${esc(caption)}">${esc(result.sent)}</textarea></section><section class="oa-rv-output"><div class="oa-rv-outhead"><span class="oa-muted" title="Edytowalny wynik dla pola: ${esc(caption)}">${selected ? 'Do wpisania' : 'Odebrana propozycja'}</span><span class="oa-pg-gap"></span>${dict ? '' : linkButton(short, 'toggle-field', `aria-label="${esc(action + ': ' + result.captions[key])}" title="${esc(action + ': ' + result.captions[key])}"`) + linkButton(compare ? 'Ukryj porównanie' : 'Porównaj', 'compare')}${previewing ? linkButton('Edytuj', 'edit-field', `aria-label="Edytuj tekst do wpisania: ${esc(caption)}" title="Popraw tekst po usunięciu powtórzeń. Przekreślone fragmenty znikną z podglądu." ${selected ? '' : 'disabled'}`) : ''}${linkButton('Kopiuj', 'copy-field')}</div><div class="oa-rv-editor">${editor}</div></section></div></div>`;
+      bindField(key); updateChrome();
+    }
+    function bindField(key) {
+      bind(body, 'toggle-field', () => { result.selected = result.selected.includes(key) ? result.selected.filter(k => k !== key) : result.keys.filter(k => k === key || result.selected.includes(k)); changed(); draw(); });
+      bind(body, 'compare', () => { result.compare[key] = !result.compare[key]; draw(); });
+      bind(body, 'edit-field', () => { result.previewing[key] = false; draw(); $('[data-block]', body)?.focus(); });
+      bind(body, 'copy-field', () => copyText(fieldText(result, key), $('[data-action="copy-field"]', body)));
+      $('[data-compare-kind]', body)?.addEventListener('change', e => { const t = $('[data-compare-text]', body); t.value = e.target.value === 'before' ? result.snapshot[key] || '' : result.sent; t.setAttribute('aria-label', (e.target.value === 'before' ? 'Przed zmianą: ' : 'Zatwierdzone źródła użyte do przygotowania: ') + result.full[key]); });
+      $('[data-plain]', body)?.addEventListener('input', e => { result.edited[key] = e.target.value; changed(); });
+      $$('[data-block]', body).forEach(el => el.addEventListener('input', () => {
+        if (result.removedText) delete result.removedText[el.dataset.block]; // a new edit invalidates the inline undo
+        if (!result.doc.edit(el.dataset.block, el.value)) return;
+        const b = result.doc.blocks.get(el.dataset.block); $$(`[data-origin="${CSS.escape(b.id)}"]`, body).forEach(o => { o.textContent = blockCaption(result.doc, b); o.title = blockTooltip(b); });
+        const dismiss = $(`[data-dismiss="${CSS.escape(b.id)}"]`, body); if (dismiss) dismiss.textContent = b.text.trim() ? 'Usuń' : 'Anuluj';
+        changed();
+      }));
+      $$('[data-open]', body).forEach(el => el.addEventListener('click', () => { (result.opened ||= {})[el.dataset.open] = true; el.hidden = true; const row = $(`[data-row="${CSS.escape(el.dataset.open)}"]`, body); row.hidden = false; $('textarea', row).focus(); }));
+      $$('[data-dismiss]', body).forEach(el => el.addEventListener('click', () => { // "Usuń" keeps the removed text for "Cofnij usunięcie…" until the next edit
+        const id = el.dataset.dismiss, text = result.doc.blocks.get(id).text; if (result.opened) delete result.opened[id];
+        if (text.trim()) (result.removedText ||= {})[id] = text; if (result.doc.edit(id, '')) changed(); draw(); $(`[data-open="${CSS.escape(id)}"]`, body)?.focus(); }));
+      $$('[data-undo-removal]', body).forEach(el => el.addEventListener('click', () => {
+        const id = el.dataset.undoRemoval, text = result.removedText?.[id]; if (text === undefined) return; delete result.removedText[id];
+        (result.opened ||= {})[id] = true; if (result.doc.edit(id, text)) changed(); draw(); $(`textarea[data-block="${CSS.escape(id)}"]`, body)?.focus(); }));
+    }
+    function detailsHtml() {
+      const controls = controlsText(result), tabs = [['source', 'Źródło'], ...(dict ? [['transcription', 'Transkrypcja']] : []), ...(g?.request.panel ? [['params', 'Parametry']] : []), ['controls', 'Kontrole' + (controls.count ? ' · ' + controls.count : '')]];
+      if (!tabs.some(t => t[0] === details)) details = 'source';
+      let page = '';
+      if (details === 'source') page = `<textarea readonly class="oa-rv-doc" aria-label="Zatwierdzone źródło wysłane do AI">${esc(dict ? result.sent : result.sent)}</textarea>`;
+      else if (details === 'transcription') page = `<textarea readonly class="oa-rv-doc" title="${esc(result.transcriptionView.tooltip)}" aria-label="Źródło transkrypcji i ustawienia sesji">${esc(result.transcriptionView.details)}</textarea>`;
+      else if (details === 'params') page = `<div class="oa-rv-params" tabindex="0" aria-label="Pochodzenie parametrów w panelu"><p class="oa-muted">Pochodzenie wartości w przygotowanym panelu. Treść możesz poprawić w zakładce badania; poniżej pozostaną źródła pierwotnej propozycji.</p>${g.panel.rows.map(row => {
+          let origin = {source: 'Z notatki', template: 'Z ustawionego wzorca', missing: 'Brak wartości w notatce i wzorcu', unverified: 'AI wskazało wzmiankę, której nie ma dosłownie w notatce'}[row.origin] || 'Źródło nieokreślone';
+          if (row.origin === 'source' && row.attribution === 'ai') origin += ' · fragment wskazany przez AI, sprawdzony dosłownie'; if (row.respelled) origin += ' · pisownia poprawiona przez AI, sprawdzona słowo po słowie'; if (row.needs_review) origin += ' · do sprawdzenia';
+          const quotes = [...row.quotes.map(q => `Źródło: „${q}”`), Doc().panelIssueDescription(row)].filter(Boolean).join('\n');
+          return `<div class="oa-rv-param"><div>${esc(row.label + ': ' + row.value)}</div><div class="oa-muted">${esc(origin + (quotes ? '\n' + quotes : ''))}</div></div>`; }).join('')}</div>`;
+      else page = `<textarea readonly class="oa-rv-doc" data-controls aria-label="Wyniki automatycznych kontroli">${esc(controls.text)}</textarea>`;
+      return `<div class="oa-rv-details"><div class="oa-rv-dhead" ${details === 'source' && !dict ? '' : 'hidden'}><span class="oa-muted">Źródło, parametry i automatyczne kontrole wyniku.</span><span class="oa-pg-gap"></span>${linkButton('Pokaż polecenie i odpowiedź', 'exchange')}</div><div class="oa-tabs oa-rv-subtabs" role="tablist" aria-label="Szczegóły przygotowania wyniku">${tabs.map(([id, label]) => `<button type="button" role="tab" class="oa-tab ${details === id ? 'active' : ''}" data-details="${id}" aria-selected="${details === id}">${esc(label)}</button>`).join('')}</div><div class="oa-rv-dbody">${page}</div></div>`;
+    }
+    function bindDetails() { $$('[data-details]', body).forEach(t => t.addEventListener('click', () => { details = t.dataset.details; draw(); })); bind(body, 'exchange', () => exchangeDialog(result)); }
+    function notesHtml() {
+      return `<div class="oa-rv-notelist" tabindex="0" aria-label="Uwagi do treści — informacyjne, nie blokują wpisania"><p class="oa-muted">Uwagi są informacyjne. Możesz poprawić treść lub zatwierdzić bieżący wynik.</p>${(result.notes || reviewNotes(result)).map(note => `<div class="oa-rv-notecard"><div class="oa-muted">${esc(note.title)}</div><div>${esc(note.quote ? '„' + note.quote + '”' : 'Pusta wartość')}</div><div class="oa-rv-notemsg">${esc(note.message)}</div><div>${button('Pokaż w tekście', 'show-note', 'small', '', `data-note="${esc(note.key)}"`)}</div></div>`).join('')}<p class="oa-muted">${esc(Doc().PRESERVATION_LIMITS)}</p></div>`;
+    }
+    function bindNotes() { $$('[data-note]', body).forEach(el => el.addEventListener('click', () => showNote((result.notes || []).find(x => x.key === el.dataset.note)))); }
+    function showNote(note) {
+      if (!note) return; notesOpen = false;
+      const key = note.target || (note.field && result.keys.includes(note.field) && result.selected.includes(note.field) ? note.field : result.selected.find(k => k === result.tab) || result.selected[0]);
+      if (!key) { draw(); return; }
+      result.tab = key; result.previewing[key] = false; draw();
+      const target = note.block ? $(`[data-block="${CSS.escape(note.block)}"]`, body) : $('[data-block]:not([readonly])', body) || $('[data-plain]', body);
+      target?.focus(); target?.scrollIntoView?.({block: 'center'});
+    }
+    bind(root, 'notes', () => { notesOpen = !notesOpen && !!(result.notes || []).length; draw(); });
+    ack.addEventListener('change', () => { result.ackRevision = ack.checked ? (result.doc?.revision ?? 0) + ':' + result.selected.join(',') : null; if (ack.checked) { result.error = ''; } updateChrome(); });
+    allow.addEventListener('change', () => { ack.checked = false; updateChrome(); });
+    bind(root, 'reject', () => rejectReview(result, ws));
+    bind(root, 'apply', () => approveReview(result, ws, ack, allow, updateChrome));
+    bind(root, 'compose', () => { const fields = Object.fromEntries(result.selected.filter(k => String(result.edited[k]).trim()).map(k => [k, result.edited[k]])); if (!Object.keys(fields).length || !completeReview(result, 'regenerate', ws)) return; composeFromDictation(result, fields); });
+    bind(root, 'continue', () => { const key = result.selected[0]; if (result.selected.length !== 1 || !completeReview(result, 'continue', ws)) return; dictate({field: key, base: result.edited[key], snapshot: result.snapshot, session: result.session, continuation: true, direct: true, review: result}); });
     draw();
+    setTimeout(() => ($('[data-block]:not([readonly]), [data-plain], .oa-rv-preview', body))?.focus({preventScroll: true}), 0);
+  }
+  function completeReview(result, outcome, ws, closing = false) { // one outcome; the host closes after it
+    if (result.outcome) return false; result.outcome = outcome;
+    if (state.review === result) state.review = null; if (!closing) finishWorkspace(ws); else { ws.finished = true; if (workspace === ws) workspace = null; }
+    state.active = null; return true;
+  }
+  function rejectReview(result, ws, closing = false) {
+    if (!completeReview(result, 'rejected', ws, closing)) return;
+    recordHistory(result, 'rejected'); setPhase('idle');
+  }
+  function approveReview(result, ws, ack, allow, updateChrome) {
+    if (result.outcome || !ack.checked) return;
+    const revision = (result.doc?.revision ?? 0) + ':' + result.selected.join(',');
+    if (result.ackRevision !== revision) { ack.checked = false; result.error = 'Treść zmieniła się po sprawdzeniu. Sprawdź bieżący wynik i potwierdź go ponownie.'; updateChrome(); return; }
+    const changes = [];
+    for (const key of result.keys) {
+      if (!result.selected.includes(key)) continue;
+      const after = fieldText(result, key), before = String(result.snapshot[key] ?? '');
+      if (!after.trim() && before.trim() && !allow.checked) { result.error = 'Wyzerowanie niepustego pola wymaga osobnego potwierdzenia.'; updateChrome(); return; }
+      changes.push({key, label: result.full[key], before, after});
+    }
+    if (!changes.length || !completeReview(result, 'approved', ws)) return;
+    result.approved = Object.fromEntries(changes.map(c => [c.key, c.after]));
+    writeChanges({changes, snapshot: result.snapshot, session: result.session, result});
+  }
+  function composeFromDictation(result, fields) { // _compose_dictation: through the ordinary entry point; the reviewed text replaces only the source copy
+    setTimeout(() => prepare({sources: fields, session: result.session, dictationReturn: result}), 0);
+  }
+  function exchangeDialog(result) { // ui/response_exchange.py, with the shortened prompt and the demo's sample answer
+    const g = result.generated, text = `OPISAI — POLECENIE I ODPOWIEDŹ AI\nPrzykładowa odpowiedź demonstracji, bez AI. Przypisane treści są dostępne w podglądzie dokumentacji.\n\nWersja OpisAI: ${VERSION}\nModel: przykład demonstracyjny\n\n=== POLECENIE WYSŁANE DO AI ===\n${Doc().OUTLINE_NOTE}\n\n${g.prompt}\n\n=== ODPOWIEDŹ — PRZYKŁAD DEMONSTRACJI ===\n${JSON.stringify(g.response, null, 1)}`;
+    const html = `<div class="oa-app oa-mb"><h2 class="oa-ex-title">Polecenie i odpowiedź AI</h2><p class="oa-muted">Przykładowa odpowiedź demonstracji, bez AI. Przypisane treści są dostępne w podglądzie dokumentacji.</p><textarea readonly class="oa-rv-doc oa-ex-text" aria-label="Polecenie i oryginalna odpowiedź AI — tylko do odczytu">${esc(text)}</textarea><p class="oa-muted">Kliknij tekst, a następnie naciśnij Ctrl+A i Ctrl+C, albo użyj przycisku kopiowania.</p><footer class="oa-footer"><span class="oa-pg-gap"></span>${button('Zamknij', 'close')}${button('Kopiuj całość', 'copy-all', 'primary', '', 'aria-label="Kopiuj polecenie, odpowiedź i raport"')}</footer></div>`;
+    const win = makeWindow('opisai-exchange', 'OpisAI — polecenie i odpowiedź AI', 960, 680, html); bind(win.content, 'close', () => win.close()); bind(win.content, 'copy-all', () => copyText(text, $('[data-action="copy-all"]', win.content)));
+  }
+
+  /* Write (application/writer.py, coordinator._written): field check, write, control read, receipt. */
+  function writeChanges(plan) {
+    const ws = {finished: false}, win = makeWindow('opisai-progress', 'OpisAI — wpisanie do pól', 740, 540, progressHtml('writing'), () => ws.finished ? undefined : false);
+    ws.win = win; startClock(ws, win.content); state.active = win;
+    ws.timer = setTimeout(() => { ws.finished = true; clearInterval(ws.clock); win.close(); state.active = null; showReceipt(performWrite(plan)); }, 500 * docSpeed());
+  }
+  function performWrite(plan) {
+    const ctx = window.Clinic?.getContext?.() || {}, results = plan.changes.map(c => ({key: c.key, label: c.label, status: 'not_attempted', detail: ''}));
+    const conflict = detail => { results[0].detail = detail; return {status: 'conflict', results, plan}; };
+    if (!ctx.editorOpen || !ctx.writable) return {status: 'failed', results, plan}; // the window is gone: nothing was prepared
+    if (ctx.session !== plan.session) return conflict(WINDOW_CHANGED);
+    const now = getFields(), moved = Object.keys(plan.snapshot).find(k => now[k] !== plan.snapshot[k]);
+    if (moved) return conflict('Zmieniono albo wymieniono pole: ' + moved); // WriteService._check_fields names the field id
+    const applied = window.Clinic.setFields(Object.fromEntries(plan.changes.map(c => [c.key, c.after])), {expected: plan.snapshot, session: plan.session, source: plan.inverse ? 'OpisAI — cofnięcie' : 'OpisAI'});
+    if (!applied.ok) return applied.reason === WINDOW_CHANGED ? conflict(WINDOW_CHANGED) : {status: 'failed', results, plan};
+    const read = getFields(); // control read
+    for (const r of results) { const c = plan.changes.find(x => x.key === r.key); r.status = read[r.key] === c.after ? 'verified' : 'unknown'; if (r.status === 'unknown') r.detail = 'Wynik niepotwierdzony. Sprawdź pole; nie ponawiaj automatycznie.'; }
+    return {status: results.every(r => r.status === 'verified') ? 'verified' : 'unknown', results, plan};
+  }
+  function showReceipt(receipt) {
+    const plan = receipt.plan, names = {verified: 'wpisano i potwierdzono', not_attempted: 'nie wykonano', conflict: 'konflikt — nie wpisano', unknown: 'wynik niepotwierdzony'};
+    if (receipt.status === 'failed') {
+      setPhase('idle');
+      recoveryDialog({writing: true, code: 'write_unconfirmed', title: 'Sprawdź wynik wpisania', explanation: 'Nie potwierdzono zakończenia wpisania do pól.', next: 'Sprawdź treść pól w Klinice oraz dziennik operacji. Nie ponawiaj wpisania bez sprawdzenia.', action: 'journal', actionLabel: 'Sprawdź dziennik'});
+      return;
+    }
+    const message = receipt.results.map(r => `${r.label}: ${names[r.status]}${r.detail ? '. ' + r.detail : ''}`).join('\n') + '\n\n' + RECEIPT_NOTE;
+    if (plan.result && !plan.inverse) recordHistory(plan.result, receipt.status === 'verified' ? 'written' : receipt.status, receipt);
+    if (receipt.status === 'verified') {
+      state.lastReceipt = state.lastWrite = receipt; setPhase('done');
+      messageBox({title: 'OpisAI — wpisano do pól', icon: 'info', text: 'Wpisano i odczytano kontrolnie wszystkie zatwierdzone pola.\n\nWizyta nie została przez to zapisana w bazie Kliniki. Zapisz ją w programie gabinetowym.', details: message,
+        buttons: [{label: 'Cofnij wpisanie', action: 'undo', onClick: () => setTimeout(undo, 0)}, {label: 'Gotowe', action: 'close', primary: true, default: true}]});
+    } else { setPhase('idle'); messageBox({title: 'OpisAI — sprawdź wynik wpisania', icon: 'warning', text: message, buttons: [{label: 'Gotowe', action: 'close', primary: true, default: true}]}); }
+  }
+
+  /* Undo (coordinator.undo): read and check first, then OBECNIE/PRZYWRÓĆ, then the same controlled write. */
+  function undo() {
+    const busy = state.job || state.recording || state.review || (workspace && !workspace.finished) || ['opisai-compose', 'opisai-progress', 'opisai-undo'].some(id => windows.get(id)?.el?.isConnected);
+    if (busy) { messageBox({title: 'OpisAI — informacja', icon: 'info', text: 'Najpierw zakończ bieżącą operację.'}); return; }
+    const last = state.lastReceipt;
+    if (!last) { messageBox({title: 'OpisAI — informacja', icon: 'info', text: 'Brak operacji do cofnięcia w tej sesji.'}); return; }
+    beginOperation();
+    readVisit(() => {
+      const ctx = window.Clinic?.getContext?.() || {}, now = getFields(), verified = last.results.filter(r => r.status === 'verified').map(r => r.key);
+      const moved = last.plan.changes.find(c => verified.includes(c.key) && now[c.key] !== c.after);
+      const error = !['verified', 'partial'].includes(last.status) ? 'Najpierw wyjaśnij niepotwierdzony wynik poprzedniego zapisu.' : !ctx.editorOpen ? 'Okno lub kontrolka nie są dostępne.'
+        : ctx.session !== last.plan.session ? WINDOW_CHANGED : !verified.length ? 'Brak potwierdzonych zmian do cofnięcia.' : moved ? 'Pole zmieniono po naszym wpisie. Nie cofnięto: ' + moved.key : '';
+      if (error) { messageBox({title: 'OpisAI — sprawdź komunikat', icon: 'warning', text: error}); return; }
+      const changes = last.plan.changes.filter(c => verified.includes(c.key)).map(c => ({key: c.key, label: c.label, before: now[c.key], after: c.before}));
+      const html = `<div class="oa-app oa-undo"><textarea readonly class="oa-rv-doc" aria-label="Zmiany do cofnięcia — tylko do odczytu">${esc(changes.map(c => `${c.label}:\nOBECNIE:\n${c.before}\nPRZYWRÓĆ:\n${c.after}`).join('\n\n'))}</textarea><footer class="oa-footer"><span class="oa-pg-gap"></span>${button('OK', 'ok', 'primary')}${button('Anuluj', 'cancel')}</footer></div>`;
+      const win = makeWindow('opisai-undo', 'OpisAI — potwierdź cofnięcie', 850, 600, html);
+      bind(win.content, 'cancel', () => win.close());
+      bind(win.content, 'ok', () => { win.close(); writeChanges({changes, snapshot: Object.fromEntries(changes.map(c => [c.key, c.before])), session: ctx.session, inverse: true}); });
+      setTimeout(() => $('[data-action="ok"]', win.content)?.focus(), 0);
+    }, () => messageBox({title: 'OpisAI — sprawdź komunikat', icon: 'warning', text: 'Anulowano odczyt. Pola pozostały bez zmian.'}));
   }
   async function copyText(value,control){
     let ok=false;try{await navigator.clipboard.writeText(String(value));ok=true;}catch(_){const t=document.createElement('textarea');t.value=String(value);t.style.cssText='position:fixed;left:-9999px;top:0';document.body.append(t);t.select();try{ok=document.execCommand('copy');}catch(__){}t.remove();}
     if(control&&ok){const span=$('span',control);if(span){const old=span.textContent;span.textContent='Skopiowano';setTimeout(()=>{if(span.isConnected)span.textContent=old;},1800);}}else toast(ok?'Skopiowano do schowka.':'Zaznacz tekst i użyj Ctrl+C, aby skopiować.');
-  }
-  function undo(){
-    const last=state.lastWrite;if(!last){toast('Brak potwierdzonego wpisu do cofnięcia.');return;}
-    const fields=Object.keys(last.after),html=`<div class="oa-app"><header class="oa-header"><h1>Cofnij ostatni potwierdzony wpis</h1><p>Operacja z ${esc(last.time)} · ${fields.map(k=>esc(FIELDS[k])).join(', ')}</p></header><div class="oa-content">${notice('Przywrócona zostanie treść sprzed wpisu OpisAI. Późniejsza edycja w Klinice zatrzyma cofnięcie.')}<div class="oa-history-detail">${esc(fields.map(k=>FIELDS[k]+'\n'+(last.before[k]||'(puste pole)')).join('\n\n'))}</div><div class="oa-notice error" data-undo-error hidden></div></div><div class="oa-ack-area">${check('Sprawdzone: przywracam pokazane pola tej wizyty.','oa-undo-ack')}</div><footer class="oa-footer"><span class="oa-footnote">Cofnięcie obejmuje tylko ostatni wpis OpisAI.</span>${button('Anuluj','cancel')}${button('Przywróć poprzednią treść','undo','primary','undo','disabled')}</footer></div>`;
-    const win=makeWindow('opisai-undo','OpisAI — cofnięcie wpisu',650,490,html),root=win.content;
-    $('#oa-undo-ack',root).addEventListener('change',e=>$('[data-action="undo"]',root).disabled=!e.target.checked);bind(root,'cancel',()=>win.close());
-    bind(root,'undo',()=>{if(!$('#oa-undo-ack',root).checked)return;const before={};fields.forEach(k=>before[k]=last.before[k]);const result=Clinic.setFields(before,{expected:last.after,session:last.session,source:'OpisAI — cofnięcie'});if(!result.ok){const error=$('[data-undo-error]',root);error.hidden=false;error.innerHTML=icon('info',16)+'<div>'+esc(result.reason||'Pola zmieniły się po wpisie. Nie cofnięto zmian.')+'</div>';return;}last.status='Cofnięto';state.lastWrite=null;win.close();setPhase('done');toast('Przywrócono poprzednią treść pól.');});
   }
 
   /* Recording is deliberately scripted: the microphone is never requested. */
@@ -325,21 +736,81 @@
     const html=`<div class="oa-app"><header class="oa-header"><h1>Profil ${esc(provider)}</h1><p>Osobny profil przeglądarki OpisAI</p></header><div class="oa-content">${notice('W demonstracji profil jest przykładowy. Nie logujemy do zewnętrznego konta.')}<div class="oa-empty">${icon('shield',44)}<h3>Połączenie demonstracyjne</h3><p>Możesz wrócić do przygotowania opisu<br>i przejść przez cały proces zatwierdzania.</p></div></div><footer class="oa-footer"><span class="oa-footnote">${esc(provider)} · przykład interfejsu</span>${button('Zamknij','close','primary')}</footer></div>`;
     const win=makeWindow('opisai-profile','OpisAI — profil przeglądarki',570,430,html);bind(win.content,'close',()=>win.close());
   }
-  function history(){
-    let filter='',selected=null;
-    const html=`<div class="oa-app"><header class="oa-header"><h1>Historia generowań</h1><p>Potwierdzone operacje w bieżącej sesji.</p></header><div class="oa-content"><div class="oa-history-toolbar"><input type="search" placeholder="Szukaj w historii" aria-label="Szukaj w historii">${button('Odśwież','refresh','small','history')}${button('Wyczyść','clear','small','close')}</div><div data-history-list></div><div class="oa-history-detail" data-history-detail hidden></div></div><footer class="oa-footer"><span class="oa-footnote" data-history-count></span>${button('Kopiuj wynik','copy-history','','copy','disabled')}${button('Cofnij ostatni wpis','undo-history','','undo',state.lastWrite?'':'disabled')}${button('Zamknij','close')}</footer></div>`;
-    const win=makeWindow('opisai-history','OpisAI — historia generowań',840,560,html),root=win.content;
-    function draw(){
-      const rows=state.history.filter(rec=>normal([rec.time,rec.route,...Object.values(rec.after)].join(' ')).includes(normal(filter))),target=$('[data-history-list]',root);
-      target.innerHTML=rows.length?`<table class="oa-history-table"><thead><tr><th>Godzina</th><th>Operacja</th><th>Pola</th><th>Stan</th></tr></thead><tbody>${rows.map((rec,i)=>`<tr data-record="${state.history.indexOf(rec)}" tabindex="0"><td>${esc(rec.time)}</td><td>${rec.mode==='dictation'?'Dyktowanie':rec.variant.rich?'Opis · Bogato':'Opis · Wiernie'}</td><td>${Object.keys(rec.after).map(k=>esc(FIELDS[k])).join(', ')}</td><td>${esc(rec.status)}</td></tr>`).join('')}</tbody></table>`:`<div class="oa-empty">${icon('history',42)}<h3>${filter?'Nie znaleziono operacji':'Historia jest pusta'}</h3><p>${filter?'Zmień szukany tekst.':'Potwierdzone wpisy OpisAI pojawią się tutaj.'}</p></div>`;
-      $('[data-history-count]',root).textContent=`${state.history.length} operacji · dane tylko w tej karcie`;
-      $$('[data-record]',root).forEach(row=>{const choose=()=>{selected=state.history[Number(row.dataset.record)];$$('[data-record]',root).forEach(x=>x.classList.toggle('selected',x===row));const detail=$('[data-history-detail]',root);detail.hidden=false;detail.textContent=Object.entries(selected.after).map(([k,v])=>FIELDS[k]+'\n'+v).join('\n\n');$('[data-action="copy-history"]',root).disabled=false;};row.addEventListener('click',choose);row.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();choose();}});});
-    }
-    $('input',root).addEventListener('input',e=>{filter=e.target.value;draw();});bind(root,'refresh',draw);bind(root,'clear',()=>clearHistory(()=>{selected=null;$('[data-history-detail]',root).hidden=true;draw();}));bind(root,'copy-history',()=>{if(selected)copyText(Object.values(selected.after).join('\n\n'),$('[data-action="copy-history"]',root));});bind(root,'undo-history',undo);bind(root,'close',()=>win.close());draw();
+  /* History (ui/history_window.py, ui/history_document.py): every prepared document, its status and the
+   * stored states. rc32 keeps it in a protected local database; the demonstration keeps it in this tab. */
+  let historySerial = 0, historyRefresh = null;
+  const HISTORY_STATUS = {generated: 'Do sprawdzenia', rejected: 'Odrzucono', written: 'Wpisano do pól', partial: 'Częściowe wpisanie', unknown: 'Sprawdź wynik', conflict: 'Nie wpisano — zmiana pól'};
+  const HISTORY_SUMMARY = {generated: 'Przygotowano — bez zatwierdzenia i wpisania', rejected: 'Odrzucono — bez wpisania', written: 'Wpisanie potwierdzone odczytem', partial: 'Wpisano część pól', unknown: 'Wynik wpisania wymaga sprawdzenia', conflict: 'Konflikt — wpisanie przerwane'};
+  const HISTORY_MODE = {rich: 'Bogato', faithful: 'Wiernie', dictation: 'Dyktowanie'};
+  function recordHistory(result, status, receipt) {
+    if (!preferences.history) return;
+    let entry = state.history.find(e => e.id === result.historyId);
+    if (!entry) { entry = {id: result.historyId = 'doc-' + (++historySerial), ts: new Date()}; state.history.unshift(entry); }
+    Object.assign(entry, {status, mode: result.mode === 'dictation' ? 'dictation' : result.variant.rich ? 'rich' : 'faithful', panel: !!result.variant?.panel,
+      sources: result.generated ? result.generated.request.sources.filter(s => s.included && s.text.trim()).map(s => ({label: s.label, text: s.text})) : [{label: 'Dyktowanie', text: result.sent}],
+      proposal: result.keys.map(k => ({key: k, label: result.full[k], text: result.original[k]})), reviewed: result.keys.map(k => ({key: k, label: result.full[k], text: fieldText(result, k)})),
+      before: result.keys.map(k => ({key: k, label: result.full[k], text: String(result.snapshot[k] ?? '')})), approved: receipt ? receipt.plan.changes.map(c => ({key: c.key, label: c.label, text: c.after})) : null,
+      results: receipt ? receipt.results : null, review: result.doc ? result.doc.snapshot() : null, original: result.generated ? Doc().reviewDocument(result.generated).snapshot() : null,
+      sections: result.generated ? result.generated.sections.map(s => ({label: s.label, subsections: s.leaves.map(l => l.name)})) : [], selected: [...result.selected], all: result.keys.length});
+    historyRefresh?.();
   }
-  function clearHistory(after){
-    if(!state.history.length){toast('Historia jest już pusta.');return;}
-    const win=makeWindow('opisai-clear-history','OpisAI — wyczyść historię',460,245,`<div class="oa-app"><header class="oa-header"><h2>Wyczyścić historię tej sesji?</h2></header><div class="oa-content"><p>Wpisy znikną z listy. Treść wizyty w Klinice pozostanie bez zmian.</p></div><footer class="oa-footer"><span class="oa-footnote"></span>${button('Anuluj','cancel')}${button('Wyczyść historię','clear','primary')}</footer></div>`);bind(win.content,'cancel',()=>win.close());bind(win.content,'clear',()=>{state.history=[];win.close();after?.();});
+  function historyReviewText(entry) { // _review_text: provenance and changes per document part
+    const doc = entry.review; if (!doc) return 'Nie zapisano oddzielnych rozstrzygnięć ani poprawek.';
+    const names = Object.fromEntries(doc.leaves.map(l => [l.section + '/' + l.id, l.name])), original = Object.fromEntries((entry.original?.blocks || []).map(b => [b.id, b])), approved = !!entry.approved, out = [];
+    for (const b of doc.blocks) {
+      const meta = b.metadata || {}; let name = names[b.section + '/' + b.leaf] || 'Część dokumentu';
+      if (b.kind === 'panel_row') name += ' — ' + (meta.label || 'Parametr'); else if (b.kind === 'inference') name += ' — wnioskowanie';
+      const value = String(b.text || ''), previous = String(original[b.id]?.text ?? meta.original_text ?? value), issue = !!(meta.needs_review || (meta.assignment_issues || []).length);
+      if (!value.trim() && !previous.trim() && !issue) continue;
+      const rows = [name, 'Pochodzenie: ' + Doc().originCaption(b)];
+      if (approved && entry.selected.length < entry.all && !entry.selected.includes(b.target)) rows.push('To pole nie zostało wybrane do wpisania.');
+      if (b.kind !== 'panel_row' && Doc().originallyBlank(b)) rows.push('Treść: ' + (value || '(puste)'));
+      else if (value !== previous) rows.push('Pierwotna propozycja: ' + (previous || '(puste)'), (approved ? 'Po sprawdzeniu: ' : 'Po edycji, bez zatwierdzenia: ') + (value || '(puste)'));
+      else rows.push('Treść: ' + (value || '(puste)'));
+      if (issue) rows.push('Uwaga informacyjna; bez oddzielnego rozstrzygnięcia.');
+      rows.push(...(meta.quotes || []).map(q => 'Fragment źródła: „' + q + '”'));
+      for (const i of meta.assignment_issues || []) { rows.push(i.message || 'Sprawdzenie przypisania'); const q = i.source_verified ? i.quote : i.proposed_quote; if (q) rows.push((i.source_verified ? 'Fragment źródła: ' : 'Niepotwierdzona propozycja: ') + q); if (i.source_verified && i.context) rows.push('Kontekst: ' + i.context); }
+      out.push(rows.join('\n'));
+    }
+    return out.join('\n\n') || 'Nie zapisano oddzielnych rozstrzygnięć ani poprawek.';
+  }
+  function historyPages(entry) {
+    const fields = items => (items || []).map(f => f.label + ':\n' + f.text).join('\n\n'), approved = !!entry.approved, pages = [];
+    pages.push(['result', approved ? 'Wynik' : 'Wersja robocza', approved ? 'Zatwierdzony wynik' : 'Wersja robocza', fields(approved ? entry.approved : entry.reviewed)]);
+    if (entry.results) pages.push(['outcome', 'Wpisanie', 'Wynik wpisania', entry.results.map(r => r.label + ': ' + ({verified: 'wpisanie potwierdzone', not_attempted: 'nie podjęto wpisania', conflict: 'konflikt przed wpisaniem', unknown: 'wpisanie niepotwierdzone'}[r.status] || r.status) + (r.detail ? '\n' + r.detail : '')).join('\n\n')]);
+    pages.push(['sources', 'Źródła', 'Źródła', fields(entry.sources)], ['proposal', 'Propozycja', 'Propozycja AI', fields(entry.proposal)], ['review', 'Poprawki', 'Poprawki i uwagi', historyReviewText(entry)], ['before', 'Przed wpisaniem', 'Przed wpisaniem', fields(entry.before)],
+      ['configuration', 'Ustawienia', 'Ustawienia', [`Tryb: ${HISTORY_MODE[entry.mode] || ''}`, 'Model: przykład demonstracyjny — bez AI', 'Panel parametrów: ' + (entry.panel ? 'włączony' : 'wyłączony'), ...entry.sections.flatMap(s => ['\n' + s.label, ...s.subsections.map(n => '• ' + n)])].join('\n')]);
+    return pages;
+  }
+  const historyStamp = (date, seconds) => { const p = n => String(n).padStart(2, '0'); return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())} ${p(date.getHours())}:${p(date.getMinutes())}${seconds ? ':' + p(date.getSeconds()) : ''}`; };
+  function history() {
+    let filter = '', selectedId = null, page = 'result';
+    const html = `<div class="oa-app oa-hist"><input type="search" class="oa-hist-search" placeholder="Szukaj w źródłach, propozycji lub wyniku…" aria-label="Szukaj w historii dokumentów"><div class="oa-hist-split"><div class="oa-hist-list" role="listbox" tabindex="0" aria-label="Dokumenty w historii" data-list></div><div class="oa-hist-doc"><p class="oa-hist-summary" data-summary></p><div class="oa-tabs" role="tablist" aria-label="Zapisany dokument" data-doc-tabs></div><textarea readonly class="oa-rv-doc" data-doc-text aria-label="Zapisany dokument"></textarea></div></div><footer class="oa-footer">${button('Kopiuj wynik', 'copy-history', '', '', 'disabled')}${button('Usuń wpis', 'delete-history', '', '', 'disabled')}<span class="oa-pg-gap"></span>${button('Odśwież', 'refresh')}${button('Zamknij', 'close')}</footer></div>`;
+    const win = makeWindow('opisai-history', 'OpisAI — Historia dokumentów', 1100, 740, html, () => { historyRefresh = null; }), root = win.content;
+    const visible = () => state.history.filter(e => !filter || [historyStamp(e.ts), ...e.sources.map(s => s.text), ...e.proposal.map(f => f.text), ...(e.approved || e.reviewed).map(f => f.text)].join('\n').toLowerCase().includes(filter));
+    function draw() {
+      const items = visible(), entry = items.find(e => e.id === selectedId) || items[0] || null; selectedId = entry?.id || null;
+      $('[data-list]', root).innerHTML = items.map(e => `<button type="button" role="option" class="oa-hist-item ${e.id === selectedId ? 'selected' : ''}" aria-selected="${e.id === selectedId}" data-entry="${e.id}"><span>${esc(historyStamp(e.ts) + ' · ' + (HISTORY_MODE[e.mode] || 'Dokument'))}</span><span>${esc(HISTORY_STATUS[e.status] || 'Sprawdź wynik')}</span></button>`).join('');
+      $$('[data-entry]', root).forEach(el => el.addEventListener('click', () => { selectedId = el.dataset.entry; draw(); }));
+      const pages = entry ? historyPages(entry) : []; if (!pages.some(p => p[0] === page)) page = 'result';
+      $('[data-summary]', root).textContent = entry ? `${HISTORY_SUMMARY[entry.status] || 'Zapisany wynik'} · ${historyStamp(entry.ts, true)}\nZapisany stan dokumentu; ten podgląd nie zmienia bieżącej wizyty.` : 'Ten wpis nie zawiera zapisanego przebiegu przygotowania dokumentu.';
+      $('[data-doc-tabs]', root).innerHTML = pages.map(([id, label, title]) => `<button type="button" role="tab" class="oa-tab ${page === id ? 'active' : ''}" aria-selected="${page === id}" data-page="${id}" title="${esc(title)}">${esc(label)}</button>`).join('');
+      $$('[data-page]', $('[data-doc-tabs]', root)).forEach(el => el.addEventListener('click', () => { page = el.dataset.page; draw(); }));
+      const text = $('[data-doc-text]', root); text.hidden = !entry; text.value = pages.find(p => p[0] === page)?.[3] || '';
+      const copy = $('[data-action="copy-history"]', root); copy.disabled = !entry; $('span', copy).textContent = entry?.approved ? 'Kopiuj wynik' : 'Kopiuj wersję roboczą';
+      $('[data-action="delete-history"]', root).disabled = !entry;
+    }
+    $('[data-list]', root).addEventListener('keydown', e => { if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return; e.preventDefault(); const items = visible(), i = items.findIndex(x => x.id === selectedId), next = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (next) { selectedId = next.id; draw(); $('.oa-hist-item.selected', root)?.focus(); } });
+    $('.oa-hist-search', root).addEventListener('input', e => { filter = e.target.value.trim().toLowerCase(); draw(); });
+    bind(root, 'copy-history', () => { const e = state.history.find(x => x.id === selectedId); if (e) copyText((e.approved || e.reviewed).map(f => f.label + ':\n' + f.text).join('\n\n'), $('[data-action="copy-history"]', root)); });
+    bind(root, 'delete-history', () => { const id = selectedId; if (!id) return; messageBox({id: 'opisai-history-delete', title: 'Usuń wpis z historii?', icon: 'question', text: 'Usunąć ten dokument z historii OpisAI?', buttons: [{label: 'Nie', action: 'close', default: true}, {label: 'Tak', action: 'yes', primary: true, onClick: () => { state.history = state.history.filter(e => e.id !== id); draw(); }}]}); });
+    bind(root, 'refresh', draw); bind(root, 'close', () => win.close());
+    historyRefresh = () => { if (win.el?.isConnected) draw(); };
+    draw();
+  }
+  function clearHistory(after) {
+    if (!state.history.length) { toast('Historia jest już pusta.'); return; }
+    messageBox({id: 'opisai-clear-history', title: 'OpisAI — wyczyść historię', icon: 'info', heading: 'Potwierdzenie', text: 'Wyczyścić historię tej sesji? Wpisy znikną z listy. Treść wizyty w Klinice pozostanie bez zmian.', buttons: [{label: 'Anuluj', action: 'close', default: true}, {label: 'Wyczyść historię', action: 'clear', primary: true, onClick: () => { state.history = []; historyRefresh?.(); after?.(); }}]});
   }
   function about(initial='about'){
     let page=typeof initial==='string'?initial:'about';
