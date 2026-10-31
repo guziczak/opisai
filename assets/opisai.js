@@ -173,7 +173,7 @@
       state.review=null;state.operation=null;win.close();state.active=null;setPhase('done');if(result.selected[0])Clinic.focusField(result.selected[0]);
       Shell.notify({title:'OpisAI — gotowe',message:`Wpisano ${result.selected.length===1?'tekst do pola':`tekst do ${result.selected.length} pól`}. Wizyta czeka na zapis w Klinice.`,icon:'opisai',actionLabel:'Cofnij wpis',onAction:undo});
     });
-    bind(root,'compose',()=>{win.close();state.review=null;prepare({sources:{...result.snapshot,...result.edited},snapshot:result.snapshot,session:result.session,fromDictation:true});});
+    bind(root,'compose',()=>{win.close();state.review=null;const now=getFields();prepare({sources:{...now,...result.edited},snapshot:{...now,...result.snapshot},session:result.session,fromDictation:true});}); // _compose_dictation: the visit is read again; the dictated field keeps its read from the start of the dictation
     bind(root,'continue',()=>{win.close();state.review=null;dictate({field:result.field||keys[0],base:result.edited[result.field||keys[0]],snapshot:result.snapshot,session:result.session,continuation:true,direct:true});});
     draw();
   }
@@ -251,7 +251,7 @@
     const engine=preferences.transcriber,chat=engine==='chatgpt_browser',two=chat&&preferences.cardMode==='two',takes=options.continuation?(saved?.takes||1):0;
     const prep=chat?(two?1.4:1.6):engine==='gemini'?1.1:2.2,diarization=engine==='local_whisper'&&preferences.diarization;
     if(diarization)errorCard('Rozpoznawanie mówców pominięte: brak biblioteki pyannote. Konfiguracja → sekcja transkrypcji → Rozpoznawanie mówców → „Pobierz brakujące składniki”.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});
-    const rec=state.recording={id:++state.token,engine,chat,two,clip:chat&&preferences.chatgptClip,auto:chat&&preferences.autoEnter?preferences.autoEnterSeconds:0,key,label:FIELDS[key],snapshot:clone(fields),session:ctx.session,base,
+    const rec=state.recording={id:++state.token,engine,chat,two,clip:chat&&preferences.chatgptClip,auto:chat&&preferences.autoEnter?preferences.autoEnterSeconds:0,key,label:FIELDS[key],snapshot:{[key]:fields[key]||''},session:ctx.session,base, // capture(hwnd,[key]): only the dictated field guards the note's write
       continuation:!!options.continuation,restore:options.continuation?options:null,takes:takes+1,t:0,at:performance.now(),prep,started:null,listening:false,stopping:null,stopAt:null,result:false,resultAt:0,cancelled:false,
       status:chat?(two?'Otwieram dyktowanie ChatGPT… Zacznij mówić po potwierdzeniu uruchomienia mikrofonu.':'Otwieram karty ChatGPT… Mikrofon otworzy OpisAI, gdy pierwsza karta będzie gotowa.'):engine==='gemini'?'🎙 Łączę z Gemini… za chwilę mów. Przytrzymaj bąbelek, aby zakończyć.':'🧠 Ładuję lokalny model Whisper… pierwsze użycie może chwilę potrwać. Przytrzymaj bąbelek, aby zakończyć.',
       command:null,text:'',shown:'',said:'',speech:dictationSpeech(DICTATION_SAMPLES[takes]||[],prep+.9),audio:[],level:null,wave:{cols:[],clock:0,last:null,quiet:null,bucket:null},

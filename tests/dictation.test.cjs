@@ -186,6 +186,16 @@ test('dictation always goes into "Badanie kliniczne", whatever field was active 
   assert.equal(r.transcription.backend, 'chatgpt_browser'); assert.equal(r.session, 1);
 });
 
+test('only the dictated field guards the note: "Wywiad" edited during the dictation does not block "Wpisz samą notatkę"', () => {
+  const f = fixture({ prefs: { transcriber: 'local_whisper' } });
+  f.api.dictate(); f.advance(4500);
+  f.clinic.text.wywiad += ' Uzupełnienie wywiadu.';
+  f.api.finishDictation(); f.advance(3000);
+  assert.equal(f.reviews.length, 1);
+  assert.deepEqual(Object.keys(f.reviews[0].snapshot), ['badanie'], 'SafeCoordinator.begin_dictation: capture(hwnd, [key])');
+  assert.equal(f.reviews[0].snapshot.badanie, 'Stan ogólny obniżony.', 'the field as read at the start');
+});
+
 test('ChatGPT: Enter is "Przepisz fragment" — the recording goes on and the text returns after the fragment is transcribed', () => {
   const f = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
   f.api.dictate(); f.advance(300);
