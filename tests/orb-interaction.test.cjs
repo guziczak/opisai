@@ -95,7 +95,7 @@ class Element extends Target {
 
 // rafLag > 0 stamps every frame that many milliseconds before the call that requested it, as Chromium does
 // (the frame's start time); 0 keeps the stamp at the harness clock.
-function fixture({ reduced = false, saved = null, prefs = {}, editor = true, main = true, rafLag = 0 } = {}) {
+function fixture({ reduced = false, saved = null, prefs = {}, editor = true, main = true, rafLag = 0, spelling = null } = {}) {
   const doc = new Target(), win = new Target(), media = new Target(), frames = new Map(), timers = new Map(), intervals = new Map();
   const actions = [], menus = [], shown = [], toasts = [], opened = [], api = {}, storage = new Map(); let now = 0, serial = 0, stack = [];
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body);
@@ -121,7 +121,7 @@ function fixture({ reduced = false, saved = null, prefs = {}, editor = true, mai
     createWindow: options => { const el = doc.createElement('section'); doc.body.append(el); const w = { id: options.id, el, content: el, closed: false, options,
       show() { shown.push(options.id); }, focus() {}, close() { this.closed = true; el.remove(); options.onClose?.(); }, setTitle() {}, setContent() {} }; return w; }
   };
-  win.Clinic = clinic; win.Shell = shell;
+  win.Clinic = clinic; win.Shell = shell; if (spelling) win.OpisAISpelling = spelling; // assets/opisai-spelling.js loads before opisai.js
   const context = vm.createContext({ window: win, document: doc, Element, __actions: actions, __orbHarness: api, Clinic: clinic, Shell: shell,
     innerWidth: 1200, innerHeight: 800, performance: { now: () => now }, matchMedia: () => media, navigator: {},
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)) },
@@ -308,7 +308,9 @@ test('right click shows the tray menu 1:1 (order, separators and submenus)', () 
     '🎤  Dyktowanie (lub przytrzymaj bąbelek)', '🎙  Profil głosu (rozpoznawanie mówców)…', 'Podpowiedzi pisowni ►', '🎮  Tryb fizyki (easter egg)', '---',
     'Konfiguracja...', '---', 'O aplikacji...', '---', 'Zamknij', '---', 'Bezpieczny zapis i odzyskiwanie ►']);
   const sub = label => plain(items.find(item => item.label === label).children().map(item => item.label + (item.disabled ? ' (wył.)' : '') + (item.checked ? ' ✓' : '')));
-  assert.deepEqual(sub('Podpowiedzi pisowni'), ['Podkreślaj podejrzane słowa w Klinice ✓', 'Sugestie dla aktywnej wizyty…', 'Cofnij ostatnią poprawkę pisowni', 'Mój słownik…', 'Sprawdzanie pisowni (wył.)']);
+  // rc32 _refresh_spelling_menu: suggestions and undo need the spelling service, the setting and an active visit
+  // window; this fixture has no spelling service, so both are disabled and the status keeps its first text.
+  assert.deepEqual(sub('Podpowiedzi pisowni'), ['Podkreślaj podejrzane słowa w Klinice ✓', 'Sugestie dla aktywnej wizyty… (wył.)', 'Cofnij ostatnią poprawkę pisowni (wył.)', 'Mój słownik…', 'Sprawdzanie pisowni (wył.)']);
   assert.deepEqual(sub('Bezpieczny zapis i odzyskiwanie'), ['Cofnij ostatni potwierdzony wpis…', 'Sprawdź niepotwierdzone operacje…']);
   assert.deepEqual(sub('Wskaż pole tekstowe'), ['Wywiad:', 'Badanie kliniczne:', 'Diagnoza:']);
   assert.equal(options.className, 'oa-menu'); assert.equal(options.flip, true);
@@ -318,6 +320,31 @@ test('right click shows the tray menu 1:1 (order, separators and submenus)', () 
   assert.match(f.toasts.at(-1), /„Skonfiguruj rączki” jest niedostępne w demonstracji/);
   options.onClose(); const [px, py] = f.press(100); f.pointer('pointerup', px, py); f.advance(100);
   assert.deepEqual(f.actions, [], 'the click that closes the menu does not reach the bubble');
+});
+
+test('the spelling submenu follows the one spelling state (rc32 _refresh_spelling_menu, _set_spelling_enabled)', () => {
+  const calls = []; let host = null, available = true;
+  const spelling = { connect(next) { host = next; }, refresh() { calls.push('refresh'); }, available: () => available, status: () => 'Pisownia gotowa · słownik demonstracyjny',
+    showIssues() { calls.push('issues'); }, undo() { calls.push('undo'); }, editWords() { calls.push('words'); } };
+  const f = fixture({ spelling }), [x, y] = f.center(), open = () => { f.menus.length = 0; f.orb.dispatchEvent({ type: 'contextmenu', clientX: x, clientY: y }); return f.menus[0].items.find(item => item.label === 'Podpowiedzi pisowni').children(); };
+  assert(host, 'OpisAI connects its state to the spelling layer');
+  const sub = () => plain(open().map(item => item.label + (item.disabled ? ' (wył.)' : '') + (item.checked ? ' ✓' : '')));
+  assert.deepEqual(sub(), ['Podkreślaj podejrzane słowa w Klinice ✓', 'Sugestie dla aktywnej wizyty…', 'Cofnij ostatnią poprawkę pisowni', 'Mój słownik…', 'Pisownia gotowa · słownik demonstracyjny (wył.)']);
+  const items = open(); items[1].onClick(); items[2].onClick(); items[3].onClick();
+  assert.deepEqual(calls, ['issues', 'undo', 'words']);
+  available = false; assert.deepEqual(sub().slice(1, 3), ['Sugestie dla aktywnej wizyty… (wył.)', 'Cofnij ostatnią poprawkę pisowni (wył.)'], 'no active visit window: both disabled');
+  open()[0].onClick();
+  assert.equal(host.enabled(), false, 'the check item is the one source of the setting'); assert.equal(f.api.preferences.spelling, false);
+  assert.equal(JSON.parse(f.storage.get('opisai-demo-settings-v12')).spelling, false, 'and it is saved'); assert.equal(calls.at(-1), 'refresh');
+  available = true; assert.deepEqual(sub().slice(0, 3), ['Podkreślaj podejrzane słowa w Klinice', 'Sugestie dla aktywnej wizyty… (wył.)', 'Cofnij ostatnią poprawkę pisowni (wył.)'], 'off: nothing to suggest or undo');
+  open()[0].onClick(); assert.equal(host.enabled(), true);
+  // SafeCoordinator.busy: no lines while OpisAI works; its passive windows do not count.
+  assert.equal(host.busy(), false);
+  f.api.open('opisai-about'); assert.equal(host.busy(), false, 'About is not work');
+  const review = f.api.open('opisai-review'); assert.equal(host.busy(), true, 'an open work view'); review.close(); assert.equal(host.busy(), false);
+  f.api.setPhase('processing'); assert.equal(host.busy(), true); f.api.setPhase('idle');
+  f.api.state.recording = {}; assert.equal(host.busy(), true, 'dictation'); f.api.state.recording = null;
+  assert.equal(host.running(), true); f.api.closeApp(); f.advance(2000); assert.equal(host.running(), false, 'a closed OpisAI draws nothing');
 });
 
 test('the menu and the model tooltip follow the OpisAI theme, not the desktop theme', () => {
