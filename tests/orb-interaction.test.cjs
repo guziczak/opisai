@@ -76,6 +76,7 @@ class Element extends Target {
   contains(other) { for (let node = other; node; node = node.parentNode) if (node === this) return true; return false; }
   matches(selector) {
     if (selector.includes(',')) return selector.split(',').some(part => this.matches(part.trim()));
+    if (selector === ':focus-visible') return this.doc.activeElement === this; // keyboard focus in these tests
     if (selector.startsWith('.')) return this.classList.contains(selector.slice(1));
     if (selector.startsWith('#')) return this.getAttribute('id') === selector.slice(1);
     const attr = selector.match(/^\[([\w-]+)(?:="([^"]*)")?\]$/);
@@ -92,7 +93,9 @@ class Element extends Target {
   releasePointerCapture(id) { if (this.captures.delete(id)) this.dispatchEvent({ type: 'lostpointercapture', pointerId: id }); }
 }
 
-function fixture({ reduced = false, saved = null, prefs = {}, editor = true, main = true } = {}) {
+// rafLag > 0 stamps every frame that many milliseconds before the call that requested it, as Chromium does
+// (the frame's start time); 0 keeps the stamp at the harness clock.
+function fixture({ reduced = false, saved = null, prefs = {}, editor = true, main = true, rafLag = 0 } = {}) {
   const doc = new Target(), win = new Target(), media = new Target(), frames = new Map(), timers = new Map(), intervals = new Map();
   const actions = [], menus = [], shown = [], toasts = [], opened = [], api = {}, storage = new Map(); let now = 0, serial = 0, stack = [];
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body);
@@ -113,7 +116,8 @@ function fixture({ reduced = false, saved = null, prefs = {}, editor = true, mai
   const clinic = { editor, main, isEditorOpen: () => clinic.editor, isOpen: () => clinic.main, open: () => { opened.push('main'); clinic.main = true; }, openEditor: () => opened.push('editor'), getFields: () => ({ wywiad: '', badanie: '', diagnoza: '' }) };
   const shell = {
     menu: (items, x, y, options) => { menus.push({ items, x, y, options }); return { querySelector: () => null }; },
-    toast: message => toasts.push(message), confirm: o => toasts.push(o.message), windows: new Map(),
+    toast: message => { toasts.push(message); const el = doc.createElement('div'); el.className = 'status-toast'; doc.body.append(el); return el; },
+    confirm: o => toasts.push(o.message), windows: new Map(),
     createWindow: options => { const el = doc.createElement('section'); doc.body.append(el); const w = { id: options.id, el, content: el, closed: false, options,
       show() { shown.push(options.id); }, focus() {}, close() { this.closed = true; el.remove(); options.onClose?.(); }, setTitle() {}, setContent() {} }; return w; }
   };
@@ -123,7 +127,7 @@ function fixture({ reduced = false, saved = null, prefs = {}, editor = true, mai
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)) },
     setTimeout: (fn, delay = 0) => { timers.set(++serial, { fn, due: now + delay }); return serial; }, clearTimeout: id => timers.delete(id),
     setInterval: (fn, delay) => { intervals.set(++serial, { fn, delay, due: now + delay }); return serial; }, clearInterval: id => intervals.delete(id),
-    requestAnimationFrame: fn => { frames.set(++serial, fn); return serial; }, cancelAnimationFrame: id => frames.delete(id),
+    requestAnimationFrame: fn => { frames.set(++serial, { fn, at: now }); return serial; }, cancelAnimationFrame: id => frames.delete(id),
     Intl, Date, JSON, Math, Object, Array, Number, String, Map, Set, Promise
   });
   vm.runInContext(motionSource, context, { filename: 'assets/orb-motion.js' });
@@ -135,7 +139,7 @@ function fixture({ reduced = false, saved = null, prefs = {}, editor = true, mai
       now = Math.min(end, now + 1000 / 60);
       for (const [id, timer] of [...timers].sort((a, b) => a[1].due - b[1].due)) if (timer.due <= now && timers.delete(id)) timer.fn();
       for (const interval of intervals.values()) while (interval.due <= now) { interval.due += interval.delay; interval.fn(); }
-      const pending = [...frames.values()]; frames.clear(); pending.forEach(fn => fn(now));
+      const pending = [...frames.values()]; frames.clear(); pending.forEach(({ fn, at }) => fn(rafLag ? at - rafLag : now));
     }
   }
   function pointer(type, x, y, extra = {}) {
@@ -286,6 +290,7 @@ test('Klinika not running: the notice offers "▶ Uruchom Klinikę", which start
   action.dispatchEvent({ type: 'click' }); f.advance(400);
   assert.deepEqual(f.opened, ['main'], 'only the main window opens'); assert.equal(f.clinic.editor, false);
   assert.equal(f.doc.querySelectorAll('.oa-error-card').length, 0, 'the notice closes');
+  assert.equal(f.api.state.handlingFailure, false, 'rc32 _launch_klinika: the next failure is shown again');
 });
 
 test('Gotowe returns after 4 s, but not while the bubble is held', () => {
@@ -308,8 +313,21 @@ test('right click shows the tray menu 1:1 (order, separators and submenus)', () 
   assert.deepEqual(sub('Wskaż pole tekstowe'), ['Wywiad:', 'Badanie kliniczne:', 'Diagnoza:']);
   assert.equal(options.className, 'oa-menu'); assert.equal(options.flip, true);
   assert(!items.some(item => /Historia|Ukryj|Kontakt|Przygotuj opis/.test(item.label || '')), 'no entries rc32 does not have');
+  for (const label of ['Wybierz okno główne...', 'Wybierz podokno opisu...', 'Skonfiguruj rączki (main)...']) items.find(item => item.label === label).onClick();
+  assert.equal(f.doc.querySelectorAll('.status-toast').length, 1, 'each "niedostępne" notice replaces the last; they never stack over the bubble');
+  assert.match(f.toasts.at(-1), /„Skonfiguruj rączki” jest niedostępne w demonstracji/);
   options.onClose(); const [px, py] = f.press(100); f.pointer('pointerup', px, py); f.advance(100);
   assert.deepEqual(f.actions, [], 'the click that closes the menu does not reach the bubble');
+});
+
+test('the menu and the model tooltip follow the OpisAI theme, not the desktop theme', () => {
+  for (const [theme, dark] of [['light', false], ['dark', true], ['blue', false]]) {
+    const f = fixture({ prefs: { theme } }), [x, y] = f.center(); f.doc.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');
+    f.orb.dispatchEvent({ type: 'contextmenu', clientX: x, clientY: y });
+    assert.equal(f.menus[0].options.className, dark ? 'oa-menu oa-theme-dark' : 'oa-menu', theme);
+    f.wrap.dispatchEvent({ type: 'pointerover' }); f.orb.dispatchEvent({ type: 'pointermove', buttons: 0, pointerId: 9, clientX: x, clientY: y }); f.advance(800);
+    const hint = f.doc.querySelector('.oa-orb-hint'); assert(hint && !hint.hidden, theme); assert.equal(hint.classList.contains('oa-theme-dark'), dark, theme);
+  }
 });
 
 test('labelled actions per state appear 250 ms after hovering and go 300 ms after leaving', () => {
@@ -320,6 +338,76 @@ test('labelled actions per state appear 250 ms after hovering and go 300 ms afte
   f.advance(500); assert.equal(Number(actions.style.opacity), 1); assert(actions.classList.contains('is-live'));
   f.wrap.dispatchEvent({ type: 'pointerout', relatedTarget: null }); f.advance(250); assert.equal(Number(actions.style.opacity), 1);
   f.advance(500); assert.equal(Number(actions.style.opacity), 0);
+});
+
+test('reduced motion: hovering or keyboard focus shows the actions at once, also with frames stamped before the kick', () => {
+  const f = fixture({ reduced: true, rafLag: 6 }), actions = f.wrap.querySelector('.oa-orb-actions');
+  f.wrap.dispatchEvent({ type: 'pointerover' }); f.advance(300);
+  assert.equal(Number(actions.style.opacity), 1, 'hover shows the actions'); assert(actions.classList.contains('is-live'), 'and makes them clickable');
+  f.wrap.dispatchEvent({ type: 'pointerout', relatedTarget: null }); f.advance(400);
+  assert.equal(Number(actions.style.opacity), 0); assert(!actions.classList.contains('is-live'));
+  const chip = f.wrap.querySelector('[data-orb-action="describe"]'), outside = f.doc.createElement('button'); f.doc.body.append(outside);
+  chip.focus(); f.wrap.dispatchEvent({ type: 'focusin', target: chip }); f.advance(50);
+  assert.equal(Number(actions.style.opacity), 1, 'a focused action is never invisible'); assert(actions.classList.contains('is-live'));
+  outside.focus(); f.wrap.dispatchEvent({ type: 'focusout', target: chip, relatedTarget: outside }); f.advance(50);
+  assert.equal(Number(actions.style.opacity), 0, 'the actions go with the focus'); assertIdle(f);
+});
+
+test('keyboard focus shows the actions every time it enters the bubble and hides them every time it leaves', () => {
+  const f = fixture({ rafLag: 6 }), actions = f.wrap.querySelector('.oa-orb-actions'), chip = f.wrap.querySelector('[data-orb-action="dictate"]');
+  const outside = f.doc.createElement('button'); f.doc.body.append(outside);
+  for (let round = 0; round < 6; round++) {
+    const target = round % 2 ? chip : f.orb;
+    target.focus(); f.wrap.dispatchEvent({ type: 'focusin', target }); f.advance(500);
+    assert.equal(Number(actions.style.opacity), 1, `focus ${round}`);
+    outside.focus(); f.wrap.dispatchEvent({ type: 'focusout', target, relatedTarget: outside }); f.advance(500);
+    assert.equal(Number(actions.style.opacity), 0, `leave ${round}`);
+  }
+  assertIdle(f);
+});
+
+test('reduced motion: REC shows the five still bars at once, not the cross', () => {
+  const f = fixture({ reduced: true }); f.api.setPhase('recording'); f.advance(50);
+  assert.equal(f.wrap.querySelector('.oa-orb-wordmark').textContent, 'REC');
+  assert.equal(f.wrap.querySelector('[data-part="arm"]').style.display, 'none', 'no cross arm');
+  const bars = [0, 1, 2, 3, 4].map(i => f.wrap.querySelector(`[data-bar="${i}"]`));
+  assert(bars.every(bar => bar.style.display !== 'none'), 'five bars');
+  assert.deepEqual(bars.map(bar => bar.getAttribute('height')), ['19.41', '8.49', '19.41', '8.49', '19.41'], 'tall, short, tall, short, tall');
+  assertIdle(f);
+});
+
+test('state changes are announced in a polite status region; the notice message is an alert', () => {
+  const f = fixture(), live = f.doc.querySelector('.oa-orb-status');
+  assert.equal(live.getAttribute('role'), 'status'); assert.equal(live.getAttribute('aria-live'), 'polite'); assert(!f.wrap.contains(live), 'audible while the bubble is hidden');
+  f.api.setPhase('processing'); assert.equal(live.textContent, 'OpisAI — przetwarzanie');
+  f.api.setPhase('recording'); assert.equal(live.textContent, 'OpisAI — nagrywanie (REC)');
+  f.api.setPhase('review'); assert.equal(live.textContent, 'OpisAI — Sprawdź');
+  f.api.setPhase('idle'); assert.equal(live.textContent, '', 'idle clears it, so the next state is heard even when repeated');
+  f.api.setPhase('done'); assert.equal(live.textContent, 'OpisAI — Gotowe');
+  const g = fixture({ editor: false }); g.click(); assert.equal(g.doc.querySelector('.oa-orb-status').textContent, 'OpisAI — Błąd');
+  g.advance(450); const card = g.doc.querySelector('.oa-error-card');
+  assert.equal(card.getAttribute('role'), 'group', 'not an alertdialog: the notice never takes the focus');
+  assert.equal(card.querySelector('.oa-error-body').getAttribute('role'), 'alert');
+});
+
+test('"Anuluj" stops the microphone start or the last-text receipt; "Pokaż" brings the receipt forward', () => {
+  const f = fixture(); f.api.state.recording = { listening: false, tick: 0, canvasFrame: 0 }; f.api.setPhase('processing'); f.advance(20);
+  assert.deepEqual(f.chips(), ['show', 'cancel']);
+  f.wrap.querySelector('[data-orb-action="cancel"]').dispatchEvent({ type: 'click' });
+  assert.equal(f.api.state.recording, null, 'the start is aborted'); assert.equal(f.phase, 'idle'); assert.match(f.toasts.at(-1), /Dyktowanie anulowane/);
+  let delivered = 0;
+  f.api.state.receipt = { deliver() { delivered++; f.api.state.receipt = null; } }; f.api.setPhase('processing'); f.advance(20);
+  f.wrap.querySelector('[data-orb-action="show"]').dispatchEvent({ type: 'click' }); assert.equal(delivered, 1, '"Pokaż" shows the review at once');
+  f.api.state.receipt = { deliver() { delivered++; } }; f.api.setPhase('processing'); f.advance(20);
+  f.wrap.querySelector('[data-orb-action="cancel"]').dispatchEvent({ type: 'click' });
+  assert.equal(f.api.state.receipt, null); assert.equal(f.phase, 'idle'); assert.equal(delivered, 1, 'a cancelled receipt is never reviewed');
+});
+
+test('the drop frame marches like the Qt pen: [6, 5] in 2.4 px pen widths, square caps, about 90 px/s', () => {
+  const css = fs.readFileSync(path.join(__dirname, '../assets/opisai.css'), 'utf8'), ants = css.match(/\.oa-field-mark \.ants\s*\{([^}]*)\}/)[1];
+  assert.match(ants, /stroke-width:\s*2\.4;/); assert.match(ants, /stroke-dasharray:\s*14\.4 12;/); assert.match(ants, /stroke-linecap:\s*square;/);
+  const duration = Number(ants.match(/animation:\s*oa-ants\s+([\d.]+)s/)[1]), offset = Number(css.match(/@keyframes oa-ants\s*\{\s*to\s*\{\s*stroke-dashoffset:\s*(-?[\d.]+)/)[1]);
+  assert.equal(offset, -26.4, 'one 26.4 px period per cycle, marching forward'); assert(Math.abs(26.4 / duration - 1.5 * 2.4 * 25) < 1, 'rc32 moves -1.5 pen widths every 40 ms');
 });
 
 test('interrupted gestures clear capture and hold without a later action', () => {

@@ -194,8 +194,11 @@
   pointer-events: none;
 }
 .oa-orb-hint[hidden] { display: none; }
-:root[data-theme="dark"] .oa-orb-hint { background: #292b2f; color: #edf0f4; border-color: #42454b; }
-/* Drop target: marching dashed frame over the field (FieldHighlightOverlay). */
+/* Light or dark with the OpisAI theme (Wygląd → Motyw aplikacji), like rc32 _theme_is_dark, not with the desktop. */
+.oa-orb-hint.oa-theme-dark { background: #292b2f; color: #edf0f4; border-color: #42454b; }
+/* Drop target: marching dashed frame over the field (FieldHighlightOverlay).
+ * Qt counts setDashPattern([6, 5]) and the -1.5 offset per 40 ms in pen widths (2.4 px) and adds square caps:
+ * 16.8 px dashes, 9.6 px gaps, a 26.4 px period marching about 90 px/s. */
 .oa-field-mark { position: fixed; z-index: 9; pointer-events: none; }
 .oa-field-mark svg { display: block; overflow: visible; }
 .oa-field-mark rect { fill: none; }
@@ -203,10 +206,11 @@
 .oa-field-mark .ants {
   stroke: var(--accent, #0078d4);
   stroke-width: 2.4;
-  stroke-dasharray: 6 5;
+  stroke-dasharray: 14.4 12;
+  stroke-linecap: square;
   animation: oa-ants .293s linear infinite;
 }
-@keyframes oa-ants { to { stroke-dashoffset: -11; } }
+@keyframes oa-ants { to { stroke-dashoffset: -26.4; } }
 .oa-orb-splash { position: fixed; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 9; }
 /* ErrorBubble: an organic red card budding from the bubble. */
 .oa-error-card { position: fixed; left: 0; top: 0; z-index: 12; pointer-events: none; font-family: 'Segoe UI', 'Selawik', Arial, sans-serif; }
@@ -221,7 +225,10 @@
   pointer-events: auto;
 }
 .oa-error-head { display: flex; align-items: center; gap: 8px; }
-.oa-error-head strong { flex: 1; font-size: 16px; font-weight: 700; color: #7f1d1d; }
+/* rc32 paints the title #e74c3c and the action #0ea5e9 on the red blob (1.0:1 and 1.4:1). Both are deep red here:
+ * #2a0606 keeps 4.9:1 on #ef4444 and 6.0:1 on the lighter centre (WCAG AA for 16 px and 14.7 px bold).
+ * The message keeps rc32's white (_readable_text_on). */
+.oa-error-head strong { flex: 1; font-size: 16px; font-weight: 700; color: #2a0606; }
 .oa-error-close {
   flex: 0 0 32px;
   width: 32px;
@@ -247,7 +254,7 @@
   font: 14.67px/1.3 'Segoe UI', 'Selawik', Arial, sans-serif;
   cursor: pointer;
 }
-.oa-error-action { color: #a5f3fc; font-weight: 700; }
+.oa-error-action { color: #2a0606; font-weight: 700; }
 .oa-error-action:hover,
 .oa-error-action:focus-visible { text-decoration: underline; outline: none; }
 .oa-error-copy:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 3px; }
@@ -274,9 +281,10 @@
 .shell-menu.oa-menu button.menu-checked::before { display: none; }
 .shell-menu.oa-menu .menu-rule { margin: 4px 2px; background: #ccd4df; }
 .shell-menu.oa-menu .menu-label { white-space: nowrap; }
-:root[data-theme="dark"] .shell-menu.oa-menu { background: #292b2f; color: #edf0f4; border-color: #42454b; }
-:root[data-theme="dark"] .shell-menu.oa-menu .menu-rule { background: #42454b; }
-:root[data-theme="dark"] .shell-menu.oa-menu button:disabled { color: #7e8590; }
+/* The OpisAI theme decides (rc32 _apply_system_menu_theme → ui_stylesheet("auto") → _theme_is_dark). */
+.shell-menu.oa-menu.oa-theme-dark { background: #292b2f; color: #edf0f4; border-color: #42454b; }
+.shell-menu.oa-menu.oa-theme-dark .menu-rule { background: #42454b; }
+.shell-menu.oa-menu.oa-theme-dark button:disabled { color: #7e8590; }
 /* Tryb fizyki magnet (MagnetOverlay): a blue pull zone with falling chevrons. */
 .oa-magnet {
   position: fixed;

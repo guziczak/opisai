@@ -43,7 +43,7 @@
   /* The compose view. The bubble stays at rest (blue "OpisAI") while it is open; its actions recall it. */
   function prepare(options={}) {
     options=typeof options==='string'?{field:options}:validOption(options);
-    if(!visitReady())return;
+    beginOperation();if(!visitReady())return; // also "Odczytaj ponownie" and "Generuj opis" from the review
     closeWin('opisai-review');
     const snapshot=clone(options.snapshot||getFields());
     const sources=clone(options.sources||snapshot);
@@ -236,11 +236,16 @@
     if(!text){setPhase('idle');toast('Nie odebrano tekstu do sprawdzenia.');return;}
     const withBefore=rec.base?text:[rec.snapshot[rec.field],text].filter(Boolean).join('\n\n'),receipt=state.receipt={id:rec.id};
     setPhase('processing'); // REC ends with the recording; the last text is still arriving
-    setTimeout(()=>{if(state.receipt!==receipt)return;state.receipt=null;review({id:rec.id,snapshot:rec.snapshot,sources:{...rec.snapshot,[rec.field]:withBefore},output:{[rec.field]:withBefore},variant:{rich:false,panel:false,diagnosis:false},field:rec.field,mode:'dictation',route:'Przykładowe dyktowanie',created:new Date().toISOString()});},600);
+    receipt.deliver=()=>{if(state.receipt!==receipt)return;state.receipt=null;review({id:rec.id,snapshot:rec.snapshot,sources:{...rec.snapshot,[rec.field]:withBefore},output:{[rec.field]:withBefore},variant:{rich:false,panel:false,diagnosis:false},field:rec.field,mode:'dictation',route:'Przykładowe dyktowanie',created:new Date().toISOString()});};
+    setTimeout(receipt.deliver,600); // "Pokaż" or a click delivers it at once
+  }
+  function dropDictation(){ // discard the recording, its microphone start or its last-text receipt
+    const rec=state.recording;if(rec){clearInterval(rec.tick);cancelAnimationFrame(rec.canvasFrame);}
+    state.recording=null;state.receipt=null;closeWin('opisai-dictation');closeWin('opisai-discard');state.active=null;setPhase('idle');
   }
   function confirmDiscardDictation(){
     const html=`<div class="oa-app"><header class="oa-header"><h2>Odrzucić bieżące dyktowanie?</h2></header><div class="oa-content"><p>Tekst tego dyktowania nie zostanie wpisany do pól. Możesz też zakończyć nagranie i sprawdzić zachowaną notatkę.</p></div><footer class="oa-footer">${button('Wróć do nagrania','back')}${button('Odrzuć','discard','danger')}${button('Sprawdź tekst','review','primary')}</footer></div>`;
-    const win=makeWindow('opisai-discard','OpisAI — zakończenie dyktowania',560,250,html);bind(win.content,'back',()=>win.close());bind(win.content,'review',()=>{win.close();finishDictation();});bind(win.content,'discard',()=>{const rec=state.recording;if(rec){clearInterval(rec.tick);cancelAnimationFrame(rec.canvasFrame);}state.recording=null;win.close();closeWin('opisai-dictation');state.active=null;setPhase('idle');});
+    const win=makeWindow('opisai-discard','OpisAI — zakończenie dyktowania',560,250,html);bind(win.content,'back',()=>win.close());bind(win.content,'review',()=>{win.close();finishDictation();});bind(win.content,'discard',()=>{win.close();dropDictation();});
   }
 
   const settingsNav=[
@@ -276,7 +281,7 @@
       } else if(page==='fields'){
         const values=getFields();
         area.innerHTML=`<h2>Odczyt pola (Klinika)</h2><p>Powiązanie OpisAI z polami w oknie opisu wizyty.</p><fieldset class="oa-group"><legend>Okno docelowe</legend>${formRow('Program','<div class="oa-form-control"><strong>Klinika XP</strong><div class="oa-form-help">Bieżąca wizyta · przykład interaktywny</div></div>')}<div class="oa-inline-controls">${button('Pokaż Klinikę','show-clinic','','clinic')}${button('Odczytaj ponownie','read-fields','','document')}</div></fieldset><fieldset class="oa-group"><legend>Przypisane pola</legend><table class="oa-options-table"><thead><tr><th>Pole</th><th>Stan</th><th></th></tr></thead><tbody>${Object.entries(FIELDS).map(([key,label])=>`<tr><td>${esc(label)}</td><td><span class="oa-success-text">${icon('check',12)} Przypisane</span><br><small class="oa-muted">${String(values[key]||'').length} znaków</small></td><td>${button('Pokaż','field-'+key,'small','eye')}</td></tr>`).join('')}</tbody></table></fieldset><fieldset class="oa-group"><legend>Pisownia</legend>${switchControl('spelling','Podkreślaj podejrzane słowa w Klinice','Sugestie dotyczą widocznego przykładu. Poprawkę wybierasz samodzielnie.',draft)}</fieldset>`;
-        bind(area,'show-clinic',()=>Clinic.open());bind(area,'read-fields',()=>{draw();toast('Odczytano bieżącą treść trzech pól.');});Object.keys(FIELDS).forEach(key=>bind(area,'field-'+key,()=>{if(!visitReady())return;win.minimize();Clinic.focusField(key);Clinic.markTarget?.(key,true);setTimeout(()=>Clinic.markTarget?.(key,false),1800);}));
+        bind(area,'show-clinic',()=>Clinic.open());bind(area,'read-fields',()=>{draw();toast('Odczytano bieżącą treść trzech pól.');});Object.keys(FIELDS).forEach(key=>bind(area,'field-'+key,()=>{beginOperation();if(!visitReady())return;win.minimize();Clinic.focusField(key);Clinic.markTarget?.(key,true);setTimeout(()=>Clinic.markTarget?.(key,false),1800);}));
       } else if(page==='appearance'){
         area.innerHTML=`<h2>Wygląd</h2><p>Kolory i czytelność okien OpisAI.</p><fieldset class="oa-group"><legend>Motyw aplikacji</legend><div class="oa-theme-choice">${[['light','Jasny'],['dark','Ciemny'],['blue','Niebieski']].map(([value,label])=>`<button type="button" class="oa-theme-card ${draft.theme===value?'selected':''}" data-theme="${value}"><span class="oa-theme-preview ${value}"><i></i><i></i></span>${label}</button>`).join('')}</div></fieldset><fieldset class="oa-group"><legend>Tekst i podgląd</legend>${formRow('Rozmiar tekstu',`<input data-setting="fontSize" type="range" min="12" max="16" value="${draft.fontSize}"><span data-font-size>${draft.fontSize} px</span>`)}<p data-font-preview style="font-size:${draft.fontSize}px;padding:11px;border:1px solid var(--oa-line);border-radius:7px;background:var(--oa-field)">Przykładowy opis wizyty. Czytelny tekst ułatwia sprawdzenie faktów, liczb i jednostek.</p>${switchControl('livePreview','Pokaż tekst na żywo podczas generowania','Wersja robocza pozostaje oddzielona od zatwierdzanego wyniku.',draft)}${switchControl('animations','Animacje interfejsu','Płynne przygotowywanie przykładu w oknach OpisAI.',draft)}</fieldset>`;
         $$('[data-theme]',area).forEach(el=>el.addEventListener('click',()=>{draft.theme=el.dataset.theme;applyTheme(win,draft.theme);dirty();draw();}));
@@ -306,8 +311,8 @@
     $('.oa-settings-search',root).addEventListener('input',event=>{const q=normal(event.target.value);$$('[data-page]',root).forEach(el=>el.hidden=!!q&&!normal(el.textContent).includes(q));$$('.oa-nav-group',root).forEach(el=>el.hidden=!!q);});
     bind(root,'cancel-settings',()=>{applyTheme(win);win.close();});
     bind(root,'save-settings',()=>{
-      preferences=clone(draft);savePreferences();Object.keys(FIELDS).forEach((key,i)=>FIELDS[key]=preferences.clinicalSections[i]||defaults.clinicalSections[i]);windows.forEach(w=>applyTheme(w));
-      document.documentElement.style.setProperty('--oa-font-size',preferences.fontSize+'px');Clinic.setSpellingEnabled?.(preferences.spelling);normalizeBounce(preferences);
+      preferences=clone(draft);normalizeBounce(preferences);savePreferences(); /* stored as used: 10–3600 s, 0–999 bounces */Object.keys(FIELDS).forEach((key,i)=>FIELDS[key]=preferences.clinicalSections[i]||defaults.clinicalSections[i]);windows.forEach(w=>applyTheme(w));
+      document.documentElement.style.setProperty('--oa-font-size',preferences.fontSize+'px');Clinic.setSpellingEnabled?.(preferences.spelling);
       if(windows.get('opisai-compose')?.el?.isConnected){const active=windows.get('opisai-compose');if(active?.content){const label=$('[data-route]',active.content);if(label)label.textContent=route();const ack=$('#oa-compose-ack',active.content);if(ack){ack.checked=false;ack.dispatchEvent(new Event('change'));}}}
       changed=false;win.close();toast('Ustawienia OpisAI zapisane.');
     });
@@ -355,8 +360,9 @@
   const ORB_R=50,LONG_PRESS=.45,TICK=1/30,ORB_POS_KEY='opisai.demo.bubble.v1';
   const ORB_STATES={idle:['OpisAI','#2563eb'],processing:['…','#2563eb'],recording:['REC','#ef4444'],review:['Sprawdź','#f59e0b'],done:['Gotowe','#22c55e'],error:['Błąd','#ef4444']};
   const ORB_ACTIONS={idle:[['describe','Opisz'],['dictate','Dyktuj']],recording:[['finish','Zakończ'],['show','Pokaż']],processing:[['show','Pokaż'],['cancel','Anuluj']],review:[['show','Pokaż']]};
-  const orb={el:null,x:0,y:0,scale:0,scaleVel:0,scaleTarget:1,amp:0,ampTarget:0,hp1:0,hp2:0,chips:false,chipsAlpha:0,dip:0,pressed:false,armed:false,fired:false,arming:0,pressAt:0,hintState:'',sx:1,sy:1,lastY:null,decay:false,bulge:0,bulgeAngle:0,split:null,soak:null,soaked:false,exit:null,bounce:null,back:null,jellyR:null,contact:0,phys:null,physAcc:0,recAt:0,frame:0,last:0,hover:false,pressOrigin:null,drops:[],stateTimer:0,stateRev:0,menuBlock:0,timers:{}};
-  let orbMotion=null,orbGesture=null,orbMotionQuery=null,pointer=null,dropTarget=null,lastInput=0,bounceWindow={last:null,count:0},card=null,cardSerial=0;
+  const ORB_SPOKEN={processing:'przetwarzanie',recording:'nagrywanie (REC)',review:'Sprawdź',done:'Gotowe',error:'Błąd'};
+  const orb={el:null,x:0,y:0,scale:0,scaleVel:0,scaleTarget:1,amp:0,ampTarget:0,hp1:0,hp2:0,chips:false,chipsAlpha:0,dip:0,pressed:false,armed:false,fired:false,arming:0,pressAt:0,hintState:'',sx:1,sy:1,lastY:null,decay:false,bulge:0,bulgeAngle:0,split:null,soak:null,soaked:false,exit:null,bounce:null,back:null,jellyR:null,contact:0,phys:null,physAcc:0,recAt:0,frame:0,last:0,hover:false,pressOrigin:null,drops:[],stateTimer:0,stateRev:0,menuBlock:0,live:null,timers:{}};
+  let orbMotion=null,orbGesture=null,orbMotionQuery=null,pointer=null,dropTarget=null,lastInput=0,bounceWindow={last:null,count:0},card=null,cardSerial=0,unavailableToast=null;
   const nowS=()=>performance.now()/1000;
   const orbReduced=()=>!!orbMotionQuery?.matches;
   const stateKey=()=>ORB_ACTIONS[state.phase]?state.phase:'';
@@ -384,7 +390,9 @@
     if(delay){const expire=()=>{if(rev!==orb.stateRev||state.phase!==phase)return;if(pointer||orb.pressed||orb.armed){orb.stateTimer=setTimeout(expire,100);return;}setPhase('idle');};orb.stateTimer=setTimeout(expire,delay);}
     if(phase==='recording'&&previous!=='recording')orb.recAt=nowS();
     if((phase==='processing'||phase==='recording')&&(orb.bounce||orb.back))holdPosition();
-    if(orb.el){orb.el.dataset.phase=phase;renderOrbActions();$('.oa-orb',orb.el)?.setAttribute('aria-label',`OpisAI${phase==='idle'?'':' — '+{processing:'przetwarzanie',recording:'nagrywanie (REC)',review:'Sprawdź',done:'Gotowe',error:'Błąd'}[phase]}. Kliknij: opisz. Przytrzymaj: dyktuj. Prawy przycisk: menu.`);}
+    if(orb.el){orb.el.dataset.phase=phase;renderOrbActions();$('.oa-orb',orb.el)?.setAttribute('aria-label',`OpisAI${phase==='idle'?'':' — '+ORB_SPOKEN[phase]}. Kliknij: opisz. Przytrzymaj: dyktuj. Prawy przycisk: menu.`);}
+    // The state is painted inside the disc; screen readers hear it from a polite status region (idle clears it, so a repeat is heard again).
+    if(orb.live&&phase!==previous)orb.live.textContent=phase==='idle'?'':'OpisAI — '+ORB_SPOKEN[phase];
     orbKick();
   }
   function beginOperation(){ // _begin_bubble_operation: a new action owns its feedback
@@ -393,7 +401,7 @@
   }
   /* SafeCoordinator.intercept_trigger: clicking recalls the open view, it never starts a second operation. */
   function recall(){
-    if(state.receipt)return true;
+    if(state.receipt){state.receipt.deliver?.();return true;} // the last text: its review is the current view
     if(state.recording){showDictation();return true;}
     if(raiseActive())return true;
     if(state.job){const w=windows.get('opisai-progress');if(w){w.show();w.focus();}return true;}
@@ -402,7 +410,7 @@
   }
   function visitReady(){ // MacroController.on_trigger: the sub-window is required, OpisAI never opens a visit
     if(window.Clinic?.isEditorOpen?.())return true;
-    if(!window.Clinic?.isOpen?.())failure("Nie znaleziono Kliniki (main: 'Klinika', sub: 'Rejestracja wizyty').\nUruchom Klinikę (przycisk na dymku) albo wybierz okno ponownie (prawy klik na bąbelek).",{actionLabel:'▶ Uruchom Klinikę',actionHint:'Uruchom Klinikę XP (wizytę otwierasz sam)',onAction:()=>{dismissCard();window.Clinic?.open();}});
+    if(!window.Clinic?.isOpen?.())failure("Nie znaleziono Kliniki (main: 'Klinika', sub: 'Rejestracja wizyty').\nUruchom Klinikę (przycisk na dymku) albo wybierz okno ponownie (prawy klik na bąbelek).",{actionLabel:'▶ Uruchom Klinikę',actionHint:'Uruchom Klinikę XP (wizytę otwierasz sam)',onAction:()=>{dismissCard();state.handlingFailure=false;window.Clinic?.open();}});
     else failure("Nie znaleziono podokna opisu wizyty (fragment: 'Rejestracja wizyty').\nOtwórz wizytę w Klinice i spróbuj ponownie.\n(Sub-okno musisz wybrać sam — OpisAI nie wybiera wizyty.)",{actionLabel:'⚙',actionHint:'Kliknij aby otworzyć konfigurację',onAction:()=>{dismissCard();state.handlingFailure=false;settings();}});
     return false;
   }
@@ -416,7 +424,11 @@
   }
   function orbAction(action){ // _on_bubble_action: labelled actions run the gesture paths
     if(action==='describe')describe();else if(action==='dictate')dictate();else if(action==='finish'){if(state.recording)finishDictation();}
-    else if(action==='show')recall();else if(action==='cancel')state.job?.cancel();
+    else if(action==='show')recall();
+    else if(action==='cancel'){ // SafeCoordinator.cancel: generation, the microphone start or the last-text receipt
+      if(state.job)state.job.cancel();
+      else if(state.recording&&!state.recording.listening||state.receipt){dropDictation();toast('Dyktowanie anulowane. Pola wizyty pozostają bez zmian.');}
+    }
   }
 
   /* MacroController._on_failure_impl: red "Błąd", a bulge of the contour and an error notice budding from its peak. */
@@ -448,8 +460,9 @@
   }
   function errorCard(message,{title='⚠  Błąd',actionLabel='',actionHint='',onAction=null,origin=null,accent='#ef4444'}={}){
     dismissCard(true);const host=document.getElementById('overlay-layer')||document.body,id='oa-err-'+(++cardSerial);
-    const el=document.createElement('section');el.className='oa-error-card';el.setAttribute('role','alertdialog');el.setAttribute('aria-labelledby',id+'-t');el.setAttribute('aria-describedby',id+'-b');
-    el.innerHTML=`<svg class="oa-error-blob" aria-hidden="true"><defs><radialGradient id="${id}-f" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${shade(accent,1.13)}"/><stop offset=".55" stop-color="${accent}"/><stop offset="1" stop-color="${shade(accent,1/1.1)}"/></radialGradient><linearGradient id="${id}-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".157"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><radialGradient id="${id}-p"><stop offset="0" stop-color="${shade(accent,1.4)}"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></radialGradient><g id="${id}-g"><path data-shape="body"/><path data-shape="neck"/></g><clipPath id="${id}-c"><use href="#${id}-g"/></clipPath></defs><g data-trail></g>${[[14,.035],[9,.059],[4,.086]].map(([dy,a])=>`<use href="#${id}-g" transform="translate(0 ${dy})" fill="#000" opacity="${a}"/>`).join('')}<use href="#${id}-g" fill="url(#${id}-f)"/><use data-stroke href="#${id}-g" fill="none" stroke="${shade(accent,1/1.2)}" stroke-width="1"/><rect data-sheen clip-path="url(#${id}-c)" fill="url(#${id}-s)"/></svg><div class="oa-error-content"><div class="oa-error-head"><strong id="${id}-t">${esc(title)}</strong><button type="button" class="oa-error-close" aria-label="Zamknij komunikat" title="Zamknij ten komunikat (Esc)">×</button></div><p class="oa-error-body" id="${id}-b">${esc(message)}</p><div class="oa-error-hints">${actionLabel&&onAction?`<button type="button" class="oa-error-action" title="${esc(actionHint)}">${esc(actionLabel)}</button>`:''}<button type="button" class="oa-error-copy" aria-label="Kopiuj komunikat do schowka" title="Kopiuj komunikat do schowka">📋</button></div></div>`;
+    // Never takes focus (rc32 shows it without activating), so the message is an alert, not an alertdialog.
+    const el=document.createElement('section');el.className='oa-error-card';el.setAttribute('role','group');el.setAttribute('aria-labelledby',id+'-t');el.setAttribute('aria-describedby',id+'-b');
+    el.innerHTML=`<svg class="oa-error-blob" aria-hidden="true"><defs><radialGradient id="${id}-f" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${shade(accent,1.13)}"/><stop offset=".55" stop-color="${accent}"/><stop offset="1" stop-color="${shade(accent,1/1.1)}"/></radialGradient><linearGradient id="${id}-s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".157"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><radialGradient id="${id}-p"><stop offset="0" stop-color="${shade(accent,1.4)}"/><stop offset="1" stop-color="${accent}" stop-opacity="0"/></radialGradient><g id="${id}-g"><path data-shape="body"/><path data-shape="neck"/></g><clipPath id="${id}-c"><use href="#${id}-g"/></clipPath></defs><g data-trail></g>${[[14,.035],[9,.059],[4,.086]].map(([dy,a])=>`<use href="#${id}-g" transform="translate(0 ${dy})" fill="#000" opacity="${a}"/>`).join('')}<use href="#${id}-g" fill="url(#${id}-f)"/><use data-stroke href="#${id}-g" fill="none" stroke="${shade(accent,1/1.2)}" stroke-width="1"/><rect data-sheen clip-path="url(#${id}-c)" fill="url(#${id}-s)"/></svg><div class="oa-error-content"><div class="oa-error-head"><strong id="${id}-t">${esc(title)}</strong><button type="button" class="oa-error-close" aria-label="Zamknij komunikat" title="Zamknij ten komunikat (Esc)">×</button></div><p class="oa-error-body" id="${id}-b" role="alert">${esc(message)}</p><div class="oa-error-hints">${actionLabel&&onAction?`<button type="button" class="oa-error-action" title="${esc(actionHint)}">${esc(actionLabel)}</button>`:''}<button type="button" class="oa-error-copy" aria-label="Kopiuj komunikat do schowka" title="Kopiuj komunikat do schowka">📋</button></div></div>`;
     host.append(el);const content=$('.oa-error-content',el),cw=content.offsetWidth||356,ch=content.offsetHeight||170,center={x:orb.x,y:orb.y};
     const W=cw+48,H=ch+48,x=Math.max(20,Math.min(innerWidth-W-20,center.x-W/2+60));let y=center.y-H-16;if(y<20)y=center.y+140;
     const c={el,svg:$('svg',el),content,target:{x,y,w:W,h:H},origin:origin||center,start:nowS(),hp1:Math.random()*Math.PI*2,hp2:Math.random()*Math.PI*2,trail:[],lastTrail:0,wobble:null,closing:null,frame:0,id,instant:orbReduced()};
@@ -543,14 +556,14 @@
     if(state.recording){finishDictation();Shell.confirm({title:'OpisAI — informacja',icon:'info',message:'Zakończ odczyt albo dyktowanie przed zamknięciem.'});return;}
     if(state.job){state.job.cancel();Shell.confirm({title:'OpisAI — informacja',icon:'info',message:'Kończę transport. Zamknij aplikację po zwolnieniu bieżącej operacji.'});return;}
     liveWindows().forEach(w=>w.close());state.review=null;state.operation=null;state.active=null;dismissCard(true);markField(null);
-    const finish=()=>{state.closed=true;orb.exit=null;stopPhysics();if(orb.el)orb.el.classList.add('is-hidden');hideHint();toast('OpisAI zostało zamknięte. W demonstracji bąbelek wróci po kliknięciu ikony OpisAI w zasobniku albo na pulpicie.');};
+    const finish=()=>{state.closed=true;syncTray();orb.exit=null;stopPhysics();if(orb.el)orb.el.classList.add('is-hidden');hideHint();toast('OpisAI zostało zamknięte. W demonstracji bąbelek wróci po kliknięciu ikony OpisAI w zasobniku albo na pulpicie.');};
     cancelGesture();releaseIdleMotion();stopPhysics();hideHint();
     if(orbReduced()){finish();return;}
     orb.exit={start:nowS(),done:finish};orb.scale=1;orb.scaleTarget=1;orb.scaleVel=0;orb.amp=orb.ampTarget=0;orb.sx=orb.sy=1;orbKick();
   }
   function launch(){ // start (or restart after "Zamknij"): scale from zero with the entrance spring
     if(!orb.el)return;
-    const was=state.closed;state.closed=false;orb.exit=null;orb.el.classList.remove('is-hidden');
+    const was=state.closed;state.closed=false;syncTray();orb.exit=null;orb.el.classList.remove('is-hidden');
     if(was||!orbOnScreen()){const p=loadOrbPosition();orb.x=p.x;orb.y=p.y;orbMotion.place(orb.x,orb.y);}
     if(was){setPhase('idle');orb.scale=orbReduced()?1:0;orb.scaleVel=0;orb.scaleTarget=1;}
     orbKick();
@@ -715,7 +728,7 @@
   function showHint(text=hintText()){
     if(!orb.el||state.closed)return;
     let hint=$('.oa-orb-hint');if(!hint){hint=document.createElement('div');hint.className='oa-orb-hint';hint.setAttribute('role','tooltip');hint.id='oa-orb-hint';(document.getElementById('overlay-layer')||document.body).append(hint);}
-    hint.textContent=text;hint.hidden=false;
+    hint.textContent=text;hint.hidden=false;hint.classList.toggle('oa-theme-dark',preferences.theme==='dark'); // BubbleHint uses shell.colors(): the OpisAI theme
     // ui/hint_geometry.place_hint: left, right, above or below the disc and its actions, inside the work area.
     const a=workArea(),R=ORB_R*Math.max(1.1,orb.scale,orb.scaleTarget)+6,chips=ORB_ACTIONS[stateKey()]?{w:($('.oa-orb-actions',orb.el)?.offsetWidth||125)+8,top:orb.y+59-4,bottom:orb.y+85+4}:null;
     const box={x:orb.x-Math.max(R,chips?chips.w/2:0),y:orb.y-R,r:orb.x+Math.max(R,chips?chips.w/2:0),b:chips?Math.max(orb.y+R,chips.bottom):orb.y+R};
@@ -735,6 +748,7 @@
     const bars=[0,1,2,3,4].map(i=>`<rect data-bar="${i}"/>`).join('');
     wrap.innerHTML=`<svg class="oa-orb-art" viewBox="-140 -140 280 280" aria-hidden="true" focusable="false"><defs><radialGradient id="oa-orb-fill" gradientUnits="userSpaceOnUse"><stop offset="0"/><stop offset=".55"/><stop offset="1"/></radialGradient><linearGradient id="oa-orb-sheen" gradientUnits="userSpaceOnUse" x1="0" x2="0"><stop offset="0" stop-color="#fff" stop-opacity=".188"/><stop offset=".5" stop-color="#fff" stop-opacity=".055"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><clipPath id="oa-orb-clip"><path data-orb-clip/></clipPath></defs><g class="oa-orb-body"><path class="oa-orb-shadow" data-dy="16" fill-opacity=".0275"/><path class="oa-orb-shadow" data-dy="10" fill-opacity=".047"/><path class="oa-orb-shadow" data-dy="4" fill-opacity=".0706"/><path class="oa-orb-face" fill="url(#oa-orb-fill)"/><path class="oa-orb-rim"/><rect class="oa-orb-sheen" x="-140" y="-140" width="280" height="280" clip-path="url(#oa-orb-clip)" fill="url(#oa-orb-sheen)"/></g><circle class="oa-orb-arming" r="58"/><g class="oa-orb-ripple"><circle/><circle/></g><g class="oa-orb-identity"><g class="oa-orb-squash"><g class="oa-orb-scaled"><g class="oa-orb-logo"><rect data-part="handle" x="-8.97" y="-29.8" width="17.94" height="10.53" rx="4.74"/><rect data-part="hole" class="oa-orb-ink" x="-4.84" y="-27.06" width="9.69" height="4.84" rx="1.94"/><rect data-part="bag" x="-21.84" y="-23.48" width="43.68" height="32.76" rx="7.8"/><rect data-part="arm" class="oa-orb-ink"/>${bars}</g><text class="oa-orb-wordmark" y="23">OpisAI</text><text class="oa-orb-version" y="35.5">${VERSION}</text></g></g><g class="oa-orb-plain"><text class="oa-orb-label"></text><g class="oa-orb-dots"><circle/><circle/><circle/></g></g></g></svg><div class="oa-orb-bridge"></div><button class="oa-orb" type="button" aria-label="OpisAI. Kliknij: opisz. Przytrzymaj: dyktuj. Prawy przycisk: menu."></button><div class="oa-orb-actions" role="group" aria-label="Akcje OpisAI"></div><div class="oa-orb-press" aria-hidden="true"></div>`;
     host.append(wrap);orb.el=wrap;state.orb=wrap;
+    orb.live=document.createElement('div');orb.live.className='oa-orb-status sr-only';orb.live.setAttribute('role','status');orb.live.setAttribute('aria-live','polite');host.append(orb.live); // outside the wrap: a hidden (closed or soaked) bubble stays audible
     orbMotionQuery=matchMedia('(prefers-reduced-motion: reduce)');
     const p=loadOrbPosition();orb.x=p.x;orb.y=p.y;
     orbMotion=OpisAIOrbMotion.create({x:orb.x,y:orb.y,reducedMotion:orbReduced()});orbGesture=OpisAIOrbMotion.createGesture({dragDelay:.18,holdDelay:LONG_PRESS});
@@ -767,7 +781,7 @@
       else if(actions.includes('click'))describe();
     });
     for(const type of ['pointercancel','lostpointercapture'])button.addEventListener(type,event=>{if(pointer?.id===event.pointerId)cancelGesture();});
-    button.addEventListener('contextmenu',event=>{event.preventDefault();if(orbGesture.phase==='held')return; /* a touch long press after the hold */cancelGesture();if(orb.bounce||orb.back)captureAtCurrent();showMenu(event.clientX,event.clientY);});
+    button.addEventListener('contextmenu',event=>{event.preventDefault();if(orbGesture.phase==='held')return; /* a touch long press after the hold */cancelGesture();if(orb.bounce||orb.back)captureAtCurrent();if(event.button<0)showMenu(orb.x,orb.y+ORB_R,{keyboard:true});else showMenu(event.clientX,event.clientY);}); // button -1: a keyboard menu that keydown did not take
     button.addEventListener('keydown',event=>{
       if(physicsKey(event,true)){event.preventDefault();return;}
       if(event.key==='Enter'||event.key===' '){event.preventDefault();cancelGesture();describe();}
@@ -799,12 +813,12 @@
   function showMenu(x,y,options={}){ // the bubble's right click shows the tray menu (_on_bubble_right_click)
     if(state.closed){launch();return;}
     if(settingsOpen()&&!options.tray)return;
-    const el=Shell.menu(orbMenuItems(),x,y,{className:'oa-menu',flip:true,onClose:()=>{orb.menuBlock=nowS()+.35;}});
+    const el=Shell.menu(orbMenuItems(),x,y,{className:'oa-menu'+(preferences.theme==='dark'?' oa-theme-dark':''),flip:true,onClose:()=>{orb.menuBlock=nowS()+.35;}}); // submenus share the class
     if(options.keyboard&&el?.querySelector)el.querySelector('button:not(:disabled)')?.focus();
     return el;
   }
   function orbMenuItems(){ // MacroController._setup_tray: same order, separators and submenus
-    const unavailable=name=>()=>toast(`„${name}” jest niedostępne w demonstracji. Okna i pola Kliniki XP są tu przypisane na stałe.`);
+    const unavailable=name=>()=>{unavailableToast?.remove?.();unavailableToast=toast(`„${name}” jest niedostępne w demonstracji. Okna i pola Kliniki XP są tu przypisane na stałe.`);}; // each replaces the last, so they never stack over the bubble
     const dot='<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5" fill="#22c55e"/></svg>';
     const spelling=preferences.spelling&&!!window.Clinic?.isEditorOpen?.();
     return [
@@ -835,12 +849,14 @@
     ];
   }
   function trayTooltip(){return state.closed?'OpisAI — zamknięte\nKliknij, aby uruchomić':`OpisAI — ${preferences.model}\nKlik: opisz · Przytrzymaj: dyktuj · Prawy: menu`;}
+  function syncTray(){$('.tray-opisai')?.setAttribute('aria-label',state.closed?'OpisAI — zamknięte. Kliknij, aby uruchomić.':'OpisAI. Kliknij: opisz. Prawy przycisk lub Shift+F10: menu.');}
 
   /* One animation loop, active only while something moves (Bubble._tick and its settle rule). */
-  function orbKick(){if(!orb.el||orb.frame||document.hidden)return;orb.last=performance.now();orb.frame=requestAnimationFrame(orbFrame);}
+  function orbKick(){if(!orb.el||orb.frame||document.hidden)return;orb.last=null;orb.frame=requestAnimationFrame(orbFrame);}
   function orbFrame(now){
     orb.frame=0;if(!orb.el?.isConnected)return;
-    const dt=Math.min(.1,Math.max(0,(now-orb.last)/1000));orb.last=now;
+    // A frame timestamp may precede the kick (Chromium stamps the frame start), so the first frame of a run is one display frame.
+    const dt=orb.last===null?1/60:Math.min(.1,Math.max(0,(now-orb.last)/1000));orb.last=now;
     const busy=orbAdvance(dt,now/1000);renderOrb(now/1000);
     if(busy&&!document.hidden)orb.frame=requestAnimationFrame(orbFrame);
   }
@@ -870,7 +886,8 @@
     orb.amp+=(orb.ampTarget*(reduced?0:1)-orb.amp)*ease(.18,dt);if(orb.ampTarget===0&&orb.amp<.005)orb.amp=0;
     if(orb.amp>.01){orb.hp1+=.09*dt/TICK;orb.hp2+=.061*dt/TICK;}
     const chipsTarget=orb.chips||(!!orb.el.querySelector?.(':focus-visible')&&!orb.pressed&&!pointer&&!orb.phys)?1:0;
-    orb.chipsAlpha+=(chipsTarget-orb.chipsAlpha)*ease(.3,dt);if(Math.abs(chipsTarget-orb.chipsAlpha)<.02)orb.chipsAlpha=chipsTarget;
+    if(reduced)orb.chipsAlpha=chipsTarget; // no fade: the actions appear and go at once
+    else{orb.chipsAlpha+=(chipsTarget-orb.chipsAlpha)*ease(.3,dt);if(Math.abs(chipsTarget-orb.chipsAlpha)<.02)orb.chipsAlpha=chipsTarget;}
     orb.dip+=((orb.pressed?1:0)-orb.dip)*ease(.35,dt);if(!orb.pressed&&orb.dip<.005)orb.dip=0;
     if(orb.armed)orb.arming=Math.max(0,Math.min(1,(now-orb.pressAt)/LONG_PRESS));else if(orb.arming>.001)orb.arming*=Math.pow(.8,dt/TICK);else orb.arming=0;
     // Split bulge
@@ -896,7 +913,7 @@
     const m=orbMotion.snapshot();
     return !reduced&&(state.phase==='processing'||state.phase==='recording')||!!(orb.split||orb.bounce||orb.back||orb.decay||orb.phys||orb.drops.length)
       ||(!reduced&&(orb.scaleTarget!==1||orb.ampTarget!==0))||orb.scale!==(reduced?Math.min(1,orb.scaleTarget):orb.scaleTarget)||orb.amp>0||m.moving||orb.pressed||orb.armed||orb.dip>0||orb.arming>0
-      ||(orb.chipsAlpha!==0&&orb.chipsAlpha!==1)||orb.sx!==1||orb.sy!==1;
+      ||orb.chipsAlpha!==chipsTarget||orb.sx!==1||orb.sy!==1;
   }
   function renderOrb(now=nowS()){
     const wrap=orb.el;if(!wrap)return;
@@ -932,7 +949,8 @@
     $('.oa-orb-wordmark',wrap).textContent=phase==='recording'?'REC':'OpisAI';
     $('.oa-orb-version',wrap).style.display=r<28?'none':'';
     $$('.oa-orb-ink',wrap).forEach(el=>el.setAttribute('fill',color));
-    if(logo)drawLogo(wrap,phase==='recording'?Math.min(1,(now-orb.recAt)/.32):0,phase==='recording'&&!reduced?now-orb.recAt:-1,color);
+    // REC: the cross morphs into the equalizer; with reduced motion the bars stand still at once.
+    if(logo)drawLogo(wrap,phase==='recording'?(reduced?1:Math.min(1,(now-orb.recAt)/.32)):0,phase==='recording'&&!reduced?now-orb.recAt:-1,color);
     const text=$('.oa-orb-label',wrap);text.style.display=['review','done','error'].includes(phase)?'':'none';text.textContent=['review','done','error'].includes(phase)?label:'';
     const dots=$('.oa-orb-dots',wrap);dots.style.display=phase==='processing'?'':'none';
     if(phase==='processing'){const rd=Math.max(3,r*.1),gap=rd*2.6,amp=r*.18,t=reduced?0:now*4;$$('circle',dots).forEach((c,i)=>{c.setAttribute('cx',((i-1)*gap).toFixed(2));c.setAttribute('cy',(reduced?0:-Math.max(0,Math.sin(t-i*.5))*amp).toFixed(2));c.setAttribute('r',rd.toFixed(2));});}
