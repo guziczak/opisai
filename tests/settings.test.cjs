@@ -245,6 +245,8 @@ test('Wygląd: Automatyczny (jak Windows), Jasny, Ciemny; "Automatyczny" follows
   for (const absent of ['Niebieski', 'Rozmiar tekstu', 'Animacje', 'Pokaż tekst na żywo']) assert(!f.page().textContent.includes(absent), absent);
   f.api.about(); assert.equal(f.themeOf('opisai-about'), 'light');
   f.set('[data-setting="theme"]', 'dark'); assert.equal(f.themeOf('opisai-settings'), 'dark', 'the open window previews the choice'); assert.equal(f.themeOf('opisai-about'), 'light');
+  f.api.settings('dictation'); assert.equal(f.themeOf('opisai-settings'), 'light', 'reopened (e.g. from the bubble menu): the saved settings, no stale preview');
+  f.click('opisai-settings', '[data-page="appearance"]'); f.set('[data-setting="theme"]', 'dark');
   f.click('opisai-settings', '[data-action="close-settings"]'); f.api.settings('appearance'); assert.equal(f.themeOf('opisai-settings'), 'light'); assert.equal(f.api.preferences().theme, 'auto');
   f.shell.prefs.theme = 'dark'; f.win.dispatchEvent({type: 'shell:theme'});
   assert.equal(f.themeOf('opisai-about'), 'dark', 'auto follows the colour mode of the desktop'); assert.equal(f.themeOf('opisai-settings'), 'dark');
