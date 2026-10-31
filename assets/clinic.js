@@ -214,15 +214,14 @@
     return `<div class="kxp-editor">${KEYS.map((key, i) => `
       <section class="kxp-section" data-section="${key}" style="flex:${state.weights[i] / total} 1 0">
         <header class="kxp-section-head"><button class="kxp-section-title${i === 0 ? ' is-first' : ''}" data-focus="${key}">${kx(SECTION_ICONS[key], 25)}<span>${LABELS[key]}:</span></button>
-          <div class="kxp-section-tools" role="toolbar" aria-label="Narzędzia sekcji ${LABELS[key]}">${SECTION_TOOLS[key].map(([label, ico, role], j) => `<button class="kxp-section-tool${i === 0 && (j === 2 || j === 4) ? ' pair-start' : ''}" style="width:${TOOL_WIDTHS[j]}px" data-tool="${role || label}" data-section-key="${key}">${kx(ico, 22)}<span>${esc(label)}</span></button>`).join('')}</div></header>
+          <div class="kxp-section-tools" role="toolbar" aria-label="Narzędzia sekcji ${LABELS[key]}">${SECTION_TOOLS[key].map(([label, ico, role], j) => `<button class="kxp-section-tool${i === 0 && (j === 2 || j === 4) ? ' pair-start' : ''}${role === 'ok' || role === 'cancel' ? '' : ' is-unavailable'}" style="width:${TOOL_WIDTHS[j]}px" data-tool="${role || label}" data-section-key="${key}" title="${role === 'ok' ? 'Zapisz wizytę (Ctrl+S)' : role === 'cancel' ? 'Odrzuć zmiany (Esc)' : `${esc(label)} — funkcja Kliniki XP, niedostępna w demonstracji`}">${kx(ico, 22)}<span>${esc(label)}</span></button>`).join('')}</div></header>
         <div class="kxp-memo" role="textbox" aria-label="${LABELS[key]}" aria-multiline="true" contenteditable="plaintext-only" spellcheck="false" data-field="${key}" data-clinic-field="${key}"></div>
       </section>${i < 2 ? `<div class="kxp-splitter" data-splitter="${i}" role="separator" aria-orientation="horizontal" title="Przeciągnij, aby zmienić wysokość pól"></div>` : ''}`).join('')}
-      <footer class="kxp-editor-status"><span data-editor-identity></span><span data-editor-status></span></footer></div>`;
+      <footer class="kxp-editor-status"><span data-editor-status></span></footer></div>`;
   }
+  function editorTitle() { const p = patientOf(state.current.patient); return state.current.id === null ? `${SUB_TITLE} — ${p.name} [NOWA]` : `${SUB_TITLE} — ${p.name} · ${state.current.meta.number}`; }
   function renderEditorChrome() {
     if (!editorRoot) return;
-    const p = patientOf(state.current.patient);
-    editorRoot.querySelector('[data-editor-identity]').textContent = `${state.current.id === null ? 'Nowa wizyta' : 'Wizyta ' + state.current.meta.number} · ${p.name} · ${p.owner}`;
     editorRoot.querySelector('[data-editor-status]').textContent = dirty() ? 'Zmiany w buforze. OK zapisze; ANULUJ je odrzuci.' : 'Opis wizyty otwarty do edycji.';
     for (const key of KEYS) fieldElement(key)?.closest('.kxp-section').classList.toggle('is-active', key === state.activeField);
   }
@@ -234,7 +233,7 @@
     editorRoot = document.createElement('div'); editorRoot.className = 'kxp-editor-root'; editorSession += 1;
     /* Below the visit card row of the main window, so both windows read as in the mock. */
     const width = Math.max(560, Math.min(1110, innerWidth - 120)), height = Math.max(400, Math.min(520, innerHeight - 300)), top = Math.max(8, Math.min(262, innerHeight - height - 56));
-    editorWindow = Shell.createWindow({ id: 'clinic-editor', title: SUB_TITLE, icon: 'clinic', width, height, minWidth: 520, minHeight: 360, x: Math.max(8, Math.min(96, innerWidth - width - 8)), y: top, className: 'kxp-editor-window', content: editorRoot, resizable: true, maximizable: true, taskbar: false, owner: 'clinic', onClose: () => { if (closingEditor) return true; requestCancel(); return false; } });
+    editorWindow = Shell.createWindow({ id: 'clinic-editor', title: editorTitle(), icon: 'clinic', width, height, minWidth: 520, minHeight: 360, x: Math.max(8, Math.min(96, innerWidth - width - 8)), y: top, className: 'kxp-editor-window', content: editorRoot, resizable: true, maximizable: true, taskbar: false, owner: 'clinic', onClose: () => { if (closingEditor) return true; requestCancel(); return false; } });
     editorRoot.innerHTML = editorHTML();
     KEYS.forEach(key => renderField(key)); bindEditor(); renderEditorChrome();
     state.editorOpen = true; persist(); renderMain();
@@ -345,20 +344,9 @@
       if (!metaValid(meta)) { d.host.querySelector('[data-meta-error]').textContent = 'Sprawdź datę, godzinę, typ i lekarza. Waga / temperatura: liczba bez jednostki albo puste pole.'; return; }
       d.win.close();
       if (isNew) { closeEditor(); state.current = { ...newDraft(patient, { empty: true }), meta }; state.loaded = null; state.mode = 'new'; for (const k of KEYS) delete fieldUndo[k]; statusText = ''; state.activeField = 'wywiad'; refreshAll(); openEditor(); announce(null, 'new'); }
-      else { state.current.meta = meta; statusText = 'Zmieniono dane w buforze. OK zapisuje całą wizytę.'; refreshAll(); }
+      else { state.current.meta = meta; statusText = 'Zmieniono dane w buforze. OK zapisuje całą wizytę.'; if (editorWindow && editorWindow.options.title !== editorTitle()) { editorWindow.setTitle(editorTitle()); editorSession += 1; } refreshAll(); }
     });
     setTimeout(() => d.host.querySelector('input:not([readonly]),select')?.focus(), 80);
-  }
-  /* Section tools are Klinika XP features the mock-up does not reproduce: manual text only (kxp_mock.c open_text_workbench). */
-  function sectionWorkbench(tool, key, heading) {
-    const names = { Mowa: 'Mowa — tekst wpisany ręcznie, bez mikrofonu', Zredaguj: 'Zredaguj — ręczna redakcja, bez AI', Typowe: 'Typowe — własny tekst sekcji', 'Poziom bólu': 'Poziom bólu — wpis użytkownika, bez automatycznej oceny', Objawy: 'Objawy — tekst potwierdzony przez użytkownika', Wybierz: 'Diagnoza — wpis ręczny zamiast nieodtworzonego słownika chorób', Choroby: 'Diagnoza — wpis ręczny zamiast nieodtworzonego słownika chorób', 'Diagnoza AI': 'Diagnoza AI — narzędzie Kliniki XP, w makiecie bez AI', Porady: 'Porady — wpis ręczny, brak generatora zaleceń' };
-    const d = dialog('workbench', `[DEMO] ${heading || names[tool] || tool}`, 560, 340, `<p class="clinic-subtle-message">To narzędzie Kliniki XP nie jest odwzorowane w makiecie. Tekst wpisany poniżej zostanie dopisany do sekcji „${esc(LABELS[key])}”. Dyktowanie z OpisAI uruchamiasz przytrzymaniem bąbelka.</p><label class="clinic-form-field full">Tekst do dopisania<textarea data-workbench-text rows="6"></textarea></label><p class="clinic-form-error" data-workbench-error role="alert"></p>`, '<button class="clinic-button primary" data-workbench-ok>Dopisz</button><button class="clinic-button" data-dialog-close>Anuluj</button>');
-    const area = d.host.querySelector('[data-workbench-text]'); setTimeout(() => area.focus(), 80);
-    d.host.querySelector('[data-workbench-ok]').onclick = () => {
-      const text = area.value.trim(); if (!text) { d.host.querySelector('[data-workbench-error]').textContent = 'Wpisz tekst do dopisania albo wybierz Anuluj.'; return; }
-      const before = state.current.fields[key]; d.win.close();
-      setFields({ [key]: before.trim() ? `${before.trimEnd()} ${text}` : text }, { expected: { [key]: before }, source: 'section-tool' }); focusField(key);
-    };
   }
   function photoInfo() { info('Zdjęcie zwierzęcia', 'Makieta nie zawiera zdjęć pacjentów. W Klinice XP w tym miejscu jest zdjęcie z karty zwierzęcia.'); }
   function notReproduced(name) { info(name, `Moduł „${name}” nie jest odwzorowany w makiecie. Demonstracja obejmuje przebieg wizyty, opis w podoknie i listę wizyt.`); }
@@ -457,8 +445,8 @@
   }
   function stepCommand(i) {
     if (i === 8) { requestCancel(); return; }
+    if (i >= 1 && i <= 6) { notReproduced(STEPS[i][0].replace(/^\d+\. /, '')); return; }
     startEditing();
-    if (i >= 1 && i <= 6 && editorWindow) sectionWorkbench(STEPS[i][0], 'badanie', `${STEPS[i][0].replace(/^\d+\. /, '')} — moduł Kliniki XP nieodwzorowany; ręczny tekst do badania`);
   }
   function bindMain() {
     mainRoot.addEventListener('click', event => {
@@ -481,8 +469,7 @@
       const key = tool.dataset.sectionKey, name = tool.dataset.tool;
       state.activeField = key;
       if (name === 'ok') saveVisit(); else if (name === 'cancel') requestCancel();
-      else if (name === 'menu' || name === 'Dodatkowe') { const r = tool.getBoundingClientRect(); editMenu(r.left, r.bottom); }
-      else sectionWorkbench(name, key);
+      else toast(`„${tool.textContent.trim()}” — funkcja Kliniki XP, niedostępna w demonstracji.`);
     });
     editorRoot.addEventListener('input', event => {
       const el = event.target.closest('[data-clinic-field]'); if (!el || !writable()) return;

@@ -107,6 +107,8 @@
 .kxp-section-tool{height:51px;display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:6px;border:1px solid transparent;background:#f5f6f7;font-size:9px;color:#2d3742;white-space:nowrap}
 .kxp-section-tool:hover{background:#e7f0f8;border-color:#a1bcd1}
 .kxp-section-tool:active{background:#cddfef}
+.kxp-section-tool.is-unavailable{opacity:.62}
+.kxp-section-tool.is-unavailable:hover{opacity:.8}
 .kxp-section-tool.pair-start{margin-left:clamp(0px,calc((100% - 940px)/2),115px)}
 .kxp-section-tools .kxp-section-tool.pair-start{margin-left:24px}
 .kxp-memo{flex:1;min-height:32px;margin:0 10px;border:1px solid #9aa9b6;background:#fff;padding:5px 7px;overflow:auto;font:13px/1.5 "Segoe UI",Selawik,Tahoma,sans-serif;color:#18232c;white-space:pre-wrap;word-wrap:break-word;outline:0;user-select:text;cursor:text}
@@ -117,7 +119,6 @@
 .kxp-splitter{flex:none;height:7px;margin:0 10px;background:#e0e7ec;border-top:1px solid #8caac1;cursor:row-resize;position:relative;min-width:800px}
 .kxp-splitter::after{content:"";position:absolute;left:50%;top:3px;width:18px;height:1px;margin-left:-9px;background:repeating-linear-gradient(90deg,#8c9aa5 0 1px,transparent 1px 3px)}
 .kxp-editor-status{flex:none;height:24px;display:flex;align-items:center;gap:20px;padding:0 10px;border-top:1px solid #e1e6ea;background:#f7f8fa;font-size:11px;color:#455c70;white-space:nowrap;overflow:hidden;min-width:800px}
-.kxp-editor-status [data-editor-identity]{width:350px;overflow:hidden;text-overflow:ellipsis;color:#617586}
 @media (prefers-reduced-motion:reduce){.kxp-section.just-applied .kxp-memo{animation:none}}
 
 /* Visit list (Ctrl+L). */

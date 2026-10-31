@@ -190,7 +190,9 @@
     options=validOption(options);
     if(state.closed)launch();
     if(state.recording){finishDictation();return;}
-    if(state.receipt||(!options.direct&&raiseActive()))return;
+    if(state.receipt)return;
+    // rc32 _start_transcription_planned: while compose/review is open (safe.busy) dictation does not start and does not recall the window.
+    if(!options.direct&&liveWindows().some(w=>['opisai-compose','opisai-progress','opisai-review','opisai-undo'].includes(w.id))){errorCard('Trwa inna operacja — zakończ ją przed dyktowaniem.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});return;}
     if(state.job)return;
     if(!window.Clinic?.isEditorOpen?.()){errorCard('Nie znaleziono podokna wizyty — otwórz wizytę w Klinice.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});return;}
     beginOperation();startDictation(options);
