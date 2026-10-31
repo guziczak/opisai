@@ -194,7 +194,8 @@
    * ui/transcript_overlay.py): always into the configured "Badanie kliniczne" field, a frameless
    * preview over that field and the engine chosen in Konfiguracja → Dyktowanie. The microphone is
    * never requested: fictional exam findings for Fistaszek are "spoken" word by word with pauses
-   * between fragments; each "Kontynuuj dyktowanie" speaks the next sample. */
+   * between fragments; each dictation speaks the next sample that is not yet in the field (or in the
+   * continued text), and "Kontynuuj dyktowanie" moves on to the sample after the last one. */
   const DICTATION_SAMPLES=[
     ['Błony śluzowe bladoróżowe, czas powrotu kapilarnego około 2 sekund.','Oddechy około 140 na minutę, z udziałem tłoczni brzusznej.','Węzły chłonne podżuchwowe niepowiększone. Brzuch miękki, niebolesny.'],
     ['Nawodnienie prawidłowe, fałd skórny rozprostowuje się od razu.','Siekacze prawidłowej długości, bez przerostu.'],
@@ -248,13 +249,14 @@
       if(options.session!==undefined&&options.session!==ctx.session||String(options.snapshot?.[key]??base)!==base){errorCard('Zmieniła się wizyta lub treść jej pola. Zachowano wcześniejszy tekst dyktowania.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});restoreDictationReview(options);return;} // DictationContinuationInput.validate → _show_transcribe_info(error=True)
       base=String(options.base??saved?.edited?.[key]??'');
     }
-    const engine=preferences.transcriber,chat=engine==='chatgpt_browser',two=chat&&preferences.cardMode==='two',takes=options.continuation?(saved?.takes||1):0;
+    const engine=preferences.transcriber,chat=engine==='chatgpt_browser',two=chat&&preferences.cardMode==='two',after=options.continuation?(saved?.takes||1):0,heard=normal(base);
+    const take=DICTATION_SAMPLES.findIndex((sample,i)=>i>=after&&!heard.includes(normal(sample[0]))); // the next sample not yet in the text: a written note or a continuation never repeats one; none left, silence
     const prep=chat?(two?1.4:1.6):engine==='gemini'?1.1:2.2,diarization=engine==='local_whisper'&&preferences.diarization;
     if(diarization)errorCard('Rozpoznawanie mówców pominięte: brak biblioteki pyannote. Konfiguracja → sekcja transkrypcji → Rozpoznawanie mówców → „Pobierz brakujące składniki”.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});
     const rec=state.recording={id:++state.token,engine,chat,two,clip:chat&&preferences.chatgptClip,auto:chat&&preferences.autoEnter?preferences.autoEnterSeconds:0,key,label:FIELDS[key],snapshot:{[key]:fields[key]||''},session:ctx.session,base, // capture(hwnd,[key]): only the dictated field guards the note's write
-      continuation:!!options.continuation,restore:options.continuation?options:null,takes:takes+1,t:0,at:performance.now(),prep,started:null,listening:false,stopping:null,stopAt:null,result:false,resultAt:0,cancelled:false,
+      continuation:!!options.continuation,restore:options.continuation?options:null,takes:take<0?DICTATION_SAMPLES.length:take+1,t:0,at:performance.now(),prep,started:null,listening:false,stopping:null,stopAt:null,result:false,resultAt:0,cancelled:false,
       status:chat?(two?'Otwieram dyktowanie ChatGPT… Zacznij mówić po potwierdzeniu uruchomienia mikrofonu.':'Otwieram karty ChatGPT… Mikrofon otworzy OpisAI, gdy pierwsza karta będzie gotowa.'):engine==='gemini'?'🎙 Łączę z Gemini… za chwilę mów. Przytrzymaj bąbelek, aby zakończyć.':'🧠 Ładuję lokalny model Whisper… pierwsze użycie może chwilę potrwać. Przytrzymaj bąbelek, aby zakończyć.',
-      command:null,text:'',shown:'',said:'',speech:dictationSpeech(DICTATION_SAMPLES[takes]||[],prep+.9),audio:[],level:null,wave:{cols:[],clock:0,last:null,quiet:null,bucket:null},
+      command:null,text:'',shown:'',said:'',speech:dictationSpeech(DICTATION_SAMPLES[take]||[],prep+.9),audio:[],level:null,wave:{cols:[],clock:0,last:null,quiet:null,bucket:null},
       fragments:[],following:true,userHidden:false,details:!!preferences.dictationDetails,baseOpen:false};
     rec.words=rec.speech.flatMap(f=>f.words);
     setPhase('processing'); // dots until the microphone is confirmed

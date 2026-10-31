@@ -373,6 +373,25 @@ test('Kontynuuj dyktowanie: the edited text waits in "Dotychczasowy tekst", the 
   assert.equal(g.rec.words.length, 0); assert.equal(g.q('.oa-dt-demo').textContent, 'Przykładowe dyktowanie — cisza');
 });
 
+test('each new dictation speaks a sample that is not yet in the field, so "Wpisz samą notatkę" never repeats sentences', () => {
+  const f = fixture({ prefs: { transcriber: 'local_whisper' } });
+  f.api.dictate(); f.advance(8000); f.api.finishDictation(); f.advance(3000);
+  const first = f.reviews[0]; assert.match(first.output.badanie, /\nBłony śluzowe bladoróżowe, czas powrotu kapilarnego około 2 sekund\./);
+  f.clinic.text.badanie = first.output.badanie; f.api.state.review = null; f.api.setPhase('idle'); // the note was written into Klinika
+  f.api.dictate(); f.advance(100);
+  assert.equal(f.rec.speech[0].text, 'Nawodnienie prawidłowe, fałd skórny rozprostowuje się od razu.', 'the next sample, not the first one again');
+  f.advance(6000); f.api.finishDictation(); f.advance(3000);
+  assert.equal((f.reviews[1].output.badanie.match(/Błony śluzowe/g) || []).length, 1, 'no sentence twice in the note');
+  // A rejected note leaves the field as it was: the same sample may be spoken again.
+  f.api.state.review = null; f.api.setPhase('idle'); f.api.dictate(); f.advance(100);
+  assert.equal(f.rec.speech[0].text, 'Nawodnienie prawidłowe, fałd skórny rozprostowuje się od razu.');
+  // Every sample already in the field: the recording stays silent.
+  const g = fixture({ prefs: { transcriber: 'local_whisper' } });
+  g.clinic.text.badanie += ' Błony śluzowe bladoróżowe, czas powrotu kapilarnego około 2 sekund. Nawodnienie prawidłowe, fałd skórny rozprostowuje się od razu.\nMałżowiny uszne i przewody słuchowe czyste, bez wydzieliny.';
+  g.api.dictate(); g.advance(100);
+  assert.equal(g.rec.words.length, 0); assert.equal(g.q('.oa-dt-demo').textContent, 'Przykładowe dyktowanie — cisza');
+});
+
 test('cancelling while the stop waits shows "Anuluję…" briefly and never opens a review', () => {
   const f = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
   f.api.dictate(); f.advance(1700); f.speak(1); f.api.finishDictation(); f.advance(200);
