@@ -13,13 +13,6 @@
     badanie: 'Stan ogólny obniżony, postawa zgarbiona, sierść nastroszna. Wokół nozdrzy i w kątach oczu zaschnięta porfiryna. Oddech przyspieszony z wysiłkiem brzusznym. Osłuchwo nad polami płucnymi rzęzenia i świsty. BCS 2/5. T 37,8°C, HR ok. 360/min.',
     diagnoza: 'Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.'
   });
-  /* Invented misspellings only. */
-  const SPELLING = {
-    nastroszna: 'nastroszona', osłuchwo: 'Osłuchowo', rzęzenia: 'rzężenia', sluzowe: 'śluzowe',
-    bravekto: 'Bravecto', szcur: 'szczur', szczor: 'szczur', apatycznny: 'apatyczny', klinczne: 'kliniczne',
-    przyspiesozny: 'przyspieszony', błonyy: 'błony', porfirryna: 'porfiryna', wilgotneee: 'wilgotne', wymiotty: 'wymioty'
-  };
-  const UNKNOWN_TERMS = new Set(['fancy']);
   const MAIN_TITLE = '[DEMO] Klinika XP - [Przebieg wizyty - Zwierzę domowe]';
   const REVIEW_TITLE = '[DEMO] Klinika XP — PRZEGLĄD WIZYTY (TYLKO DO ODCZYTU)';
   const SUB_TITLE = '[DEMO] Rejestracja wizyty: Wywiad - Badanie - Diagnoza';
@@ -56,23 +49,23 @@
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const displayDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : (iso || '');
   const newDraft = (patient = 1, { empty = false } = {}) => ({ id: null, patient, meta: { date: today(), time: '10:15', type: 'Badanie', doctor: DOCTOR, number: '', weight: patient === 1 && !empty ? '0.42' : '', temperature: patient === 1 && !empty ? '37.8' : '' }, fields: patient === 1 && !empty ? { ...DEFAULT_FIELDS } : { wywiad: '', badanie: '', diagnoza: '' } });
-  const initialState = () => ({ visits: JSON.parse(JSON.stringify(SEED_VISITS)), current: newDraft(1), loaded: null, mode: 'new', editorOpen: true, editorHidden: false, activeField: 'badanie', spelling: true, ignoredWords: [], weights: [17, 72, 11], sequence: 160 });
+  const initialState = () => ({ visits: JSON.parse(JSON.stringify(SEED_VISITS)), current: newDraft(1), loaded: null, mode: 'new', editorOpen: true, editorHidden: false, activeField: 'badanie', weights: [17, 72, 11], sequence: 160 });
   function loadState() {
     const base = initialState();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
       if (!saved || !saved.current || !saved.current.fields || KEYS.some(key => typeof saved.current.fields[key] !== 'string') || !Array.isArray(saved.visits)) return base;
-      return { ...base, ...saved, ignoredWords: Array.isArray(saved.ignoredWords) ? saved.ignoredWords : [], weights: Array.isArray(saved.weights) && saved.weights.length === 3 ? saved.weights : base.weights };
+      const { spelling, ignoredWords, ...rest } = saved; // OpisAI's spelling was never Klinika's: older saves drop it
+      return { ...base, ...rest, weights: Array.isArray(saved.weights) && saved.weights.length === 3 ? saved.weights : base.weights };
     } catch (_) { return base; }
   }
   let state = loadState();
   let mainWindow = null, mainRoot = null, editorWindow = null, editorRoot = null, listWindow = null, listRoot = null;
-  let spellPopup = null, popupPinned = false, hoverTimer = null, hideTimer = null, lastCorrection = null, closingEditor = false, statusText = '';
+  let closingEditor = false, statusText = '';
   const fieldUndo = {}, editTimers = new Map(), composing = new Set();
   let editorSession = 0;
   const esc = text => window.Shell ? Shell.escape(String(text ?? '')) : String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const kx = (name, size = 24, extra = '') => window.KxpIcons ? KxpIcons.svg(name, size, extra) : '';
-  const icon = (name, size = 16) => window.Icons ? Icons.svg(name, size) : '';
   const persist = () => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {} };
   const patientOf = id => PATIENTS.find(p => p.id === id) || PATIENTS[0];
   const writable = () => state.mode === 'new' || state.mode === 'edit';
@@ -112,37 +105,13 @@
     const point = pos => { let left = pos; for (const n of nodes) { if (left <= n.length) return [n, left]; left -= n.length; } const n = nodes[nodes.length - 1]; return [n, n.length]; };
     try { const a = point(offsets.start), b = point(offsets.end), r = document.createRange(); r.setStart(...a); r.setEnd(...b); const s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (_) {}
   }
-  /* Spelling marks belong to OpisAI's overlay; the Klinika field itself stays plain text. */
-  function spellingMarks(text) {
-    const marks = [], tokens = [...text.matchAll(/[\p{L}]+(?:[-'][\p{L}]+)*/gu)];
-    let previous = null;
-    for (const token of tokens) {
-      const word = token[0], lower = word.toLocaleLowerCase('pl'), start = token.index;
-      if (state.ignoredWords.includes(lower)) { previous = token; continue; }
-      if (previous && previous[0].toLocaleLowerCase('pl') === lower && /^\s+$/.test(text.slice(previous.index + previous[0].length, start))) marks.push({ start, word, kind: 'repeat', replacement: '' });
-      else if (SPELLING[lower]) {
-        let replacement = SPELLING[lower];
-        replacement = (word[0] === word[0].toLocaleUpperCase('pl') ? replacement[0].toLocaleUpperCase('pl') : replacement[0].toLocaleLowerCase('pl')) + replacement.slice(1);
-        marks.push({ start, word, kind: 'typo', replacement });
-      } else if (UNKNOWN_TERMS.has(lower)) marks.push({ start, word, kind: 'unknown', replacement: '' });
-      previous = token;
-    }
-    return marks;
-  }
+  /* The memo is plain text, as the native TAddictSpellMemo/EDIT. OpisAI's spelling lines are its own layer
+     above the window (assets/opisai-spelling.js); Klinika knows nothing about them. */
   function renderField(key, preserve = false) {
     const el = fieldElement(key); if (!el || composing.has(key)) return;
-    const text = state.current.fields[key], selected = preserve ? selectionOffsets(el) : null;
-    if (!state.spelling) el.textContent = text;
-    else {
-      let html = '', cursor = 0;
-      for (const mark of spellingMarks(text)) {
-        html += esc(text.slice(cursor, mark.start));
-        html += `<span class="clinic-spell ${mark.kind}" data-start="${mark.start}" data-kind="${mark.kind}" data-replacement="${esc(mark.replacement)}" data-word="${esc(mark.word)}">${esc(mark.word)}</span>`;
-        cursor = mark.start + mark.word.length;
-      }
-      el.innerHTML = html + esc(text.slice(cursor));
-    }
-    restoreSelection(el, selected);
+    const text = state.current.fields[key]; if (el.textContent === text && !el.querySelector('*')) return;
+    const selected = preserve ? selectionOffsets(el) : null;
+    el.textContent = text; restoreSelection(el, selected);
   }
 
   /* ---------------------------------------------------------------- main window */
@@ -241,14 +210,13 @@
     return true;
   }
   function closeEditor() {
-    dismissSpelling();
     if (editorWindow) { closingEditor = true; editorWindow.close(); closingEditor = false; }
     editorWindow = null; editorRoot = null; state.editorOpen = false; state.editorHidden = false;
     emit('clinic:editor', { open: false, mode: state.mode });
   }
   function holdEditor() {
     if (!writable() || !editorWindow) return;
-    dismissSpelling(); editorWindow.minimize(true); state.editorHidden = true; persist();
+    editorWindow.minimize(true); state.editorHidden = true; persist();
     setStatus('Bufor pozostaje w pamięci. F2 przywraca tę samą sesję, bez zapisu.'); renderMain();
     emit('clinic:editor', { open: false, mode: state.mode });
   }
@@ -349,7 +317,7 @@
   }
   function photoInfo() { info('Zdjęcie zwierzęcia', 'Makieta nie zawiera zdjęć pacjentów. W Klinice XP w tym miejscu jest zdjęcie z karty zwierzęcia.'); }
   function notReproduced(name) { info(name, `Moduł „${name}” nie jest odwzorowany w makiecie. Demonstracja obejmuje przebieg wizyty, opis w podoknie i listę wizyt.`); }
-  function aboutMock() { dialog('about', 'O makiecie Kliniki XP', 470, 300, `<div class="kxp-about">${kx('caseVisit', 40)}<div><h2>Makieta Kliniki XP</h2><p>Niezależna rekonstrukcja układu okna wizyty do pokazania pracy z OpisAI. Nie jest produktem BRI ani kompletną Kliniką XP.</p><p>Odwzorowane: przebieg wizyty, osobne podokno opisu (F2), nowa wizyta (F4), przegląd zapisanej wizyty i lista wizyt (Ctrl+L). Dane są fikcyjne i zostają w tej przeglądarce.</p></div></div>`); }
+  function aboutMock() { dialog('about', 'O makiecie Kliniki XP', 470, 332, `<div class="kxp-about">${kx('caseVisit', 40)}<div><h2>Makieta Kliniki XP</h2><p>Niezależna rekonstrukcja układu okna wizyty do pokazania pracy z OpisAI. Nie jest produktem BRI ani kompletną Kliniką XP.</p><p>Odwzorowane: przebieg wizyty, osobne podokno opisu (F2), nowa wizyta (F4), przegląd zapisanej wizyty i lista wizyt (Ctrl+L). Dane są fikcyjne i zostają w tej przeglądarce.</p><p>Prawdziwe pole opisu Kliniki rysuje własne cienkie czerwone zygzaki pisowni (słownik programu); makieta ich nie rysuje. Gładkie linie pod słowami to warstwa OpisAI.</p></div></div>`); }
 
   /* ---------------------------------------------------------------- visit list (Ctrl+L) */
   let listFilter = { owner: '', animal: '', text: '' }, listSelected = null;
@@ -474,7 +442,7 @@
       const el = event.target.closest('[data-clinic-field]'); if (!el || !writable()) return;
       const key = el.dataset.clinicField, value = el.innerText.replace(/\r\n/g, '\n').replace(/ /g, ' '), before = getFields();
       if (state.current.fields[key] === value) return;
-      noteManualEdit(key, before[key], value); state.current.fields[key] = value; persist(); renderEditorChrome(); announce(key, 'manual'); dismissSpelling();
+      noteManualEdit(key, before[key], value); state.current.fields[key] = value; persist(); renderEditorChrome(); announce(key, 'manual');
       clearTimeout(editTimers.get(key)); editTimers.set(key, setTimeout(() => renderField(key, true), 650));
     });
     editorRoot.addEventListener('compositionstart', event => { const key = event.target.closest('[data-clinic-field]')?.dataset.clinicField; if (key) composing.add(key); });
@@ -482,18 +450,12 @@
     editorRoot.addEventListener('focusin', event => { const key = event.target.closest('[data-clinic-field]')?.dataset.clinicField; if (key) { state.activeField = key; renderEditorChrome(); emit('clinic:focus', { field: key, fields: getFields() }); } });
     editorRoot.addEventListener('paste', event => { if (!event.target.closest('[data-clinic-field]')) return; event.preventDefault(); document.execCommand('insertText', false, event.clipboardData.getData('text/plain')); });
     editorRoot.addEventListener('contextmenu', event => { const field = event.target.closest('[data-clinic-field]'); if (field) { event.preventDefault(); state.activeField = field.dataset.clinicField; editMenu(event.clientX, event.clientY); } });
-    editorRoot.addEventListener('pointerover', event => { const mark = event.target.closest('.clinic-spell'); if (!mark || popupPinned) return; clearTimeout(hideTimer); clearTimeout(hoverTimer); hoverTimer = setTimeout(() => showSpelling(mark, mark.closest('[data-clinic-field]').dataset.clinicField), 380); });
-    editorRoot.addEventListener('pointerout', event => { if (event.target.closest('.clinic-spell') && !popupPinned) { clearTimeout(hoverTimer); hideTimer = setTimeout(dismissSpelling, 240); } });
-    editorRoot.addEventListener('pointerdown', event => {
-      const mark = event.target.closest('.clinic-spell'); if (mark && event.button === 0) { event.preventDefault(); showSpelling(mark, mark.closest('[data-clinic-field]').dataset.clinicField, true); return; }
-      const split = event.target.closest('[data-splitter]'); if (split) dragSplitter(event, Number(split.dataset.splitter));
-    });
-    editorRoot.addEventListener('scroll', () => { if (spellPopup) dismissSpelling(); }, true);
+    editorRoot.addEventListener('pointerdown', event => { const split = event.target.closest('[data-splitter]'); if (split) dragSplitter(event, Number(split.dataset.splitter)); });
     editorRoot.addEventListener('keydown', event => {
       const ctrl = (event.ctrlKey || event.metaKey) && !event.altKey, key = event.key.toLowerCase();
       if (ctrl && key === 'z' && event.target.closest('[data-clinic-field]')) { event.preventDefault(); undoField(event.target.closest('[data-clinic-field]').dataset.clinicField); }
       else if (ctrl && key === 's') { event.preventDefault(); saveVisit(); }
-      else if (event.key === 'Escape' && !spellPopup) { event.preventDefault(); requestCancel(); }
+      else if (event.key === 'Escape') { event.preventDefault(); requestCancel(); }
     });
   }
   function dragSplitter(event, index) {
@@ -522,17 +484,29 @@
     const changed = KEYS.filter(key => key in fields && fields[key] !== state.current.fields[key]);
     if (!changed.length) return { ok: true, reason: 'Treść jest już aktualna.' };
     changed.forEach(key => { state.current.fields[key] = fields[key]; clearTimeout(editTimers.get(key)); delete fieldUndo[key]; });
-    dismissSpelling();
     changed.forEach(key => { renderField(key); const wrap = fieldElement(key)?.closest('.kxp-section'); wrap?.classList.remove('just-applied'); requestAnimationFrame(() => wrap?.classList.add('just-applied')); setTimeout(() => wrap?.classList.remove('just-applied'), 1300); });
     persist(); renderEditorChrome(); announce(changed.length === 1 ? changed[0] : null, options.source || 'external');
     return { ok: true, reason: 'Wpisano treść do pól wizyty.' };
   }
-  function setSpellingEnabled(enabled) { state.spelling = !!enabled; dismissSpelling(); KEYS.forEach(key => renderField(key, true)); persist(); emit('clinic:spelling', { enabled: state.spelling }); }
+  /* EM_SETSEL + EM_REPLACESEL(fCanUndo): an exact range of one field replaced as the native edit control does it.
+     Unlike a document write (setFields, WM_SETTEXT), it is the field's last undoable change: Ctrl+Z restores it.
+     The caller names the text it saw (expected) and the sub-window it read (session). */
+  function replaceText(key, start, end, replacement, options = {}) {
+    if (!KEYS.includes(key) || !editorVisible() || !writable()) return { ok: false, reason: NO_EDITOR };
+    if (options.session !== undefined && options.session !== editorSession) return { ok: false, reason: WINDOW_CHANGED };
+    const before = state.current.fields[key];
+    if (options.expected !== undefined && String(options.expected) !== before) return { ok: false, reason: 'Treść pola zmieniła się od ostatniego odczytu.' };
+    if (typeof replacement !== 'string' || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end > before.length) return { ok: false, reason: 'Nieprawidłowy zakres zamiany.' };
+    const after = before.slice(0, start) + replacement + before.slice(end), el = fieldElement(key), focused = !!el && document.activeElement === el;
+    clearTimeout(editTimers.get(key)); fieldUndo[key] = { before, after, at: 0 }; state.current.fields[key] = after;
+    renderField(key); if (focused) restoreSelection(el, { start: start + replacement.length, end: start + replacement.length });
+    persist(); renderEditorChrome(); announce(key, options.source || 'replace');
+    return { ok: true, text: after };
+  }
   function markTarget(key, enabled = true) { editorRoot?.querySelectorAll('.kxp-section').forEach(el => el.classList.toggle('is-target', enabled && el.dataset.section === key)); }
   function reset() {
-    const settings = { spelling: state.spelling };
     closeEditor(); listWindow?.close();
-    state = { ...initialState(), ...settings }; for (const k of KEYS) delete fieldUndo[k]; lastCorrection = null; statusText = ''; dismissSpelling();
+    state = initialState(); for (const k of KEYS) delete fieldUndo[k]; statusText = '';
     try { localStorage.removeItem('opisai.demo.visit.v2'); } catch (_) {}
     persist();
     if (mainRoot) renderMain();
@@ -542,37 +516,12 @@
   }
   function context() { const p = patientOf(state.current.patient); return { editorOpen: editorVisible(), writable: writable() && editorVisible(), mode: state.mode, title: SUB_TITLE, mainTitle: state.mode === 'saved' ? REVIEW_TITLE : MAIN_TITLE, patient: p.name, owner: p.owner, visitNumber: state.current.id === null ? '<NOWY>' : state.current.meta.number, session: editorVisible() ? editorSession : 0, message: NO_EDITOR }; }
 
-  /* ---------------------------------------------------------------- spelling card (OpisAI overlay) */
-  function dismissSpelling() { clearTimeout(hoverTimer); clearTimeout(hideTimer); spellPopup?.remove(); spellPopup = null; popupPinned = false; }
-  function showSpelling(mark, key, pinned = false) {
-    if (!document.contains(mark) || !state.spelling) return;
-    dismissSpelling(); popupPinned = pinned;
-    const kind = mark.dataset.kind, word = mark.dataset.word, replacement = mark.dataset.replacement, start = Number(mark.dataset.start);
-    const popup = document.createElement('div'); popup.className = 'clinic-spell-popover'; popup.setAttribute('role', 'dialog'); popup.setAttribute('aria-label', 'Podpowiedź pisowni');
-    const title = kind === 'unknown' ? 'Nieznane słowo' : kind === 'repeat' ? 'Powtórzone słowo' : 'Literówka';
-    popup.innerHTML = `<div class="clinic-spell-popover-header ${kind}">${icon('document', 14)}${title}<button class="clinic-spell-close" data-spell-close aria-label="Zamknij podpowiedź">${icon('close', 13)}</button></div><div class="clinic-spell-explanation">${kind === 'unknown' ? 'Może to być nazwa własna lub termin specjalistyczny.' : kind === 'repeat' ? 'To słowo występuje dwa razy obok siebie.' : 'Proponowana poprawka pisowni'}</div>${kind !== 'unknown' ? `<button class="clinic-spell-suggestion" data-spell-fix><s>${esc(word)}</s>${icon('arrowRight', 14)}<b>${esc(replacement || 'Usuń powtórzenie')}</b></button>` : `<div style="padding:0 12px 10px;font-size:14px">${esc(word)}</div>`}<div class="clinic-spell-actions"><button class="clinic-spell-action" data-spell-ignore>${icon('check', 13)}${kind === 'unknown' ? 'Dodaj do słownika' : 'Pomiń słowo'}</button>${lastCorrection ? `<button class="clinic-spell-action" data-spell-undo>${icon('undo', 13)}Cofnij poprawkę</button>` : ''}</div><div class="clinic-spell-source">OpisAI · lokalne podpowiedzi demonstracyjne</div>`;
-    document.body.appendChild(popup); spellPopup = popup;
-    const rect = mark.getBoundingClientRect(), pr = popup.getBoundingClientRect();
-    popup.style.left = Math.max(8, Math.min(rect.left, innerWidth - pr.width - 8)) + 'px';
-    popup.style.top = (rect.bottom + 8 + pr.height < innerHeight - 55 ? rect.bottom + 8 : Math.max(8, rect.top - pr.height - 8)) + 'px';
-    popup.addEventListener('pointerenter', () => clearTimeout(hideTimer)); popup.addEventListener('pointerleave', () => { if (!popupPinned) hideTimer = setTimeout(dismissSpelling, 220); });
-    popup.querySelector('[data-spell-close]').onclick = dismissSpelling;
-    popup.querySelector('[data-spell-ignore]').onclick = () => { state.ignoredWords.push(word.toLocaleLowerCase('pl')); persist(); dismissSpelling(); KEYS.forEach(k => renderField(k, true)); };
-    popup.querySelector('[data-spell-fix]')?.addEventListener('click', () => {
-      const before = state.current.fields[key]; if (before.slice(start, start + word.length) !== word) { dismissSpelling(); return; }
-      let end = start + word.length; if (kind === 'repeat' && before[end] === ' ') end++;
-      const after = before.slice(0, start) + replacement + before.slice(end);
-      lastCorrection = { key, before, after }; setFields({ [key]: after }, { expected: { [key]: before }, source: 'spelling' }); dismissSpelling(); focusField(key); restoreSelection(fieldElement(key), { start: start + replacement.length, end: start + replacement.length }); toast('Poprawiono pisownię.');
-    });
-    popup.querySelector('[data-spell-undo]')?.addEventListener('click', () => { const c = lastCorrection; if (!c) return; const result = setFields({ [c.key]: c.before }, { expected: { [c.key]: c.after }, source: 'spelling-undo' }); if (result.ok) { lastCorrection = null; toast('Cofnięto poprawkę pisowni.'); } else toast('Pole zmieniło się po poprawce. Użyj polecenia Cofnij.'); dismissSpelling(); });
-  }
-
   /* ---------------------------------------------------------------- window lifecycle */
   function open() {
     if (mainWindow && document.contains(mainWindow.el)) { mainWindow.show(); mainWindow.focus(); return mainWindow; }
     mainRoot = document.createElement('div'); mainRoot.className = 'kxp-app';
     const width = Math.max(360, Math.min(1214, innerWidth - 40)), height = Math.max(380, Math.min(800, innerHeight - 70));
-    mainWindow = Shell.createWindow({ id: 'clinic', title: MAIN_TITLE, icon: 'clinic', width, height, minWidth: 600, minHeight: 360, x: innerWidth < 900 ? 8 : 16, y: innerHeight < 600 ? 8 : 12, className: 'kxp-window', content: mainRoot, resizable: true, maximizable: true, taskbar: true, onClose: () => { if (writable() && editorWindow && dirty()) { confirmDialog('Zamknąć Klinikę?', 'Odrzucić niezapisane zmiany tej wizyty?', 'Odrzuć i zamknij', () => { discardEditing(); mainWindow?.close(); }); return false; } closeEditor(); dismissSpelling(); mainWindow = null; mainRoot = null; emit('clinic:editor', { open: false, mode: state.mode }); return true; } });
+    mainWindow = Shell.createWindow({ id: 'clinic', title: MAIN_TITLE, icon: 'clinic', width, height, minWidth: 600, minHeight: 360, x: innerWidth < 900 ? 8 : 16, y: innerHeight < 600 ? 8 : 12, className: 'kxp-window', content: mainRoot, resizable: true, maximizable: true, taskbar: true, onClose: () => { if (writable() && editorWindow && dirty()) { confirmDialog('Zamknąć Klinikę?', 'Odrzucić niezapisane zmiany tej wizyty?', 'Odrzuć i zamknij', () => { discardEditing(); mainWindow?.close(); }); return false; } closeEditor(); mainWindow = null; mainRoot = null; emit('clinic:editor', { open: false, mode: state.mode }); return true; } });
     renderMain(); bindMain();
     if (innerWidth >= 900) mainWindow.maximize();
     return mainWindow;
@@ -584,11 +533,8 @@
     else if (event.key === 'F4') { event.preventDefault(); newVisit(); }
     else if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'l') { event.preventDefault(); openList(); }
   }
-  window.Clinic = { open, isOpen: () => !!(mainWindow && document.contains(mainWindow.el)), openEditor: startEditing, isEditorOpen: editorVisible, getContext: context, getFields, setFields, focusField, getActiveField: () => state.activeField, setSpellingEnabled, reset, markTarget, getDefaultFields: () => ({ ...DEFAULT_FIELDS }), getSpellingEnabled: () => state.spelling };
-  document.addEventListener('pointerdown', event => { if (spellPopup && !spellPopup.contains(event.target) && !event.target.closest('.clinic-spell')) dismissSpelling(); }, true);
-  document.addEventListener('keydown', event => { if (event.key === 'Escape' && spellPopup) { dismissSpelling(); event.stopPropagation(); } }, true);
+  window.Clinic = { open, isOpen: () => !!(mainWindow && document.contains(mainWindow.el)), openEditor: startEditing, isEditorOpen: editorVisible, getContext: context, getFields, setFields, replaceText, focusField, getActiveField: () => state.activeField, reset, markTarget, getDefaultFields: () => ({ ...DEFAULT_FIELDS }) };
   document.addEventListener('keydown', onKey);
-  window.addEventListener('resize', dismissSpelling);
   function init() {
     Shell.registerApp({ id: 'clinic', title: 'Klinika XP', icon: 'clinic', open });
     open();
