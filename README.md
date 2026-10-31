@@ -6,12 +6,17 @@ Demonstracja przeglądarkowa OpisAI, dostosowana do przebiegu pracy aplikacji **
 
 ## Przebieg wizyty
 
+Kolejne kroki odpowiadają sekcji „Opracowanie dokumentacji” z README aplikacji 0.12.0rc32.
+
 1. W Klinice XP opis wizyty jest w osobnym podoknie „Rejestracja wizyty: Wywiad - Badanie - Diagnoza” (F2). Edytuj w nim wywiad, badanie i diagnozę.
-2. Kliknij bąbelek OpisAI i sprawdź odczytane źródła. OpisAI czyta tylko otwarte podokno opisu i nie otwiera wizyty za Ciebie; gdy podokna nie ma, pokazuje błąd jak aplikacja.
-3. Wybierz wariant Bogato lub Wiernie, zatwierdź materiał i rozpocznij opracowanie.
-4. Przejrzyj wynik, porównaj go ze źródłem, popraw tekst i wybierz pola do wpisania.
-5. Zatwierdź przegląd. Wpis zostanie wykonany wyłącznie wtedy, gdy stan pól zgadza się z odczytanym wcześniej.
-6. Zapisz wizytę osobno w Klinice (OK w podoknie albo „Zapisz wizytę”). Zapisana wizyta otwiera się w przeglądzie tylko do odczytu; ponowna edycja wymaga „Przejdź do edycji”. Historię i cofanie wpisów znajdziesz w OpisAI.
+2. Kliknij bąbelek OpisAI albo upuść go na jednym polu. OpisAI najpierw odczytuje otwarte podokno („Odczytuję pola”). Nie otwiera wizyty za Ciebie: gdy podokna nie ma, pokazuje błąd jak aplikacja.
+3. Wybierz zakres i wariant: Wiernie albo Bogato, z panelem parametrów lub bez, z rozpoznaniem lub bez. Domyślny wariant to „Wiernie · sam opis”. Wariant całej wizyty jest zapamiętywany po rozpoczęciu generowania; opracowanie pojedynczego pola go nie zmienia. Pod kafelkami widać, czego wariant wymaga od AI, np. że panel uzupełnia brakujące parametry normą z Ustawień.
+4. Sprawdź i zatwierdź źródła oraz wybrane połączenie. Zgoda nazywa usługę AI („Sprawdzone: wysyłam do ChatGPT tylko te pola…”). Zmiana treści, zakresu albo połączenia odznacza ją, a sama zmiana stylu Bogato/Wiernie nie. „Pokaż zasady i źródła” pokazuje układ polecenia z rc32: kolejność reguł, sloty, zestawienie panelu, format odpowiedzi i źródła. Treść każdej reguły jest w demonstracji skrócona do jednego zdania.
+5. W tym samym oknie widać postęp, a potem przegląd. Najpierw pojawia się panel złożony lokalnie, potem tekst na żywo. W przeglądzie tekst „Do wpisania” edytujesz w stałych podsekcjach. Wiersze panelu mają podpis pochodzenia („Ze źródła”, „Z wzorca”), a wnioski AI są osobnymi blokami „Wnioskowanie”. Zamknięcie okna podczas generowania anuluje je, a zamknięcie przeglądu odrzuca wynik.
+6. Zatwierdź dokładnie tę treść. Wpis wykonuje się tylko wtedy, gdy podokno i pola są takie jak przy odczycie. Okno wyniku potwierdza każde pole odczytem kontrolnym i oferuje „Cofnij wpisanie”. Wpisanie do pól nie zapisuje wizyty w Klinice.
+7. Zapisz wizytę osobno w Klinice (OK w podoknie albo „Zapisz wizytę”). Zapisana wizyta otwiera się w przeglądzie tylko do odczytu; ponowna edycja wymaga „Przejdź do edycji”. Historia dokumentów (Konfiguracja → Historia) obejmuje opracowania przygotowane, odrzucone, wpisane i niewpisane z powodu zmiany pól.
+
+Świadome uproszczenia: odpowiedź AI jest lokalną, powtarzalną symulacją. Dla przykładowej wizyty Fistaszka teksty mają ustalone brzmienie zgodne z regułami rc32, a inną notatkę rozdziela na podsekcje prosty lokalny podział zdań. Panel parametrów, poprawioną pisownię jego cytatów, usuwanie powtórzeń, uwagi do treści i kontrole liczy kod przeniesiony z rc32. Jako model widnieje „przykład demonstracyjny — bez AI”, a „Pokaż polecenie i odpowiedź” zawiera skrócone polecenie i przykładową odpowiedź.
 
 Przytrzymanie bąbelka uruchamia przykładowe dyktowanie. Można zatrzymać, poprawić i kontynuować transkrypcję, przygotować z niej opis albo przejść do wpisania surowej notatki.
 
@@ -38,15 +43,15 @@ Układ, etykiety i zachowanie okna pochodzą z `kxp_mock.c` 2.4.1 z repozytorium
 - Podokno opisu z trzema sekcjami i ich narzędziami (Mowa, Zredaguj, Typowe… OK, ANULUJ). Narzędzia Kliniki (także etapy 2–7) nie są odtworzone i mówią o tym po kliknięciu; działają OK i ANULUJ. Tytuł podokna ma dopisek z imieniem pacjenta i numerem wizyty, jak w mocku. Wysokość pól zmienia się przeciągnięciem separatora.
 - Tryby jak w mocku: nowa wizyta, edycja, zapisana wizyta w przeglądzie tylko do odczytu i historia po anulowaniu. „Na razie zatrzymaj” chowa podokno bez zapisu; F2 je przywraca.
 - F2 — opis wizyty, F4 — nowa wizyta z danymi (data, godzina, typ, lekarz, waga, temperatura), Ctrl+L — lista wizyt z filtrami i przeglądem dowolnej wizyty. W podoknie Ctrl+S zapisuje, a Esc anuluje. Skróty działają, gdy fokus jest w oknie Kliniki; inaczej Ctrl+L przejmie przeglądarka.
-- Ctrl+Z cofa ostatnią zmianę w polu, jak w zwykłym polu tekstowym Windows. Wpis wykonany przez OpisAI czyści to cofanie; wpisy cofa się w OpisAI („Cofnij ostatni wpis”).
+- Ctrl+Z cofa ostatnią zmianę w polu, jak w zwykłym polu tekstowym Windows. Wpis wykonany przez OpisAI czyści to cofanie; wpisy cofa się w OpisAI („Cofnij wpisanie” w oknie wyniku albo menu bąbelka „Bezpieczny zapis i odzyskiwanie”).
 - Wpis OpisAI wymaga tego samego podokna, które było odczytane: po zamknięciu i ponownym otwarciu opisu trzeba odczytać pola od nowa.
 - Moduły spoza zdjęć (Leczenie, Rozliczenie, Multimedia, Apteka, Finanse…) są wyłączone albo pokazują informację, że nie są odwzorowane. Wydruki nie są generowane.
 
 ## Dane i granice demonstracji
 
-Generowanie jest lokalnym formatowaniem przykładu, a dyktowanie odtwarza zapisaną transkrypcję. Demo nie łączy się z usługami AI, nie prosi o klucze API i nie włącza mikrofonu. Dowolny tekst wprowadzony przez użytkownika pozostaje źródłem wyniku; przykład Fistaszka nie zastępuje innej notatki.
+Generowanie jest lokalną symulacją odpowiedzi AI (zob. „Przebieg wizyty”), a dyktowanie odtwarza zapisaną transkrypcję. Demo nie łączy się z usługami AI, nie prosi o klucze API i nie włącza mikrofonu. Dowolny tekst wprowadzony przez użytkownika pozostaje źródłem wyniku; przykład Fistaszka nie zastępuje innej notatki.
 
-Wizyty makiety Kliniki, dokumenty, ustawienia pulpitu i położenie bąbelka (`opisai.demo.bubble.v1`) są zapisywane w `localStorage`, pod kluczami zaczynającymi się od `opisai.demo.` (wizyty: `opisai.demo.visit.v3`; dawny klucz `opisai.demo.visit.v2` jest usuwany przy przywróceniu przykładu). Ustawienia OpisAI są zapisywane pod kluczem `opisai-demo-settings-v12`. Historia operacji OpisAI pozostaje w bieżącej karcie i jest czyszczona po odświeżeniu strony. Ustawienia → Prywatność i zabezpieczenia → Przywróć ustawienia usuwa dane demonstracji, w tym oba zestawy ustawień. Do testowania należy używać fikcyjnych danych.
+Wizyty makiety Kliniki, dokumenty, ustawienia pulpitu i położenie bąbelka (`opisai.demo.bubble.v1`) są zapisywane w `localStorage`, pod kluczami zaczynającymi się od `opisai.demo.` (wizyty: `opisai.demo.visit.v3`; dawny klucz `opisai.demo.visit.v2` jest usuwany przy przywróceniu przykładu). Ustawienia OpisAI są zapisywane pod kluczem `opisai-demo-settings-v12`, a ostatni zatwierdzony wariant całej wizyty pod `opisai.demo.variant.v1`. Historia dokumentów OpisAI pozostaje w bieżącej karcie i jest czyszczona po odświeżeniu strony. Ustawienia → Prywatność i zabezpieczenia → Przywróć ustawienia usuwa dane demonstracji, w tym oba zestawy ustawień. Do testowania należy używać fikcyjnych danych.
 
 ## Struktura
 
@@ -59,6 +64,7 @@ Wizyty makiety Kliniki, dokumenty, ustawienia pulpitu i położenie bąbelka (`o
 | `assets/clinic.js`, `assets/clinic.css` | Makieta Kliniki XP: przebieg wizyty, podokno opisu, przegląd tylko do odczytu, lista wizyt |
 | `assets/clinic-icons.js` | Ikony makiety Kliniki przeniesione z `kxp_mock.c` |
 | `assets/opisai.js`, `assets/opisai.css` | Bąbelek, przygotowanie, dyktowanie, przegląd i ustawienia OpisAI |
+| `assets/opisai-document.js` | Niezależny od DOM model dokumentu przeniesiony z rc32: podsekcje, wzorzec panelu i jego lokalny odczyt, pisownia cytatów, usuwanie powtórzeń, uwagi do treści, dokument przeglądu i symulowana odpowiedź |
 | `assets/orb-motion.js` | Niezależne od DOM modele bąbelka przeniesione z rc32: podążanie i wyhamowanie, rozpoznawanie gestów, obrys, odbicie od paska zadań i krople |
 | `assets/icons.js`, `assets/fonts/`, `assets/desktop-*.svg` | Zasoby wizualne |
 | `assets/ASSET_SOURCES.md` | Źródła i licencje zasobów |
@@ -73,12 +79,13 @@ Kontrola składni: `node --check` dla zmienianych plików JavaScript. Testy bez 
 node --test tests/*.test.cjs
 ```
 
-GitHub Actions wykonuje te same kontrole dla push i pull requestów. Testy okien odtwarzają regresję ponownego otwierania po przeciągnięciu. Testy bąbelka sprawdzają zachowanie z rc32: podążanie bez przeregulowania (20% odległości na takt 33 ms) i wyhamowanie ×0,82, brak odbijania od krawędzi, odkształcanie samego obrysu, gesty (przeciąganie po 180 ms, przytrzymanie po 450 ms, anulowanie), odbicie i krople zgodne z wartościami z modułów Pythona, menu 1:1 z zasobnikiem, akcje w poszczególnych stanach (także przy ograniczeniu ruchu i z klawiatury, gdy klatka animacji ma znacznik sprzed wywołania), „Anuluj” i „Pokaż” podczas startu i odbioru dyktowania, wsiąkanie w widoczne pole i geometrię maszerującej ramki, czerwony „Błąd” z dymkiem, ogłaszanie stanu, motyw menu i zapamiętywanie położenia. Harness DOM nie zastępuje oceny wyglądu w przeglądarce.
+GitHub Actions wykonuje te same kontrole dla push i pull requestów. Testy okien odtwarzają regresję ponownego otwierania po przeciągnięciu. Testy bąbelka sprawdzają zachowanie z rc32: podążanie bez przeregulowania (20% odległości na takt 33 ms) i wyhamowanie ×0,82, brak odbijania od krawędzi, odkształcanie samego obrysu, gesty (przeciąganie po 180 ms, przytrzymanie po 450 ms, anulowanie), odbicie i krople zgodne z wartościami z modułów Pythona, menu 1:1 z zasobnikiem, akcje w poszczególnych stanach (także przy ograniczeniu ruchu i z klawiatury, gdy klatka animacji ma znacznik sprzed wywołania), „Anuluj” i „Pokaż” podczas startu i odbioru dyktowania, wsiąkanie w widoczne pole i geometrię maszerującej ramki, czerwony „Błąd” z dymkiem, ogłaszanie stanu, motyw menu i zapamiętywanie położenia. Testy modelu dokumentu porównują panel, pisownię, usuwanie powtórzeń i wygenerowane dokumenty z danymi z prawdziwego potoku rc32 (`tests/fixtures/rc32-document-golden.json`, wyłącznie wymyślone notatki). Testy przebiegu dokumentacji sprawdzają odczyt przed przygotowaniem, reset zgody, macierz wariantów dla pola, zapamiętywanie wariantu, anulowanie z powrotem do notatki, konflikt pól, zgodę na wyczyszczenie pola, cofnięcie i historię. Harness DOM nie zastępuje oceny wyglądu w przeglądarce.
 
 Najważniejsze ścieżki do sprawdzenia w przeglądarce:
 
 - Przygotowanie → zmiana źródła unieważnia zatwierdzenie → opracowanie → edycja przeglądu → wpis → cofnięcie.
-- Zmiana pola w Klinice w trakcie przeglądu → konflikt zatrzymuje wpis.
+- Zmiana pola w Klinice w trakcie przeglądu → konflikt zatrzymuje wpis; OK w podoknie i „Przejdź do edycji” przed wpisem → „Zmieniło się okno…”.
+- Anulowanie generowania → „Anulowano przygotowanie” → „Wróć do notatki” z zachowanymi źródłami i odznaczoną zgodą.
 - Zamknięte podokno opisu (ANULUJ albo „Na razie zatrzymaj”) → kliknięcie bąbelka kończy się czerwonym „Błędem” i dymkiem „Nie znaleziono podokna opisu wizyty”, a przytrzymanie samym dymkiem „⚠ Transkrypcja”; przy zamkniętej całej Klinice dymek ma „▶ Uruchom Klinikę”, który otwiera tylko okno główne.
 - OK w podoknie → przegląd tylko do odczytu → „Przejdź do edycji” (F2); Ctrl+L → przegląd innej wizyty; F4 → nowa wizyta.
 - Dyktowanie → zakończenie → kontynuacja / opracowanie / wpisanie notatki.
