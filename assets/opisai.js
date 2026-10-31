@@ -55,11 +55,15 @@
     prepare();
   }
   function getFields() { return clone(window.Clinic?.getFields?.() || {wywiad:'',badanie:'',diagnoza:''}); }
+  /* OpisAI reads and writes only the open description sub-window; it never opens a visit itself (0.12 _on_failure). */
+  function orbNotice(title,text){const wrap=state.orb;if(!wrap)return;$('.oa-orb-teach',wrap)?.remove();const card=document.createElement('div');card.className='oa-orb-teach is-error';card.setAttribute('role','alert');card.innerHTML=`<button type="button" aria-label="Zamknij komunikat">${icon('close',13)}</button><strong>${esc(title)}</strong>${esc(text)}`;wrap.append(card);$('button',card).addEventListener('click',()=>{card.remove();if(state.phase==='error')setPhase('idle');});setTimeout(()=>card.remove(),15000);}
+  function visitWindowReady(){if(!window.Clinic?.isEditorOpen||Clinic.isEditorOpen())return true;showBubble();setPhase('error');orbNotice('Nie znaleziono podokna opisu wizyty',`(fragment: „Rejestracja wizyty”). Otwórz wizytę w Klinice i spróbuj ponownie. Podokno musisz wybrać sam — OpisAI nie wybiera wizyty.`);return false;}
   function validOption(options) {return options && typeof options==='object' && !('target' in options && options.target instanceof Element)?options:{};}
   function prepare(options={}) {
     options=typeof options==='string'?{field:options}:validOption(options);
     if(state.phase==='recording'||state.phase==='processing'){showActive();return;}
-    closeWin('opisai-review');Clinic.open(); showBubble();
+    if(!visitWindowReady())return;
+    closeWin('opisai-review'); showBubble();
     const snapshot=clone(options.snapshot||getFields());
     const sources=clone(options.sources||snapshot);
     const field=FIELDS[options.field]?options.field:null;
@@ -176,7 +180,7 @@
       if(!applied.ok){const err=$('[data-write-error]',root);err.hidden=false;err.innerHTML=icon('info',16)+`<div><strong>Zmieniła się treść wizyty.</strong><br>${esc(applied.reason||'Pola nie odpowiadają wcześniejszemu odczytowi.')} Odczytaj źródła ponownie.</div>`+button('Odczytaj ponownie','reread','small');bind(err,'reread',()=>{win.close();state.review=null;prepare({field:result.field});});invalidate();setPhase('error');return;}
       const record={id:result.id,time:stamp(),mode:result.mode,variant:result.variant,route:result.route||'Przykładowe dyktowanie',before:clone(result.snapshot),after:clone(changes),status:'Wpis potwierdzony'};
       state.lastWrite=record;if(preferences.history)state.history.unshift(record);
-      state.review=null;state.operation=null;win.close();state.active=null;setPhase('done');Clinic.open();if(result.selected[0])Clinic.focusField(result.selected[0]);
+      state.review=null;state.operation=null;win.close();state.active=null;setPhase('done');if(result.selected[0])Clinic.focusField(result.selected[0]);
       Shell.notify({title:'OpisAI — gotowe',message:`Wpisano ${result.selected.length===1?'tekst do pola':`tekst do ${result.selected.length} pól`}. Wizyta czeka na zapis w Klinice.`,icon:'opisai',actionLabel:'Cofnij wpis',onAction:undo});
       const token=state.token;setTimeout(()=>{if(state.phase==='done'&&token===state.token)setPhase('idle');},4000);
     });
@@ -202,7 +206,8 @@
     options=validOption(options);
     if(state.recording){finishDictation();return;}
     if(state.phase==='processing'){showActive();return;}
-    Clinic.open();showBubble();
+    if(!visitWindowReady())return;
+    showBubble();
     const field=FIELDS[options.field]?options.field:(Clinic.getActiveField?.()||state.activeField||'wywiad');
     const snapshot=clone(options.snapshot||getFields());
     state.review=null;closeWin('opisai-compose');closeWin('opisai-review');
@@ -282,7 +287,7 @@
       } else if(page==='fields'){
         const values=getFields();
         area.innerHTML=`<h2>Odczyt pola (Klinika)</h2><p>Powiązanie OpisAI z polami w oknie opisu wizyty.</p><fieldset class="oa-group"><legend>Okno docelowe</legend>${formRow('Program','<div class="oa-form-control"><strong>Klinika XP</strong><div class="oa-form-help">Bieżąca wizyta · przykład interaktywny</div></div>')}<div class="oa-inline-controls">${button('Pokaż Klinikę','show-clinic','','clinic')}${button('Odczytaj ponownie','read-fields','','document')}</div></fieldset><fieldset class="oa-group"><legend>Przypisane pola</legend><table class="oa-options-table"><thead><tr><th>Pole</th><th>Stan</th><th></th></tr></thead><tbody>${Object.entries(FIELDS).map(([key,label])=>`<tr><td>${esc(label)}</td><td><span class="oa-success-text">${icon('check',12)} Przypisane</span><br><small class="oa-muted">${String(values[key]||'').length} znaków</small></td><td>${button('Pokaż','field-'+key,'small','eye')}</td></tr>`).join('')}</tbody></table></fieldset><fieldset class="oa-group"><legend>Pisownia</legend>${switchControl('spelling','Podkreślaj podejrzane słowa w Klinice','Sugestie dotyczą widocznego przykładu. Poprawkę wybierasz samodzielnie.',draft)}</fieldset>`;
-        bind(area,'show-clinic',()=>Clinic.open());bind(area,'read-fields',()=>{draw();toast('Odczytano bieżącą treść trzech pól.');});Object.keys(FIELDS).forEach(key=>bind(area,'field-'+key,()=>{win.minimize();Clinic.open();Clinic.focusField(key);Clinic.markTarget?.(key,true);setTimeout(()=>Clinic.markTarget?.(key,false),1800);}));
+        bind(area,'show-clinic',()=>Clinic.open());bind(area,'read-fields',()=>{draw();toast('Odczytano bieżącą treść trzech pól.');});Object.keys(FIELDS).forEach(key=>bind(area,'field-'+key,()=>{if(!visitWindowReady())return;win.minimize();Clinic.focusField(key);Clinic.markTarget?.(key,true);setTimeout(()=>Clinic.markTarget?.(key,false),1800);}));
       } else if(page==='appearance'){
         area.innerHTML=`<h2>Wygląd</h2><p>Kolory i czytelność okien OpisAI.</p><fieldset class="oa-group"><legend>Motyw aplikacji</legend><div class="oa-theme-choice">${[['light','Jasny'],['dark','Ciemny'],['blue','Niebieski']].map(([value,label])=>`<button type="button" class="oa-theme-card ${draft.theme===value?'selected':''}" data-theme="${value}"><span class="oa-theme-preview ${value}"><i></i><i></i></span>${label}</button>`).join('')}</div></fieldset><fieldset class="oa-group"><legend>Tekst i podgląd</legend>${formRow('Rozmiar tekstu',`<input data-setting="fontSize" type="range" min="12" max="16" value="${draft.fontSize}"><span data-font-size>${draft.fontSize} px</span>`)}<p data-font-preview style="font-size:${draft.fontSize}px;padding:11px;border:1px solid var(--oa-line);border-radius:7px;background:var(--oa-field)">Przykładowy opis wizyty. Czytelny tekst ułatwia sprawdzenie faktów, liczb i jednostek.</p>${switchControl('livePreview','Pokaż tekst na żywo podczas generowania','Wersja robocza pozostaje oddzielona od zatwierdzanego wyniku.',draft)}${switchControl('animations','Animacje interfejsu','Ruch bąbelka i płynne przygotowywanie przykładu.',draft)}</fieldset>`;
         $$('[data-theme]',area).forEach(el=>el.addEventListener('click',()=>{draft.theme=el.dataset.theme;applyTheme(win,draft.theme);dirty();draw();}));

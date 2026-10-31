@@ -72,6 +72,8 @@
     if(!win || !win.visible)return;
     for(const w of windows.values())w.el.classList.toggle('is-inactive',w!==win);
     active=win;desktopById().lastActiveId=win.id;win.el.style.zIndex=String(++z);
+    // Owned windows (options.owner) stay above their owner, as Win32 owned windows do.
+    const raiseOwned=owner=>{for(const w of windows.values())if(w!==owner&&w.options.owner===owner.id&&w.visible){w.el.style.zIndex=String(++z);raiseOwned(w);}};raiseOwned(win);
     if(!win.el.contains(document.activeElement)){
       const previous=win.lastFocusedElement;
       if(previous?.isConnected&&win.el.contains(previous)&&!previous.disabled&&previous.getClientRects().length)previous.focus({preventScroll:true});
