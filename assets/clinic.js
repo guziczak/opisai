@@ -593,7 +593,7 @@
     else if (event.key === 'F4') { event.preventDefault(); newVisit(); }
     else if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'l') { event.preventDefault(); openList(); }
   }
-  window.Clinic = { open, openEditor: startEditing, isEditorOpen: editorVisible, getContext: context, getFields, setFields, focusField, getActiveField: () => state.activeField, setSpellingEnabled, reset, markTarget, undo: undoVisit, getDefaultFields: () => ({ ...DEFAULT_FIELDS }), getSpellingEnabled: () => state.spelling };
+  window.Clinic = { open, isOpen: () => !!(mainWindow && document.contains(mainWindow.el)), openEditor: startEditing, isEditorOpen: editorVisible, getContext: context, getFields, setFields, focusField, getActiveField: () => state.activeField, setSpellingEnabled, reset, markTarget, undo: undoVisit, getDefaultFields: () => ({ ...DEFAULT_FIELDS }), getSpellingEnabled: () => state.spelling };
   document.addEventListener('pointerdown', event => { if (spellPopup && !spellPopup.contains(event.target) && !event.target.closest('.clinic-spell')) dismissSpelling(); }, true);
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && spellPopup) { dismissSpelling(); event.stopPropagation(); } }, true);
   document.addEventListener('keydown', onKey);
