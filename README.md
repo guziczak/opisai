@@ -13,7 +13,7 @@ Demonstracja przeglądarkowa OpisAI, dostosowana do przebiegu pracy aplikacji **
 5. Zatwierdź przegląd. Wpis zostanie wykonany wyłącznie wtedy, gdy stan pól zgadza się z odczytanym wcześniej.
 6. Zapisz wizytę osobno w Klinice (OK w podoknie albo „Zapisz wizytę”). Zapisana wizyta otwiera się w przeglądzie tylko do odczytu; ponowna edycja wymaga „Przejdź do edycji”. Historię i cofanie wpisów znajdziesz w OpisAI.
 
-Przytrzymanie bąbelka uruchamia przykładowe dyktowanie. Można zatrzymać, poprawić i kontynuować transkrypcję, przygotować z niej opis albo przejść do wpisania surowej notatki.
+Przytrzymanie bąbelka uruchamia przykładowe dyktowanie do pola „Badanie kliniczne”. Jak nakładka w aplikacji, panel nad tym polem pokazuje nową transkrypcję i stan nagrywania, a treść pola sprzed dyktowania można rozwinąć osobno. Silnik (domyślnie Gemini Live ze zgodą przed pierwszym nagraniem, lokalny Whisper albo ChatGPT w przeglądarce jako próba) wybiera się w Konfiguracji → Dyktowanie. Przy ChatGPT Enter przekazuje bieżący fragment do przepisania, a nagrywanie trwa. Dyktowanie kończy „Zakończ i sprawdź tekst” albo ponowne przytrzymanie; potem można poprawić i kontynuować transkrypcję, przygotować z niej opis albo przejść do wpisania surowej notatki.
 
 ## Pulpit
 
@@ -73,7 +73,7 @@ Kontrola składni: `node --check` dla zmienianych plików JavaScript. Testy bez 
 node --test tests/*.test.cjs
 ```
 
-GitHub Actions wykonuje te same kontrole dla push i pull requestów. Testy okien odtwarzają regresję ponownego otwierania po przeciągnięciu. Testy bąbelka sprawdzają zachowanie z rc32: podążanie bez przeregulowania (20% odległości na takt 33 ms) i wyhamowanie ×0,82, brak odbijania od krawędzi, odkształcanie samego obrysu, gesty (przeciąganie po 180 ms, przytrzymanie po 450 ms, anulowanie), odbicie i krople zgodne z wartościami z modułów Pythona, menu 1:1 z zasobnikiem, akcje w poszczególnych stanach (także przy ograniczeniu ruchu i z klawiatury, gdy klatka animacji ma znacznik sprzed wywołania), „Anuluj” i „Pokaż” podczas startu i odbioru dyktowania, wsiąkanie w widoczne pole i geometrię maszerującej ramki, czerwony „Błąd” z dymkiem, ogłaszanie stanu, motyw menu i zapamiętywanie położenia. Harness DOM nie zastępuje oceny wyglądu w przeglądarce.
+GitHub Actions wykonuje te same kontrole dla push i pull requestów. Testy okien odtwarzają regresję ponownego otwierania po przeciągnięciu. Testy bąbelka sprawdzają zachowanie z rc32: podążanie bez przeregulowania (20% odległości na takt 33 ms) i wyhamowanie ×0,82, brak odbijania od krawędzi, odkształcanie samego obrysu, gesty (przeciąganie po 180 ms, przytrzymanie po 450 ms, anulowanie), odbicie i krople zgodne z wartościami z modułów Pythona, menu 1:1 z zasobnikiem, akcje w poszczególnych stanach (także przy ograniczeniu ruchu i z klawiatury, gdy klatka animacji ma znacznik sprzed wywołania), „Anuluj” i „Pokaż” podczas startu i odbioru dyktowania, wsiąkanie w widoczne pole i geometrię maszerującej ramki, czerwony „Błąd” z dymkiem, ogłaszanie stanu, motyw menu i zapamiętywanie położenia. Testy dyktowania sprawdzają pole docelowe „Badanie kliniczne”, Enter jako „Przepisz fragment” przy ChatGPT, zgodę Gemini, położenie panelu (wartości z modułu rc32 `overlay_geometry`), chowanie panelu bez podokna, kontynuację z „Dotychczasowym tekstem” i stronę Dyktowanie w konfiguracji. Harness DOM nie zastępuje oceny wyglądu w przeglądarce.
 
 Najważniejsze ścieżki do sprawdzenia w przeglądarce:
 
@@ -81,7 +81,7 @@ Najważniejsze ścieżki do sprawdzenia w przeglądarce:
 - Zmiana pola w Klinice w trakcie przeglądu → konflikt zatrzymuje wpis.
 - Zamknięte podokno opisu (ANULUJ albo „Na razie zatrzymaj”) → kliknięcie bąbelka kończy się czerwonym „Błędem” i dymkiem „Nie znaleziono podokna opisu wizyty”, a przytrzymanie samym dymkiem „⚠ Transkrypcja”; przy zamkniętej całej Klinice dymek ma „▶ Uruchom Klinikę”, który otwiera tylko okno główne.
 - OK w podoknie → przegląd tylko do odczytu → „Przejdź do edycji” (F2); Ctrl+L → przegląd innej wizyty; F4 → nowa wizyta.
-- Dyktowanie → zakończenie → kontynuacja / opracowanie / wpisanie notatki.
+- Dyktowanie (Gemini Live, ChatGPT z Enterem, lokalny Whisper) → panel nad „Badanie kliniczne” → zakończenie → kontynuacja / opracowanie / wpisanie notatki; zamknięcie podokna w trakcie dyktowania chowa panel, a po ponownym otwarciu wpis wymaga nowego odczytu.
 - Minimalizowanie i przywracanie, maksymalizacja, zmiana rozmiaru, przyciąganie i menu klawiaturowe.
 - Zapis i ponowne otwarcie notatki, przeniesienie do Kosza i przywrócenie.
 - Zmiana motywu oraz zachowanie okien na węższym ekranie.
