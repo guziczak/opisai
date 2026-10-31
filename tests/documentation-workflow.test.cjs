@@ -529,10 +529,11 @@ test('Esc is reject(): compose cancels, the read and the generation ask to cance
 test('settings: no inert compose switches; the page shows the layout and panel template the workflow uses', () => {
   const f = fixture(); f.api.settings('sections');
   const page = f.q('opisai-settings', '[data-settings-page]');
-  assert.equal(page.querySelectorAll('[data-panel-row], [data-section-name], [data-setting="rich"], [data-setting="panel"], [data-setting="diagnosis"]').length, 0);
-  assert.match(page.textContent, /Panel: wartości z pól, a brakujące parametry według Ustawień \(np\. norma\)\./);
-  assert.deepEqual(page.querySelectorAll('.oa-doc-layout tbody tr').map(tr => tr.children[0].textContent), ['Opis badania i ocena', 'Opis wywiadu', 'Rozpoznanie robocze']);
-  assert.ok(page.querySelectorAll('tbody td').some(td => td.textContent === 'niepowiększone, niebolesne, przesuwalne względem podłoża'));
+  assert.equal(page.querySelectorAll('[data-setting], [data-panel-row], [data-section-name]').length, 0);
+  assert.deepEqual(page.querySelectorAll('.oa-doc-layout tbody tr').map(tr => tr.children[1].textContent), ['Opis badania i ocena', 'Opis wywiadu', 'Rozpoznanie robocze']);
+  page.querySelector('[data-vitals]').click(); f.advance(0); // "Konfiguruj": the panel template the workflow uses
+  assert.match(f.root('opisai-vitals').textContent, /Wartości z notatki zastępują odpowiednie pozycje szablonu\./);
+  assert.ok(f.root('opisai-vitals').querySelectorAll('tbody td').some(td => td.textContent === 'niepowiększone, niebolesne, przesuwalne względem podłoża'));
   f.click('opisai-settings', '[data-page="history"]');
   assert.doesNotMatch(f.q('opisai-settings', '[data-settings-page] p').textContent, /Potwierdzone wpisy/);
 });

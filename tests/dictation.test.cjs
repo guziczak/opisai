@@ -16,7 +16,7 @@ assert.equal(source.split(startup).length, 2, 'The test boundary must precede th
 const controllerSource = source.replace(startup, `
   review=result=>{__reviews.push(result);state.review=result;setPhase('review');};
   document.addEventListener('keydown',dictationEnterShortcut,true);
-  Object.assign(__api,{mount:createOrb,state,preferences:()=>preferences,dictate,finishDictation,orbAction,settings,setPhase,placeDictationPanel,FIELDS,
+  Object.assign(__api,{mount:createOrb,state,preferences:()=>preferences,dictate,finishDictation,orbAction,settings,about,setPhase,placeDictationPanel,FIELDS,
     open(id){return makeWindow(id,'Okno',400,300,'<div></div>');}});
   return;
 ${startup}`);
@@ -425,9 +425,9 @@ test('Konfiguracja → Dyktowanie: rc32 engines, the ChatGPT retention notice, t
   spin.value = '3'; f.bubble(spin, { type: 'change' }); assert.equal(spin.value, 10, 'outside 5–600 s it is 10');
 });
 
-test('Konfiguracja → System → "Kopiuj informacje" names the dictation engines as rc32 does, never a stored identifier', async () => {
+test('O aplikacji → "Kopiuj informacje" names the dictation engines as rc32 does, never a stored identifier', async () => {
   const f = fixture({ prefs: { transcriber: 'chatgpt_browser' } });
-  f.api.settings('system'); f.click(f.doc.querySelector('[data-settings-page] [data-action="copy-info"]')); await new Promise(resolve => setImmediate(resolve));
+  f.api.about(); f.click(f.doc.querySelector('[data-action="copy-about"]')); await new Promise(resolve => setImmediate(resolve));
   assert.equal(f.copied.length, 1);
   assert.match(f.copied[0], /^Dyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce \(próba\)$/m, 'application_info_text: "Dyktowanie: " + transcription_summary()');
   assert(!/chatgpt_browser|local_whisper|gemini\b/.test(f.copied[0]));

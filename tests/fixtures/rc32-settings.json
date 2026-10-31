@@ -1,0 +1,343 @@
+{
+ "providers": [
+  {
+   "id": "claude",
+   "label": "Claude",
+   "transport": "cookie",
+   "auth": "cookie",
+   "models": [
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5",
+    "claude-opus-4-7"
+   ],
+   "runtime": "claude.ai",
+   "secret": true,
+   "locked": ""
+  },
+  {
+   "id": "chatgpt",
+   "label": "ChatGPT",
+   "transport": "browser",
+   "auth": "profile",
+   "models": [
+    "gpt-4o",
+    "gpt-4o-mini",
+    "o1-preview",
+    "o1-mini",
+    "gpt-4-turbo"
+   ],
+   "runtime": "chatgpt",
+   "secret": false,
+   "locked": "(wybrany w ChatGPT UI)"
+  },
+  {
+   "id": "claude",
+   "label": "Claude",
+   "transport": "browser",
+   "auth": "profile",
+   "models": [
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5",
+    "claude-opus-4-7"
+   ],
+   "runtime": "claude.ai-pw",
+   "secret": false,
+   "locked": ""
+  },
+  {
+   "id": "gemini",
+   "label": "Gemini",
+   "transport": "browser",
+   "auth": "profile",
+   "models": [
+    "Gemini 3.1 Pro",
+    "Gemini 3.5 Flash"
+   ],
+   "runtime": "gemini-pw",
+   "secret": false,
+   "locked": ""
+  },
+  {
+   "id": "gemini",
+   "label": "Gemini",
+   "transport": "browser",
+   "auth": "edge_cookie",
+   "models": [
+    "Gemini 3.1 Pro",
+    "Gemini 3.5 Flash"
+   ],
+   "runtime": "gemini-cookie",
+   "secret": true,
+   "locked": ""
+  },
+  {
+   "id": "gemini",
+   "label": "Gemini",
+   "transport": "browser",
+   "auth": "anonymous",
+   "models": [
+    "Gemini 3.5 Flash"
+   ],
+   "runtime": "gemini-anon",
+   "secret": false,
+   "locked": ""
+  },
+  {
+   "id": "gemini",
+   "label": "Gemini",
+   "transport": "api",
+   "auth": "api_key",
+   "models": [
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
+    "gemini-3.1-pro-preview",
+    "gemini-3-pro-preview",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-pro-latest"
+   ],
+   "runtime": "gemini",
+   "secret": true,
+   "locked": ""
+  },
+  {
+   "id": "gemini",
+   "label": "Gemini",
+   "transport": "api",
+   "auth": "gcloud_oauth",
+   "models": [
+    "gemini-3.1-pro-preview",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-2.5-flash",
+    "gemini-2.5-pro"
+   ],
+   "runtime": "gemini-oauth",
+   "secret": false,
+   "locked": ""
+  },
+  {
+   "id": "local",
+   "label": "Lokalny (offline)",
+   "transport": "local",
+   "auth": "local",
+   "models": [
+    "gemma4:12b",
+    "qwen3:14b",
+    "qwen3:8b",
+    "qwen3:4b"
+   ],
+   "runtime": "local",
+   "secret": false,
+   "locked": ""
+  }
+ ],
+ "transport_labels": {
+  "cookie": "Cookie HTTP",
+  "browser": "Przeglądarka",
+  "api": "API",
+  "local": "Lokalnie (offline)"
+ },
+ "auth_labels": {
+  "cookie": "Cookie z przeglądarki",
+  "profile": "Profil OpisAI / Chrome",
+  "edge_cookie": "Cookie z Edge",
+  "anonymous": "Bez logowania (Flash)",
+  "api_key": "Klucz API",
+  "gcloud_oauth": "OAuth Google Cloud",
+  "local": "Lokalnie (bez logowania)"
+ },
+ "creds_titles": {
+  "cookie": "Logowanie - cookie sesji",
+  "profile": "Logowanie - w oknie przegladarki",
+  "edge_cookie": "Logowanie - cookie z Edge",
+  "anonymous": "Logowanie - niewymagane (Flash)",
+  "api_key": "Klucz API - Gemini",
+  "gcloud_oauth": "Logowanie - Gemini OAuth (Google Cloud)",
+  "local": "Model lokalny (offline)"
+ },
+ "creds_key_field": [
+  "cookie",
+  "edge_cookie",
+  "api_key"
+ ],
+ "connection_labels": {
+  "claude.ai": "Claude · Cookie HTTP · claude-sonnet-4-6",
+  "chatgpt": "ChatGPT · Przeglądarka · model wybrany w ChatGPT UI",
+  "claude.ai-pw": "Claude · Przeglądarka · claude-sonnet-4-6",
+  "gemini-pw": "Gemini · Przeglądarka · Gemini 3.1 Pro",
+  "gemini-cookie": "Gemini · Przeglądarka · Gemini 3.1 Pro",
+  "gemini-anon": "Gemini · Przeglądarka · Gemini 3.5 Flash",
+  "gemini": "Gemini · API · gemini-3.5-flash",
+  "gemini-oauth": "Gemini · API · gemini-3.1-pro-preview",
+  "local": "Lokalny (offline) · Lokalnie (offline) · gemma4:12b"
+ },
+ "llm_hardware": {
+  "auto": "Automatycznie (najlepszy dostępny)",
+  "nvidia_external": "Karta NVIDIA RTX — zewnętrzna (np. AORUS AI BOX)",
+  "nvidia_internal": "Karta NVIDIA RTX — wewnętrzna",
+  "integrated": "Karta wbudowana (AMD Radeon / Intel)"
+ },
+ "release_notes": [
+  "Panel badania ma poprawioną pisownię notatki; cytat lekarza w szczegółach.",
+  "Tylko pisownia: inne słowa, liczby i przeczenia zostają jak w notatce.",
+  "„Szmerów” zostaje przy drogach oddechowych; nazwa wiersza się nie dubluje.",
+  "„Sygnalment” zamiast „Sygnalement”; kreski nie chowają się pod Kliniką."
+ ],
+ "version": "0.12.0rc32",
+ "capabilities": [
+  "Epikryzy z notatek i wpisywanie zatwierdzonej treści do Kliniki.",
+  "Dyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce (próba).",
+  "Podgląd tekstu na żywo i kontrola układu dokumentacji.",
+  "Konfiguracja Gemini z logowaniem Google."
+ ],
+ "provider_names": [
+  "Claude",
+  "ChatGPT",
+  "Gemini",
+  "Lokalny (offline)"
+ ],
+ "application_info_text": "OpisAI 0.12.0rc32\nAsystent dokumentacji weterynaryjnej\nGenerowanie: Claude, ChatGPT, Gemini, Lokalny (offline)\nDyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce (próba)\nKontrola informacji o wydaniu (lokalnie): spójne\nAktualizacje online: nie skonfigurowano źródła wydań.\nLicencja: PolyForm Internal Use 1.0.0",
+ "license_summary": "Licencja programu: PolyForm Internal Use 1.0.0 — do użytku wewnętrznego licencjobiorcy, bez prawa rozpowszechniania. Biblioteki i modele zachowują własne licencje; ich pełne teksty są dołączone do pakietów poszczególnych zależności.",
+ "third_party": [
+  [
+   "PySide6 (Qt for Python)",
+   "LGPL v3"
+  ],
+  [
+   "shiboken6",
+   "LGPL v3"
+  ],
+  [
+   "pywinauto",
+   "BSD-3-Clause"
+  ],
+  [
+   "pywin32",
+   "PSF License"
+  ],
+  [
+   "cryptography",
+   "Apache 2.0 / BSD-3"
+  ],
+  [
+   "cloudscraper",
+   "MIT"
+  ],
+  [
+   "patchright",
+   "Apache 2.0"
+  ],
+  [
+   "Chromium",
+   "BSD-3-Clause i inne"
+  ],
+  [
+   "whisper.cpp (silnik dyktowania osadzony w programie)",
+   "MIT"
+  ],
+  [
+   "Ollama (pobierana przy pierwszym użyciu lokalnego AI)",
+   "MIT"
+  ]
+ ],
+ "update_status": "Aktualizacje online: nie skonfigurowano źródła wydań.",
+ "license_sha256": "f03bef7ad2fd380f684f2b28ad2122ac3bdf9456d9242bb23702c48e3d112f88",
+ "sections": [
+  {
+   "label": "Opis badania i ocena",
+   "instruction": "Przepisz część badaniową (badanie pacjenta, pomiary, wyniki badań obrazowych/laboratoryjnych) na profesjonalny opis badania klinicznego i ocenę wizyty: interpretację wyników, leczenie, zalecenia, rokowanie i plan dalszy. Osobnego rozpoznania nie wpisuj tutaj, jeżeli generowane jest pole Rozpoznanie robocze.",
+   "subsections": [
+    [
+     "Badanie kliniczne",
+     "Opis badania układów i okolic ciała oraz pozostałych ustaleń z badania; bez zabiegów i leków. Panel parametrów i opis tworzą jedną podsekcję.",
+     true,
+     true
+    ],
+    [
+     "Badania dodatkowe",
+     "wyniki badań obrazowych/laboratoryjnych z notatki + krótka interpretacja kliniczna",
+     true,
+     false
+    ],
+    [
+     "Leczenie zastosowane podczas wizyty",
+     "leki podane i zabiegi wykonane w gabinecie (nazwy, droga, płynoterapia); dawki jeśli są w notatce",
+     true,
+     false
+    ],
+    [
+     "Zalecenia i leczenie do domu",
+     "konkretne leki do domu tylko jeśli są w notatce; poza tym dieta, ograniczenia, obserwacja objawów alarmowych i termin kontroli jako zalecenia do rozważenia",
+     true,
+     false
+    ],
+    [
+     "Rokowanie i plan dalszy",
+     "rokowanie (dobre/ostrożne/niepewne), co monitorować, jakie badania wykonać dalej",
+     true,
+     false
+    ]
+   ]
+  },
+  {
+   "label": "Opis wywiadu",
+   "instruction": "Przepisz część wywiadową (objawy, historia, przebieg) na zwięzły, profesjonalny opis wywiadu lekarsko-weterynaryjnego (anamneza).",
+   "subsections": [
+    [
+     "Sygnalment",
+     "gatunek, rasa, wiek, płeć, masa ciała",
+     true,
+     false
+    ],
+    [
+     "Powód wizyty",
+     "dolegliwość zgłaszana przez właściciela albo cel wizyty (kontrola, szczepienie, zabieg)",
+     true,
+     false
+    ],
+    [
+     "Przebieg i czas trwania",
+     "dynamika objawów, od kiedy, co się zmieniało",
+     true,
+     false
+    ],
+    [
+     "Dotychczasowe leczenie i choroby współistniejące",
+     "wcześniejsze/obecne leczenie i leki, choroby współistniejące, profilaktyka, dieta, środowisko",
+     false,
+     false
+    ]
+   ]
+  },
+  {
+   "label": "Rozpoznanie robocze",
+   "instruction": "Wypełnij pole „Diagnoza:” krótkim, ostrożnym rozpoznaniem roboczym opartym na danych z notatki. W trybie bogatym możesz podać najważniejsze różnicowanie, ale bez zaleceń, planu dalszego, badań do wykonania, leczenia ani zdań typu „wskazana dalsza diagnostyka”. Nie przedstawiaj hipotezy jako rozpoznania ostatecznego.",
+   "subsections": [
+    [
+     "Rozpoznanie wstępne",
+     "krótka robocza propozycja do weryfikacji przez lekarza",
+     true,
+     false
+    ],
+    [
+     "Różnicowanie",
+     "najważniejsze jednostki różnicowe tylko gdy uzasadniają je dane z notatki",
+     true,
+     false
+    ],
+    [
+     "Uzasadnienie",
+     "opcjonalnie maksymalnie jedno krótkie zdanie z faktami z notatki; bez planu i zaleceń",
+     false,
+     false
+    ]
+   ]
+  }
+ ]
+}

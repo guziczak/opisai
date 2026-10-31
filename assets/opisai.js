@@ -6,22 +6,62 @@
   const VERSION = '0.12.0rc32';
   const FIELDS = {wywiad: 'Wywiad', badanie: 'Badanie kliniczne', diagnoza: 'Rozpoznanie'};
   const PREF_KEY = 'opisai-demo-settings-v12';
-  const defaults = {provider:'ChatGPT',transport:'Przeglądarka',model:'Wybrany w ChatGPT',theme:'light',transcriber:'ChatGPT',cardMode:'Nagrywa OpisAI',spelling:true,animations:true,idleBounce:true,bounceInterval:10,bounceMax:0,history:true,retention:'30 dni',fontSize:13,livePreview:true,language:'Polski',sentenceLines:false,dictationConsent:false,panel:true,rich:false,diagnosis:false,clinicalSections:['Wywiad','Badanie kliniczne','Rozpoznanie'],panelRows:{temperature:true,heart:true,bcs:true,mass:true},customPrompt:''};
+  /* Konfiguracja (rc32 Config): the connection variant (domain/providers.py ids), the window theme ("auto" follows the
+   * desktop), the idle bounce and the history switch. livePreview is the progress window's remembered "Pokaż tekst na
+   * żywo" (generation_stream_visible). The demonstration starts from ChatGPT in the browser; a fresh rc32 starts from
+   * Claude · Cookie HTTP · claude-sonnet-4-6. Earlier demo-only options (text size, animations, "Niebieski", section
+   * names, panel rows, the variant switches) are no longer read, so they leave the stored settings at the next save. */
+  const defaults = {provider:'chatgpt',transport:'browser',auth:'profile',model:'',theme:'auto',spelling:true,idleBounce:true,bounceInterval:10,bounceMax:0,history:true,livePreview:true};
   /* Dyktowanie (rc32 Config): engine (default Gemini Live), ChatGPT language clip, card mode and Autoenter, Gemini mode and
    * consent, local Whisper hardware, model and speakers, and the remembered details view. rc32 has no language or
    * one-sentence-per-line control. */
-  Object.assign(defaults,{transcriber:'gemini',chatgptClip:true,cardMode:'own',autoEnter:false,autoEnterSeconds:10,geminiMode:'transcribe',dictationConsent:false,whisperHardware:'auto',whisperModel:'large-v3',diarization:false,diarizationOverlay:true,labelDoctor:'Lekarz',labelOther:'Właściciel',dictationDetails:false});delete defaults.language;delete defaults.sentenceLines;
+  Object.assign(defaults,{transcriber:'gemini',chatgptClip:true,cardMode:'own',autoEnter:false,autoEnterSeconds:10,geminiMode:'transcribe',dictationConsent:false,whisperHardware:'auto',whisperModel:'large-v3',diarization:false,diarizationOverlay:true,labelDoctor:'Lekarz',labelOther:'Właściciel',dictationDetails:false});
+  /* domain/providers.py PROVIDERS: serwis → transport → autoryzacja → modele of that variant (runtime_key, a secret
+   * field, a model chosen by the service's own UI). Konfiguracja, the compose route and the consent's service name. */
+  const CLAUDE_MODELS=['claude-sonnet-4-6','claude-haiku-4-5','claude-opus-4-7'],GEMINI_WEB=['Gemini 3.1 Pro','Gemini 3.5 Flash'];
+  const PROVIDERS=[['claude','Claude','cookie','cookie',CLAUDE_MODELS,'claude.ai',true],['chatgpt','ChatGPT','browser','profile',['gpt-4o','gpt-4o-mini','o1-preview','o1-mini','gpt-4-turbo'],'chatgpt',false,'(wybrany w ChatGPT UI)'],
+    ['claude','Claude','browser','profile',CLAUDE_MODELS,'claude.ai-pw'],['gemini','Gemini','browser','profile',GEMINI_WEB,'gemini-pw'],['gemini','Gemini','browser','edge_cookie',GEMINI_WEB,'gemini-cookie',true],
+    ['gemini','Gemini','browser','anonymous',['Gemini 3.5 Flash'],'gemini-anon'],['gemini','Gemini','api','api_key',['gemini-3.5-flash','gemini-3.1-flash-lite','gemini-3-flash-preview','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-pro','gemini-3.1-pro-preview','gemini-3-pro-preview','gemini-flash-latest','gemini-flash-lite-latest','gemini-pro-latest'],'gemini',true],
+    ['gemini','Gemini','api','gcloud_oauth',['gemini-3.1-pro-preview','gemini-3.5-flash','gemini-3.1-flash-lite','gemini-3-flash-preview','gemini-2.5-flash','gemini-2.5-pro'],'gemini-oauth'],['local','Lokalny (offline)','local','local',['gemma4:12b','qwen3:14b','qwen3:8b','qwen3:4b'],'local']]
+    .map(([id,label,transport,auth,models,runtime,secret=false,locked=''])=>({id,label,transport,auth,models,runtime,secret,locked}));
+  const TRANSPORT_LABELS={cookie:'Cookie HTTP',browser:'Przeglądarka',api:'API',local:'Lokalnie (offline)'};
+  const AUTH_LABELS={cookie:'Cookie z przeglądarki',profile:'Profil OpisAI / Chrome',edge_cookie:'Cookie z Edge',anonymous:'Bez logowania (Flash)',api_key:'Klucz API',gcloud_oauth:'OAuth Google Cloud',local:'Lokalnie (bez logowania)'};
+  const uniq=list=>[...new Set(list)];
+  const providerSpec=(p=preferences)=>PROVIDERS.find(s=>s.id===p.provider&&s.transport===p.transport&&s.auth===p.auth)||PROVIDERS[1];
+  function modelFor(spec,requested){ // model_for_spec: a model belongs to its variant; ChatGPT's is chosen in its own UI
+    if(spec.locked)return '';
+    let m=String(requested||'').trim();const low=m.toLowerCase();
+    if(spec.id==='gemini'&&spec.transport==='api')m=/3\.1/.test(low)&&/pro/.test(low)?'gemini-3.1-pro-preview':/3\.5/.test(low)&&/flash/.test(low)?'gemini-3.5-flash':m;
+    else if(spec.id==='gemini')m=/flash/.test(low)&&!/pro/.test(low)?'Gemini 3.5 Flash':/pro/.test(low)||!spec.models.includes(m)?'Gemini 3.1 Pro':m;
+    return spec.models.includes(m)?m:spec.models[0];
+  }
+  function connectCascade(p){ // _refresh_transport_combo → _refresh_auth_combo → _refresh_model_combo: keep what still fits
+    const ts=uniq(PROVIDERS.filter(s=>s.id===p.provider).map(s=>s.transport));if(!ts.includes(p.transport))p.transport=ts[0];
+    const as=PROVIDERS.filter(s=>s.id===p.provider&&s.transport===p.transport).map(s=>s.auth);if(!as.includes(p.auth))p.auth=as[0];
+    const s=providerSpec(p);if(!s.locked)p.model=modelFor(s,p.model);
+  }
+  const modelLabel=(p=preferences)=>{const s=providerSpec(p);return s.locked?s.locked.replace(/^\(|\)$/g,''):modelFor(s,p.model);}; // model_label (bubble and tray tooltips)
+  function connectionLabel(p=preferences){const s=providerSpec(p);return [s.label,TRANSPORT_LABELS[s.transport],s.locked?'model '+modelLabel(p):modelFor(s,p.model)].join(' · ');} // connection_label
+  const normalizeConnection=p=>{ // the demo's earlier labels map onto rc32 variants; anything unknown returns to the default
+    const old={ChatGPT:['chatgpt','browser','profile'],Claude:['claude','browser','profile'],Gemini:['gemini',p.transport==='API'?'api':'browser',p.transport==='API'?'api_key':'profile'],Lokalny:['local','local','local']}[p.provider];
+    if(old){[p.provider,p.transport,p.auth]=old;p.model={'Claude Opus':'claude-opus-4-7','Gemini Pro':'pro','Gemini Flash':'flash'}[p.model]||'';}
+    if(!PROVIDERS.some(s=>s.id===p.provider))Object.assign(p,{provider:defaults.provider,transport:defaults.transport,auth:defaults.auth});
+    connectCascade(p);
+  };
+  /* Motyw okien: auto (the desktop's colour mode stands for Windows here), light or dark; the open Konfiguracja previews its choice. */
+  let themePreview=null;
+  const themeName=(theme=preferences.theme)=>theme==='dark'||theme==='auto'&&(window.Shell?.prefs?.theme||document.documentElement?.dataset?.theme)==='dark'?'dark':'light';
   let preferences = {...defaults};
   try { const saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); for (const key of Object.keys(defaults)) if (key in saved && typeof saved[key] === typeof defaults[key]) preferences[key] = saved[key]; } catch (_) {}
-  if(!Array.isArray(preferences.clinicalSections)||preferences.clinicalSections.length!==3)preferences.clinicalSections=[...defaults.clinicalSections];
-  if(!preferences.panelRows||typeof preferences.panelRows!=='object')preferences.panelRows={...defaults.panelRows};
-  if(!['light','dark','blue'].includes(preferences.theme))preferences.theme='light';
+  if(preferences.theme==='blue')preferences.theme='light'; // the demo's "Niebieski" was a light palette; rc32 offers auto, light and dark
+  if(!['auto','light','dark'].includes(preferences.theme))preferences.theme=defaults.theme;
   /* Config idle_bounce_*: 10–3600 s between bounces, 0 = no limit per idle window. */
   const normalizeBounce=p=>{p.bounceInterval=Number.isFinite(+p.bounceInterval)?Math.max(10,Math.min(3600,Math.round(+p.bounceInterval))):defaults.bounceInterval;p.bounceMax=Number.isFinite(+p.bounceMax)?Math.max(0,Math.min(999,Math.round(+p.bounceMax))):defaults.bounceMax;};
   normalizeBounce(preferences);
   /* Saved dictation choices as rc32 identifiers (the demo's earlier labels map onto them); Autoenter whole seconds 5–600, otherwise 10. */
   const normalizeDictation=p=>{p.transcriber={ChatGPT:'chatgpt_browser','Gemini Live':'gemini','Whisper (lokalnie)':'local_whisper'}[p.transcriber]||(['gemini','local_whisper','chatgpt_browser'].includes(p.transcriber)?p.transcriber:defaults.transcriber);p.cardMode={'Nagrywa OpisAI':'own','Dwie karty':'two'}[p.cardMode]||(['own','two'].includes(p.cardMode)?p.cardMode:'own');if(!['transcribe','agent'].includes(p.geminiMode))p.geminiMode='transcribe';const s=Math.round(Number(p.autoEnterSeconds));p.autoEnterSeconds=s>=5&&s<=600?s:10;if(!['auto','nvidia_external','nvidia_internal','integrated','cpu'].includes(p.whisperHardware))p.whisperHardware='auto';if(!['large-v3','large-v3-turbo','medium','small'].includes(p.whisperModel))p.whisperModel='large-v3';};
   normalizeDictation(preferences);
+  normalizeConnection(preferences);
   const state = {phase:'idle',active:null,operation:null,review:null,history:[],lastWrite:null,token:0,recording:null,receipt:null,job:null,orb:null,closed:false,handlingFailure:false,failureSerial:0,activeField:null};
   const windows = new Map();
   const $ = (sel,root=document) => root.querySelector(sel);
@@ -33,18 +73,19 @@
   const notice = (text,kind='info',extra='') => `<div class="oa-notice ${kind}" ${extra}>${icon(kind==='error'?'info':'shield',17)}<div>${text}</div></div>`;
   const clone = value => JSON.parse(JSON.stringify(value));
   const savePreferences = () => { try { localStorage.setItem(PREF_KEY,JSON.stringify(preferences)); } catch (_) {} };
-  const route = () => `${preferences.provider} · ${preferences.provider==='Lokalny'?'Offline':preferences.transport} · ${preferences.model}`;
   const stamp = () => new Intl.DateTimeFormat('pl-PL',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
   const toast = message => window.Shell?.toast(message);
   function bind(root, action, callback) { $$(`[data-action="${action}"]`,root).forEach(el => el.addEventListener('click',callback)); }
-  function applyTheme(win,theme=preferences.theme) { if(!win?.el)return; win.el.classList.remove('oa-theme-light','oa-theme-dark','oa-theme-blue');win.el.classList.add('oa-host','oa-theme-'+theme); }
+  function applyTheme(win,theme=(win?.id==='opisai-settings'&&themePreview)||preferences.theme) { if(!win?.el)return; win.el.classList.remove('oa-theme-light','oa-theme-dark','oa-theme-blue');win.el.classList.add('oa-host','oa-theme-'+themeName(theme)); }
+  function refreshThemes() { windows.forEach(w=>applyTheme(w)); const dt=document.querySelector('.oa-dictation'); if(dt){dt.classList.remove('oa-theme-light','oa-theme-dark','oa-theme-blue');dt.classList.add('oa-theme-'+themeName());} } // a saved or followed theme reaches every OpisAI window
   function makeWindow(id,title,width,height,html,onClose) {
     let win=windows.get(id);
     if(win?.el?.isConnected){win.setTitle(title);win.setContent(html);win.show();win.focus();}
-    else {win=Shell.createWindow({id,title,icon:'opisai',width,height,minWidth:Math.min(width,500),minHeight:Math.min(height,360),className:'oa-host oa-theme-'+preferences.theme,content:html,resizable:true,maximizable:true,taskbar:true,onClose:()=>onClose?.()});windows.set(id,win);}
+    else {win=Shell.createWindow({id,title,icon:'opisai',width,height,minWidth:Math.min(width,500),minHeight:Math.min(height,360),className:'oa-host oa-theme-'+themeName(),content:html,resizable:true,maximizable:true,taskbar:true,onClose:()=>onClose?.()});windows.set(id,win);}
     applyTheme(win); if(win?.el)win.el.dataset.oaWindow=id; holdPosition(); return win; // a work view stops the idle bounce where it is
   }
   function closeWin(id) { windows.get(id)?.close(); }
+  window.addEventListener?.('shell:theme',()=>{if(preferences.theme==='auto'||themePreview==='auto')refreshThemes();}); // "Automatyczny" follows a change of the desktop's colour mode
   function getFields() { return clone(window.Clinic?.getFields?.() || {wywiad:'',badanie:'',diagnoza:''}); }
   function validOption(options) {return options && typeof options==='object' && !('target' in options && options.target instanceof Element)?options:{};}
   /* ------------------------------------------------------------------ documentation workflow
@@ -59,11 +100,10 @@
   const VARIANT_KEY = 'opisai.demo.variant.v1'; // config generation_variant: the last approved whole-visit choice
   const WINDOW_CHANGED = 'Zmieniło się okno, proces programu lub mapowanie pól. Odczytaj pola ponownie.';
   const RECEIPT_NOTE = 'To wynik wpisania do kontrolek, nie potwierdzenie zapisu wizyty w bazie Kliniki.';
-  const docSpeed = () => preferences.animations === false || matchMedia('(prefers-reduced-motion: reduce)').matches ? .35 : 1;
+  const docSpeed = () => matchMedia('(prefers-reduced-motion: reduce)').matches ? .35 : 1; // ui/motion.py: only the system setting
   const pick = (values, keys) => Object.fromEntries(keys.map(key => [key, String(values?.[key] ?? '')]));
   const lines = text => Math.max(1, String(text).split('\n').length);
   const normal = text => String(text).replace(/\s+/g, ' ').trim().toLowerCase(); // also the settings search
-  function connectionLabel() { const p = preferences.provider; return [p === 'Lokalny' ? 'Lokalny (offline)' : p, p === 'Lokalny' ? 'Lokalnie (offline)' : preferences.transport, p === 'ChatGPT' ? 'model wybrany w ChatGPT UI' : preferences.model].join(' · '); }
   function clinicTitle() { const c = window.Clinic?.getContext?.() || {}; return c.title ? `${c.title.replace(/^\[DEMO\]\s*/, '')} — ${c.patient}${c.visitNumber === '<NOWY>' ? ' [NOWA]' : ' · ' + c.visitNumber}` : 'Okno docelowe'; }
   function rememberedVariant() { try { const v = JSON.parse(localStorage.getItem(VARIANT_KEY) || 'null'); if (v && ['rich', 'panel', 'diagnosis'].every(k => typeof (v[k] ?? false) === 'boolean')) return Doc().variant(v); } catch (_) {} return Doc().variant({}); }
   function rememberVariant(v) { try { localStorage.setItem(VARIANT_KEY, JSON.stringify(Doc().variant(v))); } catch (_) {} }
@@ -134,7 +174,7 @@
       for (const s of sources) { const card = $(`[data-source-card="${s.field}"]`, root), status = $('[data-status]', card), text = !s.included ? 'Poza wybranym zakresem — diagnoza nie będzie opracowywana.' : !s.text.trim() ? 'Puste pole — możesz je uzupełnić.' : ''; card.classList.toggle('out-of-scope', !s.included); status.textContent = text; status.hidden = !text; }
       $$('[data-tile]', root).forEach(tile => { const on = tile.getAttribute('aria-disabled') !== 'true' && Doc().sameVariant(JSON.parse(tile.dataset.tile), op.variant); tile.classList.toggle('selected', on); tile.setAttribute('aria-pressed', String(on)); });
       $('[data-description]', root).innerHTML = variantHtml(op.variant);
-      const local = preferences.provider === 'Lokalny', route = connectionLabel(), service = route.split('·')[0].trim() || 'wskazanej usługi AI';
+      const local = preferences.provider === 'local', route = connectionLabel(), service = route.split('·')[0].trim() || 'wskazanej usługi AI';
       $('[data-oa-route]', root).textContent = route;
       if (has) {
         preview = Doc().plan(composeRequest(op));
@@ -245,9 +285,8 @@
 
   /* Recovery (ui/recovery.py): a report and explicit next steps, never an automatic resend. */
   const hexId = () => Array.from({length: 32}, () => (Math.random() * 16 | 0).toString(16)).join(''); // uuid4().hex
-  const RUNTIME_KEY = {ChatGPT: 'chatgpt', Claude: 'claude.ai-pw', Gemini: 'gemini-pw', Lokalny: 'local'}; // ProviderSpec.runtime_key of the demo's routes
   function recoveryDialog(issue) {
-    const writing = !!issue.writing, delivery = issue.delivery || 'unknown', backend = preferences.provider === 'Gemini' && preferences.transport === 'API' ? 'gemini' : RUNTIME_KEY[preferences.provider] || '';
+    const writing = !!issue.writing, delivery = issue.delivery || 'unknown', backend = providerSpec().runtime; // ProviderSpec.runtime_key
     // enrich_recovery_issue: the sanitized rows in DIAGNOSTIC_LABELS order; the grid shows the compact captions.
     const rows = [['Wersja OpisAI', VERSION], ['ID zdarzenia', hexId()], ['ID operacji', issue.operation || hexId()], ['Etap', writing ? 'writing' : 'generating'], ...(backend ? [['Usługa', backend]] : []), ['Kod błędu', issue.code], ['Stan odpowiedzi', delivery, 'Odpowiedź']];
     const status = writing ? 'Wynik wpisania nie został potwierdzony. Sprawdź pola w Klinice i dziennik operacji. Nie ponawiaj wpisania automatycznie.' : {not_sent: 'Nie wysłano notatki do AI. Pola wizyty pozostają bez zmian.', not_retried: 'Nie wysłano notatki ponownie. Pola wizyty pozostają bez zmian.', received: 'Odebrano odpowiedź serwisu. Pola wizyty pozostają bez zmian. Nie wysłano notatki ponownie.'}[delivery] || 'Pola wizyty pozostają bez zmian. Nie ponawiam wysyłania automatycznie. Poprzednie żądanie mogło dotrzeć do serwisu.';
@@ -665,7 +704,7 @@
     const ask=state.consent={cancelled:false};let answered=false;
     const answer=value=>{if(answered)return;answered=true;if(state.consent===ask)state.consent=null;done(value&&!ask.cancelled);}; // consent given during a cancelled start is still remembered
     const html=`<div class="oa-app oa-consent"><div class="oa-content"><h2>Dyktowanie przez Gemini Live</h2><p>Dźwięk z mikrofonu będzie przesyłany do usługi Google Gemini Live w celu zamiany mowy na tekst. Podczas nagrywania zobaczysz transkrypcję, a po zakończeniu sprawdzisz ją przed wpisaniem do Kliniki.</p>${check('Zapamiętaj zgodę na dyktowanie przez Gemini Live','oa-gemini-remember',true)}<p class="oa-muted">Zgodę możesz cofnąć w konfiguracji, w sekcji transkrypcji głosowej.</p></div><footer class="oa-footer"><span class="oa-footnote"></span>${button('Anuluj','cancel')}${button('Rozpocznij dyktowanie','start','primary')}</footer></div>`;
-    const id='opisai-gemini-consent',win=Shell.createWindow({id,title:'OpisAI — dyktowanie',icon:'opisai',width:610,height:290,minWidth:420,minHeight:250,className:'oa-host oa-theme-'+preferences.theme,content:html,resizable:false,maximizable:false,taskbar:false,onClose:()=>answer(false)}),root=win.content;
+    const id='opisai-gemini-consent',win=Shell.createWindow({id,title:'OpisAI — dyktowanie',icon:'opisai',width:610,height:290,minWidth:420,minHeight:250,className:'oa-host oa-theme-'+themeName(),content:html,resizable:false,maximizable:false,taskbar:false,onClose:()=>answer(false)}),root=win.content;
     windows.set(id,win);if(win.el)win.el.dataset.oaWindow=id;holdPosition();
     const max=win.el?.querySelector?.('[data-caption="max"]');if(max)max.hidden=true; // CompactDialog: only "×" in its title bar
     bind(root,'cancel',()=>win.close());
@@ -836,7 +875,7 @@
   /* TranscriptOverlay: never a taskbar window and never activated by itself; its stacking follows the
    * Klinika sub-window, its geometry follows the field (FOLLOW_MS 300) and it hides without the field. */
   function dictationOverlay(rec){
-    const el=document.createElement('section');el.className='oa-dictation oa-host oa-theme-'+preferences.theme;el.setAttribute('aria-label','OpisAI — dyktowanie');el.hidden=true;el.dataset.engine=rec.engine;
+    const el=document.createElement('section');el.className='oa-dictation oa-host oa-theme-'+themeName();el.setAttribute('aria-label','OpisAI — dyktowanie');el.hidden=true;el.dataset.engine=rec.engine;
     el.innerHTML=`<div class="oa-dt-target"><span data-dt-target></span>${rec.speech.length?'<span class="oa-dt-demo" title="Demonstracja nie używa mikrofonu: odtwarza zapisany przykład.">Przykładowe dyktowanie</span>':'<span class="oa-dt-demo" title="Demonstracja nie używa mikrofonu. Zapisane przykłady się skończyły, więc to nagranie pozostanie ciche.">Przykładowe dyktowanie — cisza</span>'}</div>`+
       `<div class="oa-dt-head"><span class="oa-dt-indicator" data-dt-indicator aria-hidden="true">●</span><div class="oa-dt-status" data-dt-status></div><span class="oa-dt-meter" data-dt-meter role="meter" aria-label="Poziom sygnału mikrofonu" aria-valuemin="0" aria-valuemax="100" hidden><i></i></span><button type="button" class="oa-dt-hide" data-dt="hide" aria-label="Ukryj podgląd; dyktowanie trwa dalej" title="Ukryj podgląd. Dyktowanie trwa dalej; ikoną OpisAI możesz przywołać podgląd.">Zwiń</button></div>`+
       `<div class="oa-dt-body"><button type="button" class="oa-dt-toggle" data-dt="base" aria-expanded="false" title="Rozwiń tekst zachowany przed tym nagraniem. Nowe dyktowanie pojawia się osobno poniżej." hidden>Dotychczasowy tekst</button><div class="oa-dt-base" data-dt-base tabindex="0" aria-label="Tekst przed nagraniem — tylko do podglądu" hidden></div>`+
@@ -971,7 +1010,7 @@
       if(now-(rec.painted||0)>=45){rec.painted=now;const t=rec.t+Math.min(DT_STEP,Math.max(0,(performance.now()-rec.at)/1000));drawDictationWave(rec,now);if(rec.details)drawDictationTimeline(rec,t,now);}
       if(state.recording===rec||rec.cancelled)dictationFrames(rec);});
   }
-  const dtAccent=()=>preferences.theme==='dark'?'#85dec2':'#147a62'; // StreamTextEdit._accent
+  const dtAccent=()=>themeName()==='dark'?'#85dec2':'#147a62'; // StreamTextEdit._accent
   function canvasFor(canvas,width,height){ // a crisp 2D context of the CSS size; null where canvases are unavailable
     const ctx=canvas?.getContext?.('2d');if(!ctx)return null;const dpr=Math.min(window.devicePixelRatio||1,2);
     if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';}
@@ -1089,78 +1128,217 @@
     });
   }
 
+  /* Konfiguracja (ConfigDialog): the rc32 pages, search keywords and save rule. One page at a time: "Zapisz" is active
+   * only with changes and saves the page without closing; another page, "Zamknij", × or Esc discard what was not saved
+   * (_set_dirty, _on_tab_changed, reject). Controls that need Windows, a browser login, a key or a download are shown
+   * as in the application and say that they work there. */
   const settingsNav=[
-    ['GENEROWANIE',null],['Połączenie i model','connection','send'],['Sekcje opisu','sections','document'],
-    ['WEJŚCIE',null],['Dyktowanie','dictation','mic'],['Odczyt pola (Klinika)','fields','clinic'],
-    ['INTERFEJS',null],['Wygląd','appearance','eye'],['Bąbelek','bubble','opisai'],['Historia','history','history'],
-    ['ZAAWANSOWANE',null],['System','system','settings'],['Zgodność AI (RODO)','privacy','shield']
+    ['GENEROWANIE'],['Połączenie i model','connection','send','klucz api token provider model gemini claude chatgpt edge transport autoryzacja'],['Sekcje opisu','sections','document','sekcje prompt pola epikryza wywiad badanie rozpoznanie polerka'],
+    ['WEJŚCIE'],['Dyktowanie','dictation','mic','transkrypcja whisper gemini live mikrofon gpu glos nagrywanie mowcy diaryzacja profil glosu rozpoznawanie mowcow etykiety'],['Odczyt pola (Klinika)','fields','clinic','odczyt diagnoza pole klinika'],
+    ['INTERFEJS'],['Wygląd','appearance','eye','motyw ciemny jasny tryb kolory wyglad theme dark light auto okna'],['Bąbelek','bubble','opisai','bounce odbijanie idle pasek zadan'],['Historia','history','history','historia retencja zapis generowan'],
+    ['ZAAWANSOWANE'],['System','system','settings','skrot pulpit hash integralnosc system'],['Zgodność AI (RODO)','privacy','shield','rodo ai act zgodnosc matryca compliance']
   ];
-  const selectControl=(key,values,current)=>`<select data-setting="${key}" aria-label="${esc(key)}">${values.map(value=>`<option ${value===current?'selected':''}>${esc(value)}</option>`).join('')}</select>`;
+  const PAGE_KEYS={connection:['provider','transport','auth','model'],dictation:['transcriber','chatgptClip','cardMode','autoEnter','autoEnterSeconds','geminiMode','dictationConsent','whisperHardware','whisperModel','diarization','diarizationOverlay','labelDoctor','labelOther'],appearance:['theme'],bubble:['idleBounce','bounceInterval','bounceMax'],history:['history']}; // what "Zapisz" stores from each page
   const formRow=(label,control)=>`<div class="oa-form-row"><label>${label}</label>${control}</div>`;
-  const switchControl=(key,label,description,draft)=>`<label class="oa-switch-row"><input type="checkbox" data-setting="${key}" ${draft[key]?'checked':''}><div>${label}${description?`<small>${description}</small>`:''}</div></label>`;
+  const IN_APP=' — w aplikacji';
+  const cfgButton=(label,action,title,kind='')=>`<button type="button" class="oa-btn ${kind}" data-cfg="${action}" title="${esc(title)}"><span>${label}</span></button>`;
+  const offButton=(label,title,kind='')=>`<button type="button" class="oa-btn ${kind}" disabled title="${esc(title+IN_APP)}"><span>${label}</span></button>`;
+  const lockedSwitch=(label,title,on)=>`<label class="oa-switch-row oa-cfg-locked" title="${esc(title)}"><input type="checkbox" ${on?'checked':''} disabled><div>${label}</div></label>`;
+  const cfgHint=html=>`<p class="oa-cfg-hint">${html}</p>`; // _style_hint
+  let settingsToast=null;
+  const demoOnly=text=>{settingsToast?.remove?.();settingsToast=toast(text);}; // each replaces the last
+  const HW_LLM={auto:'Automatycznie (najlepszy dostępny)',nvidia_external:'Karta NVIDIA RTX — zewnętrzna (np. AORUS AI BOX)',nvidia_internal:'Karta NVIDIA RTX — wewnętrzna',integrated:'Karta wbudowana (AMD Radeon / Intel)'}; // hardware.LLM_CHOICES
   function settings(initial='connection'){
-    if(typeof initial!=='string')initial='connection';
-    let page=initial,draft=clone(preferences),changed=false;
-    const html=`<div class="oa-app"><div class="oa-settings-layout"><aside class="oa-settings-nav"><input class="oa-settings-search" type="search" placeholder="Znajdź ustawienie" aria-label="Znajdź ustawienie">${settingsNav.map(([label,id,ic])=>id?`<button class="oa-nav-item ${page===id?'active':''}" data-page="${id}">${icon(ic,16)}<span>${label}</span></button>`:`<div class="oa-nav-group">${label}</div>`).join('')}</aside><section class="oa-settings-page" data-settings-page></section></div><footer class="oa-footer"><span class="oa-footnote oa-settings-footer-msg">OpisAI ${VERSION}</span>${button('Anuluj','cancel-settings')}${button('Zapisz','save-settings','primary','check')}</footer></div>`;
-    const win=makeWindow('opisai-settings','OpisAI — konfiguracja',930,680,html);const root=win.content;
-    function dirty(){changed=true;$('.oa-settings-footer-msg',root).textContent='Masz niezapisane zmiany.';}
+    if(typeof initial!=='string'||!settingsNav.some(n=>n[1]===initial))initial='connection';
+    let page=initial,draft=clone(preferences);
+    const html=`<div class="oa-app oa-cfg"><div class="oa-settings-layout"><aside class="oa-settings-nav"><input class="oa-settings-search" type="search" placeholder="Szukaj ustawienia…" aria-label="Szukaj ustawienia"><nav aria-label="Sekcje konfiguracji">${settingsNav.map(([label,id,ic])=>id?`<button type="button" class="oa-nav-item" data-page="${id}">${icon(ic,16)}<span>${label}</span></button>`:`<div class="oa-nav-group">${label}</div>`).join('')}</nav></aside><section class="oa-settings-page" data-settings-page></section></div><footer class="oa-footer oa-cfg-foot"><span class="oa-cfg-folder"><small>Konfig:</small>${button('Otwórz folder','config-folder','','','title="Folder z plikiem konfiguracji OpisAI (opisai.sqlite3)"')}</span><span class="oa-pg-gap"></span><span class="sr-only" role="status" data-cfg-status></span>${button('Zapisz','save-settings','primary','','disabled title="Zapisz zmiany z TEJ karty (nie zamyka okna). Aktywny tylko gdy sa niezapisane zmiany; przelaczenie karty je odrzuca."')}${button('Zamknij','close-settings','','','title="Zamknij okno konfiguracji. Niezapisane zmiany z bieżącej karty zostaną odrzucone."')}</footer></div>`;
+    const win=makeWindow('opisai-settings',`OpisAI ${VERSION} — konfiguracja`,880,700,html,()=>{themePreview=null;});const root=win.content;escapeCloses(win);
+    const saveButton=$('[data-action="save-settings"]',root),status=$('[data-cfg-status]',root);
+    const dirty=()=>(PAGE_KEYS[page]||[]).some(key=>JSON.stringify(draft[key])!==JSON.stringify(preferences[key]));
+    const refreshSave=()=>{saveButton.disabled=!dirty();};
+    function preview(theme){themePreview=theme===preferences.theme?null:theme;applyTheme(win);} // _on_theme_combo_changed: the open window follows the choice at once
+    function go(next){ // _on_nav_changed → _on_tab_changed: unsaved changes of the page are dropped
+      draft=clone(preferences);preview(preferences.theme);page=next;status.textContent='';draw();
+    }
     function draw(){
-      $$('[data-page]',root).forEach(el=>el.classList.toggle('active',el.dataset.page===page));
-      const area=$('[data-settings-page]',root);
-      if(page==='connection'){
-        const models=draft.provider==='Claude'?['Claude Sonnet','Claude Opus','Wybrany w przeglądarce']:draft.provider==='Gemini'?['Gemini Flash','Gemini Pro','Wybrany w przeglądarce']:draft.provider==='Lokalny'?['Qwen · model lokalny','Własny model']:['Wybrany w ChatGPT'];
-        if(!models.includes(draft.model))draft.model=models[0];
-        area.innerHTML=`<h2>Połączenie i model</h2><p>Wybierz usługę, która opracowuje dokumentację.</p><fieldset class="oa-group"><legend>Generator opisu</legend>${formRow('Dostawca',selectControl('provider',['ChatGPT','Claude','Gemini','Lokalny'],draft.provider))}${formRow('Połączenie',selectControl('transport',draft.provider==='Lokalny'?['Lokalnie (offline)']:draft.provider==='Gemini'?['Przeglądarka','API']:['Przeglądarka'],draft.transport))}${formRow('Model',selectControl('model',models,draft.model))}<div class="oa-form-help">${draft.provider==='Lokalny'?'Lokalny silnik w aplikacji desktopowej działa przez Ollamę.':'W aplikacji desktopowej używany jest osobny profil przeglądarki OpisAI.'}</div></fieldset><fieldset class="oa-group"><legend>Stan połączenia</legend><div class="oa-inline-controls">${button('Sprawdź połączenie','test-connection','','check')}${button('Otwórz profil','profile','','eye')}</div><div class="oa-setting-state" data-connection-state>Profil demonstracyjny · gotowy do pokazania przebiegu pracy.</div></fieldset><div style="margin-top:16px">${notice('W tej demonstracji połączenia są symulowane. Nie wymagają logowania ani kluczy API. Wybór zmienia prezentowany przebieg, a tekst pozostaje w przeglądarce.')}</div>`;
-        bind(area,'test-connection',()=>{const target=$('[data-connection-state]',area);target.textContent='Sprawdzam ustawienia…';setTimeout(()=>{if(target.isConnected)target.innerHTML=`<span class="oa-success-text">${icon('check',14)} Tryb demonstracyjny gotowy.</span> Wybrano ${esc(draft.provider)}.`;},900);});
-        bind(area,'profile',()=>providerPreview(draft.provider));
-      } else if(page==='sections'){
-        /* The documentation workflow uses the rc32 default sections and the small-animal panel template; the page shows them (read-only) until the settings follow rc32. */
-        area.innerHTML=`<h2>Sekcje opisu</h2><p>Układ dokumentacji i parametry odczytywane ze źródeł.</p><fieldset class="oa-group"><legend>Sekcje opisu wizyty</legend><table class="oa-options-table oa-doc-layout"><thead><tr><th>Etykieta</th><th>Pole tekstowe</th><th>Podsekcje</th></tr></thead><tbody>${DOC_KEYS.map(key=>{const s=Doc().sectionByKey(key);return `<tr><td>${esc(s.label)}</td><td>${esc(s.field)}</td><td>${esc(s.subsections.map(x=>x.name).join(', '))}</td></tr>`;}).join('')}</tbody></table></fieldset><fieldset class="oa-group"><legend>Panel parametrów</legend><p class="oa-form-help">${esc(Doc().PANEL_COPY)}</p><table class="oa-options-table"><thead><tr><th>Nazwa</th><th>Treść szablonu</th><th>Jednostka</th></tr></thead><tbody>${Doc().TEMPLATE.map(row=>`<tr><td>${esc(row.label)}</td><td>${esc(row.reference)}</td><td>${esc(row.unit)}</td></tr>`).join('')}</tbody></table></fieldset><p class="oa-form-help">W demonstracji sekcje i wzorzec panelu (Psy / koty) są stałe i odpowiadają ustawieniom domyślnym OpisAI ${VERSION}. Sposób opracowania wybierasz w oknie przygotowania opisu; wariant całej wizyty jest zapamiętywany po rozpoczęciu generowania.</p>`;
-      } else if(page==='dictation'){
-        dictationSettings(area,draft);
-      } else if(page==='fields'){
-        const values=getFields();
-        area.innerHTML=`<h2>Odczyt pola (Klinika)</h2><p>Powiązanie OpisAI z polami w oknie opisu wizyty.</p><fieldset class="oa-group"><legend>Okno docelowe</legend>${formRow('Program','<div class="oa-form-control"><strong>Klinika XP</strong><div class="oa-form-help">Bieżąca wizyta · przykład interaktywny</div></div>')}<div class="oa-inline-controls">${button('Pokaż Klinikę','show-clinic','','clinic')}${button('Odczytaj ponownie','read-fields','','document')}</div></fieldset><fieldset class="oa-group"><legend>Przypisane pola</legend><table class="oa-options-table"><thead><tr><th>Pole</th><th>Stan</th><th></th></tr></thead><tbody>${Object.entries(FIELDS).map(([key,label])=>`<tr><td>${esc(label)}</td><td><span class="oa-success-text">${icon('check',12)} Przypisane</span><br><small class="oa-muted">${String(values[key]||'').length} znaków</small></td><td>${button('Pokaż','field-'+key,'small','eye')}</td></tr>`).join('')}</tbody></table></fieldset><fieldset class="oa-group"><legend>Pisownia</legend>${switchControl('spelling','Podkreślaj podejrzane słowa w Klinice','Sugestie dotyczą widocznego przykładu. Poprawkę wybierasz samodzielnie.',draft)}</fieldset>`;
-        bind(area,'show-clinic',()=>Clinic.open());bind(area,'read-fields',()=>{draw();toast('Odczytano bieżącą treść trzech pól.');});Object.keys(FIELDS).forEach(key=>bind(area,'field-'+key,()=>{beginOperation();if(!visitReady())return;win.minimize();Clinic.focusField(key);Clinic.markTarget?.(key,true);setTimeout(()=>Clinic.markTarget?.(key,false),1800);}));
-      } else if(page==='appearance'){
-        area.innerHTML=`<h2>Wygląd</h2><p>Kolory i czytelność okien OpisAI.</p><fieldset class="oa-group"><legend>Motyw aplikacji</legend><div class="oa-theme-choice">${[['light','Jasny'],['dark','Ciemny'],['blue','Niebieski']].map(([value,label])=>`<button type="button" class="oa-theme-card ${draft.theme===value?'selected':''}" data-theme="${value}"><span class="oa-theme-preview ${value}"><i></i><i></i></span>${label}</button>`).join('')}</div></fieldset><fieldset class="oa-group"><legend>Tekst i podgląd</legend>${formRow('Rozmiar tekstu',`<input data-setting="fontSize" type="range" min="12" max="16" value="${draft.fontSize}"><span data-font-size>${draft.fontSize} px</span>`)}<p data-font-preview style="font-size:${draft.fontSize}px;padding:11px;border:1px solid var(--oa-line);border-radius:7px;background:var(--oa-field)">Przykładowy opis wizyty. Czytelny tekst ułatwia sprawdzenie faktów, liczb i jednostek.</p>${switchControl('livePreview','Pokaż tekst na żywo podczas generowania','Wersja robocza pozostaje oddzielona od zatwierdzanego wyniku.',draft)}${switchControl('animations','Animacje interfejsu','Płynne przygotowywanie przykładu w oknach OpisAI.',draft)}</fieldset>`;
-        $$('[data-theme]',area).forEach(el=>el.addEventListener('click',()=>{draft.theme=el.dataset.theme;applyTheme(win,draft.theme);dirty();draw();}));
+      $$('[data-page]',root).forEach(el=>{const on=el.dataset.page===page;el.classList.toggle('active',on);el.setAttribute('aria-current',on?'page':'false');});
+      const area=$('[data-settings-page]',root);area.setAttribute('aria-label',settingsNav.find(n=>n[1]===page)[0]);area.scrollTop=0;
+      if(page==='connection')connectionPage(area,draft);
+      else if(page==='sections')sectionsPage(area);
+      else if(page==='dictation')dictationSettings(area,draft);
+      else if(page==='fields')fieldsPage(area);
+      else if(page==='appearance'){
+        area.innerHTML=`<fieldset class="oa-group"><legend>Motyw okien</legend><div class="oa-form-row"><label for="oa-cfg-theme">Motyw:</label><select id="oa-cfg-theme" data-setting="theme" title="Kolory okna konfiguracji i okienek dialogowych. „Automatyczny” podąża za motywem aplikacji Windows (jasny/ciemny). Bąbelek i kolorowe popupy (RODO/parametry) mają własne kolory niezależnie od tego ustawienia.">${[['auto','Automatyczny (jak Windows)'],['light','Jasny'],['dark','Ciemny']].map(([value,label])=>`<option value="${value}" ${draft.theme===value?'selected':''}>${label}</option>`).join('')}</select></div>${cfgHint('Zmiana działa od razu — bez restartu. „Automatyczny” reaguje też na zmianę motywu Windows w trakcie pracy.')}<p class="oa-form-help">W demonstracji „Automatyczny” podąża za trybem kolorów tego pulpitu (Ustawienia → Personalizacja).</p></fieldset>`;
       } else if(page==='bubble'){
         /* rc32 ConfigDialog._build_bounce_section: the bubble's only settings. */
-        area.innerHTML=`<h2>Bąbelek</h2><p>Zachowanie bąbelka podczas bezczynności.</p><fieldset class="oa-group"><legend>Animacja bezczynności</legend><label class="oa-switch-row" title="Po dłuższej bezczynności bąbelek spada na pasek zadań i odbija się jak gumowa piłka. Tylko gdy bąbelek jest wyżej niż pasek zadań (nie przecięty)."><input type="checkbox" data-setting="idleBounce" ${draft.idleBounce?'checked':''}><div>Bąbelek czasem odbija się od paska zadań</div></label>${formRow('Co ile sekund:',`<span class="oa-number"><input type="number" data-setting="bounceInterval" min="10" max="3600" step="10" value="${draft.bounceInterval}" title="Co ile sekund bąbelek odbija się podczas bezczynności" aria-label="Co ile sekund"><span>s</span></span>`)}${formRow('Maks. odbić w sesji:',`<span class="oa-number"><input type="number" data-setting="bounceMax" min="0" max="999" step="1" value="${draft.bounceMax}" title="Maks. liczba odbić w jednym oknie bezczynności. 0 = bez limitu." aria-label="Maks. odbić w sesji"><span data-bounce-unit>${draft.bounceMax>0?'odbić':'bez limitu'}</span></span>`)}</fieldset>`;
+        area.innerHTML=`<fieldset class="oa-group"><legend>Animacja bezczynności</legend><label class="oa-switch-row" title="Po dłuższej bezczynności bąbelek spada na pasek zadań i odbija się jak gumowa piłka. Tylko gdy bąbelek jest wyżej niż pasek zadań (nie przecięty)."><input type="checkbox" data-setting="idleBounce" ${draft.idleBounce?'checked':''}><div>Bąbelek czasem odbija się od paska zadań</div></label>${formRow('Co ile sekund:',`<span class="oa-number"><input type="number" data-setting="bounceInterval" min="10" max="3600" step="10" value="${draft.bounceInterval}" title="Co ile sekund bąbelek odbija się podczas bezczynności" aria-label="Co ile sekund"><span>s</span></span>`)}${formRow('Maks. odbić w sesji:',`<span class="oa-number"><input type="number" data-setting="bounceMax" min="0" max="999" step="1" value="${draft.bounceMax}" title="Maks. liczba odbić w jednym oknie bezczynności (od ostatniej aktywności użytkownika). 0 = bez limitu - bąbelek odbija się co interval dopóki user nie wróci. Sensowne dla gabinetów gdzie komputer bywa włączony godzinami bez interakcji." aria-label="Maks. odbić w sesji"><span data-bounce-unit>${draft.bounceMax>0?'odbić':'bez limitu'}</span></span>`)}</fieldset>`;
       } else if(page==='history'){
-        area.innerHTML=`<h2>Historia</h2><p>Dokumenty przygotowane w tej demonstracji: do sprawdzenia, odrzucone, wpisane do pól i niewpisane z powodu zmiany pól.</p><fieldset class="oa-group"><legend>Historia generowań</legend>${switchControl('history','Zapisuj historię tej sesji','Treść pozostaje w bieżącej karcie. Zamknięcie lub odświeżenie strony usuwa wpisy.',draft)}<div class="oa-inline-controls">${button('Otwórz historię','open-history','','history')}${button('Wyczyść historię','clear-history','','close',state.history.length?'':'disabled')}</div><div class="oa-setting-state">W tej sesji: ${state.history.length} ${state.history.length===1?'operacja':'operacji'}.</div></fieldset><fieldset class="oa-group"><legend>Cofanie</legend><p class="oa-form-help">Możesz cofnąć ostatni potwierdzony wpis, jeśli od tego czasu pola nie zostały zmienione.</p>${button('Cofnij ostatni wpis','last-undo','','undo',state.lastWrite?'':'disabled')}</fieldset>`;
-        bind(area,'open-history',history);bind(area,'clear-history',()=>clearHistory(()=>draw()));bind(area,'last-undo',undo);
+        area.innerHTML=`<fieldset class="oa-group"><legend>Historia generowań</legend>${cfgButton('Otwórz historię generowań…','open-history','Otwiera przeglądarkę zapisanych epikryz (lista + notatka + epikryza). Osobne, skalowalne okno — możesz je porównywać z Kliniką.','oa-cfg-wide')}<label class="oa-switch-row" title="Wyłącz aby OpisAI nie zapisywał notatek/epikryz w bazie opisai.sqlite3 (chronione rekordy)."><input type="checkbox" data-setting="history" ${draft.history?'checked':''}><div>Zapisuj historię generowań</div></label>`+
+          formRow('Maks. wpisów:',`<span class="oa-number"><input type="number" value="1000" disabled aria-label="Maks. wpisów" title="${esc('Hard cap: 2000 wpisów (limit konfiguracyjny history_hard_max_entries, przechowywany w SQLite)'+IN_APP)}"><span>wpisów</span></span>`)+
+          formRow('Czas retencji:',`<span class="oa-number"><input type="number" value="90" disabled aria-label="Czas retencji" title="${esc('0 = brak limitu wieku. Hard cap = 730 dni (~24 miesiecy).'+IN_APP)}"><select disabled aria-label="Jednostka czasu retencji"><option selected>dni</option><option>tygodni</option><option>miesięcy</option></select></span>`)+
+          cfgHint('Trim przy starcie: <b>najpierw</b> wpisy starsze niż czas retencji, <b>potem</b> jeśli zostało więcej niż maks. wpisów — najstarsze utnij.<br>Hard cap: 2000 wpisów / 730 dni (ustawienia przechowywane w SQLite).')+
+          `</fieldset><div class="oa-cfg-note">${notice('W demonstracji historia dokumentów zostaje tylko w tej karcie przeglądarki i znika po odświeżeniu strony, więc limity wpisów i retencji dotyczą aplikacji. Ostatni wpis cofniesz w oknie wyniku albo z menu bąbelka: „Bezpieczny zapis i odzyskiwanie”.')}</div>`;
       } else if(page==='system'){
-        area.innerHTML=`<h2>System</h2><p>Informacje o działającej wersji i ustawieniach przykładu.</p><fieldset class="oa-group"><legend>Aplikacja</legend><dl class="oa-system-info"><dt>Wersja</dt><dd>${VERSION}</dd><dt>Interfejs</dt><dd>OpisAI dla Microsoft Windows · demonstracja w przeglądarce</dd><dt>Dane wizyty</dt><dd>Lokalnie w tej przeglądarce</dd><dt>Ustawienia wyglądu</dt><dd>Zapamiętane w tej przeglądarce</dd></dl><div class="oa-inline-controls">${button('Kopiuj informacje','copy-info','','copy')}${button('O aplikacji','about','','info')}</div></fieldset><fieldset class="oa-group"><legend>Przywracanie</legend><p class="oa-form-help">Przywróć domyślne ustawienia OpisAI. Treść wizyty nie zostanie zmieniona.</p>${button('Przywróć ustawienia domyślne','reset-settings','','undo')}</fieldset>`;
-        bind(area,'copy-info',()=>copyText(`OpisAI ${VERSION}\nInteraktywna demonstracja OpisAI\nGenerator: ${draft.provider}\nDyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce (próba)\nBez danych wizyty i poświadczeń.`,$('[data-action="copy-info"]',area)));bind(area,'about',about);bind(area,'reset-settings',()=>{draft=clone(defaults);dirty();applyTheme(win,draft.theme);draw();});
+        area.innerHTML=`<fieldset class="oa-group"><legend>Integracja z Windows</legend>${cfgButton('🖥️  Stwórz skrót na pulpicie','shortcut','Tworzy skrót OpisAI na pulpicie. Uruchamia tę kopię programu dwukrotnym kliknięciem, bez okna konsoli.','oa-cfg-wide')}${lockedSwitch('Uruchamiaj OpisAI przy starcie Windows (autologon)','Dodaje skrót do folderu Startup użytkownika. OpisAI uruchomi się sam po zalogowaniu się do Windows.'+IN_APP,false)}${lockedSwitch('Dodaj OpisAI do menu Start','Tworzy OpisAI.lnk w menu Start (Start > Wszystkie aplikacje). Stamtąd możesz prawym klikiem przypiąć apkę do paska zadań. Odznaczenie usuwa skrót z menu Start.'+IN_APP,false)}${cfgHint('Skrót i autostart wskazują na <code>pythonw.exe</code> z .venv apki (bez konsoli). Działają tylko na Windows.')}</fieldset>`+
+          `<fieldset class="oa-group"><legend>Hash skryptu (SHA-256)</legend><input type="text" class="oa-cfg-hash" readonly value="W demonstracji nie ma pliku programu — hash pokazuje aplikacja" aria-label="Hash skryptu (SHA-256)"><div class="oa-inline-controls">${offButton('📋  Kopiuj hash','Kopiuje hash do schowka')}${offButton('↻  Przelicz','Przelicz hash ponownie (np. po podmianie pliku).')}</div>${cfgHint('SHA-256 launchera i modułów źródłowych <code>opisai_app</code><br>W aplikacji pod spodem jest ścieżka programu; dwie kopie o tym samym hashu są identyczne.')}</fieldset><div class="oa-cfg-note">${notice('Przykładową wizytę, historię i ustawienia demonstracji przywrócisz w Ustawieniach pulpitu: Prywatność i zabezpieczenia.')}</div>`;
       } else {
-        area.innerHTML=`<h2>Zgodność AI (RODO)</h2><p>Jawne źródła, nadzór lekarza i zatwierdzanie wpisu.</p><fieldset class="oa-group"><legend>Kontrola danych</legend><div class="oa-about-block"><p>Przed opracowaniem opisu widzisz dokładną treść pól. Możesz poprawić źródła i usunąć dane, których nie chcesz przekazać do wybranego połączenia.</p><p style="margin-top:10px">Zmiana treści lub zakresu unieważnia potwierdzenie. Nowe źródła wymagają ponownego sprawdzenia.</p></div></fieldset><fieldset class="oa-group"><legend>Nadzór nad wynikiem</legend><div class="oa-about-block"><p>OpisAI pokazuje wynik jako propozycję. Przed wpisaniem sprawdzasz tekst, właściwą wizytę i wybrane pola.</p><p style="margin-top:10px">Wpis jest wstrzymywany, jeśli zmienił się kontekst lub treść pól od wcześniejszego odczytu.</p></div></fieldset><div style="margin-top:16px">${notice('Tryb demonstracyjny: witryna nie wysyła treści wizyty do modeli AI, nie uruchamia mikrofonu i nie zapisuje danych w zewnętrznej Klinice. Pokazuje interfejs oraz przebieg pracy aplikacji.')}</div><p class="oa-form-help" style="margin-top:12px">Te funkcje wspierają kontrolę pracy. Sama demonstracja nie stanowi potwierdzenia zgodności prawnej konkretnego wdrożenia.</p>`;
+        area.innerHTML=`<fieldset class="oa-group"><legend>AI Act / RODO</legend><p class="oa-cfg-text">Robocza matryca kwalifikacji OpisAI: kwalifikacja AI Act, ryzyka i kontrole oraz checklista wdrożeniowa. Sama edycja otwiera się w osobnym, większym oknie. Źródłem prawdy jest jeden plik XLSX.</p><div class="oa-inline-controls">${cfgButton('Otwórz edycję matrycy...','matrix','Otwiera osobne okno z trzema arkuszami: Kwalifikacja, Ryzyka_i_kontrole, Checklista.')}${cfgButton('Otwórz plik XLSX...','xlsx','Otwiera źródłowy skoroszyt OpisAI_matryca_kwalifikacji_AI_Act.xlsx.')}</div>${cfgHint('XLSX: OpisAI_matryca_kwalifikacji_AI_Act.xlsx (w folderze OpisAI)<br>Status: brak - zostanie utworzony z domyślnej matrycy.')}${cfgHint('To robocza matryca zgodności, nie opinia prawna. Przy zmianie funkcji klinicznych, dostawców AI albo sposobu użycia trzeba ją przejrzeć ponownie.')}</fieldset><div class="oa-cfg-note">${notice('Tryb demonstracyjny: witryna nie wysyła treści wizyty do modeli AI, nie uruchamia mikrofonu i nie zapisuje danych w zewnętrznej Klinice.')}</div>`;
       }
       $$('[data-setting]',area).forEach(el=>{
-        el.addEventListener(el.type==='range'?'input':'change',()=>{
-          const key=el.dataset.setting;draft[key]=el.type==='checkbox'?el.checked:el.type==='range'||el.type==='number'?Number(el.value):el.value;dirty();
-          if(key==='provider'){draft.transport=draft.provider==='Lokalny'?'Lokalnie (offline)':'Przeglądarka';draw();}
+        el.addEventListener('change',()=>{
+          const key=el.dataset.setting;draft[key]=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;
+          if(key==='provider'||key==='transport'||key==='auth'){connectCascade(draft);draw();}
           if(key==='transcriber')draw();
-          if(key==='fontSize'){const text=$('[data-font-size]',area);if(text)text.textContent=draft.fontSize+' px';const preview=$('[data-font-preview]',area);if(preview)preview.style.fontSize=draft.fontSize+'px';}
+          if(key==='theme')preview(draft.theme);
           if(key==='bounceMax'){const unit=$('[data-bounce-unit]',area);if(unit)unit.textContent=Number(el.value)>0?'odbić':'bez limitu';}
+          status.textContent='';
         });
       });
+      $$('[data-cfg]',area).forEach(el=>el.addEventListener('click',()=>settingsAction(el.dataset.cfg,draft)));
+      refreshSave();
     }
-    $$('[data-page]',root).forEach(el=>el.addEventListener('click',()=>{page=el.dataset.page;draw();}));
-    $('.oa-settings-search',root).addEventListener('input',event=>{const q=normal(event.target.value);$$('[data-page]',root).forEach(el=>el.hidden=!!q&&!normal(el.textContent).includes(q));$$('.oa-nav-group',root).forEach(el=>el.hidden=!!q);});
-    bind(root,'cancel-settings',()=>{applyTheme(win);win.close();});
-    bind(root,'save-settings',()=>{
-      preferences=clone(draft);normalizeBounce(preferences);savePreferences(); /* stored as used: 10–3600 s, 0–999 bounces */Object.keys(FIELDS).forEach((key,i)=>FIELDS[key]=preferences.clinicalSections[i]||defaults.clinicalSections[i]);windows.forEach(w=>applyTheme(w));
-      document.documentElement.style.setProperty('--oa-font-size',preferences.fontSize+'px');Clinic.setSpellingEnabled?.(preferences.spelling);
-      if(windows.get('opisai-compose')?.el?.isConnected){const active=windows.get('opisai-compose');if(active?.content){const label=$('[data-route]',active.content);if(label)label.textContent=route();const ack=$('#oa-compose-ack',active.content);if(ack){ack.checked=false;ack.dispatchEvent(new Event('change'));}}}
-      changed=false;win.close();toast('Ustawienia OpisAI zapisane.');
+    $('[data-settings-page]',root).addEventListener('change',refreshSave); // last, after a page's own handlers have normalized the draft
+    $$('[data-page]',root).forEach(el=>el.addEventListener('click',()=>{if(el.dataset.page!==page)go(el.dataset.page);}));
+    $$('[data-page]',root).forEach(el=>el.addEventListener('keydown',e=>{ // the section list moves with the arrows, as a QListWidget does
+      if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;e.preventDefault();const items=$$('[data-page]',root).filter(x=>!x.hidden),next=items[items.indexOf(el)+(e.key==='ArrowDown'?1:-1)];if(next){go(next.dataset.page);next.focus();}
+    }));
+    $('.oa-settings-search',root).addEventListener('input',event=>{ // _filter_nav: name + keywords; a group header shows while it has a visible page
+      const q=normal(event.target.value);let group=null,shown=false;
+      for(const el of $$('[data-page], .oa-nav-group',root)){
+        if(el.classList.contains('oa-nav-group')){if(group)group.hidden=!shown;group=el;shown=false;continue;}
+        const entry=settingsNav.find(n=>n[1]===el.dataset.page);el.hidden=!!q&&!normal(entry[0]+' '+entry[3]).includes(q);shown=shown||!el.hidden;
+      }
+      if(group)group.hidden=!shown;
+    });
+    bind(root,'close-settings',()=>win.close());
+    bind(root,'config-folder',()=>demoOnly('W demonstracji nie ma folderu konfiguracji: ustawienia OpisAI są zapisane w tej przeglądarce. W aplikacji przycisk otwiera folder z plikiem opisai.sqlite3.'));
+    bind(root,'save-settings',()=>{ // _on_accept: stores this page and keeps the window open
+      if(!dirty())return;
+      for(const key of PAGE_KEYS[page])preferences[key]=draft[key];
+      normalizeBounce(preferences);normalizeDictation(preferences);connectCascade(preferences);savePreferences();
+      themePreview=null;refreshThemes();window.OpisAISpelling?.refresh?.();
+      const compose=windows.get('opisai-compose');if(page==='connection'&&compose?.el?.isConnected)$('#oa-compose-ack',compose.content)?.dispatchEvent(new Event('change')); // the route and the consent follow the new connection
+      refreshSave(); // the same draft object: a page's own handlers keep it
+      const scope=$('[data-dt-scope]',root);if(scope)scope.textContent='Zapisano ustawienia dla następnego dyktowania.\nZmiana silnika, trybu kart, klipu i Autoenter nie przełącza trwającego nagrania.';
+      status.textContent='Zapisano zmiany z tej karty.';$('[data-action="close-settings"]',root)?.focus();
     });
     draw();
+    setTimeout(()=>$('.oa-nav-item.active',root)?.focus(),0);
   }
-  function providerPreview(provider){
-    const html=`<div class="oa-app"><header class="oa-header"><h1>Profil ${esc(provider)}</h1><p>Osobny profil przeglądarki OpisAI</p></header><div class="oa-content">${notice('W demonstracji profil jest przykładowy. Nie logujemy do zewnętrznego konta.')}<div class="oa-empty">${icon('shield',44)}<h3>Połączenie demonstracyjne</h3><p>Możesz wrócić do przygotowania opisu<br>i przejść przez cały proces zatwierdzania.</p></div></div><footer class="oa-footer"><span class="oa-footnote">${esc(provider)} · przykład interfejsu</span>${button('Zamknij','close','primary')}</footer></div>`;
-    const win=makeWindow('opisai-profile','OpisAI — profil przeglądarki',570,430,html);bind(win.content,'close',()=>win.close());
+  /* Połączenie i model: _build_token_section (title and actions by the auth mode, creds_ui_for) above
+   * _build_provider_section (Serwis → Transport → Autoryzacja → Model, then the Klinika window titles). */
+  function connectionPage(area,draft){
+    const s=providerSpec(draft),ids=uniq(PROVIDERS.map(x=>x.id)),transports=uniq(PROVIDERS.filter(x=>x.id===s.id).map(x=>x.transport)),auths=PROVIDERS.filter(x=>x.id===s.id&&x.transport===s.transport).map(x=>x.auth);
+    const key=['cookie','edge_cookie','api_key'].includes(s.auth),title={cookie:'Logowanie - cookie sesji',edge_cookie:'Logowanie - cookie z Edge',profile:'Logowanie - w oknie przegladarki',anonymous:'Logowanie - niewymagane (Flash)',api_key:'Klucz API - Gemini',gcloud_oauth:'Logowanie - Gemini OAuth (Google Cloud)',local:'Model lokalny (offline)'}[s.auth];
+    const creds=s.secret?(s.auth==='api_key'?'Brak klucza':'Brak tokenu'):AUTH_LABELS[s.auth]; // _refresh_status: what is configured, never a connection test
+    const options=(values,labels,current)=>values.map(v=>`<option value="${esc(v)}" ${v===current?'selected':''}>${esc(labels[v]??v)}</option>`).join('');
+    const tip={cookie:'',anonymous:'Działa bez logowania tylko z Gemini 3.5 Flash. Gemini Pro wymaga profilu OpisAI/Chrome albo cookie z Edge.',gcloud_oauth:'Łączy się z Gemini przez logowanie Google, bez klucza API w polu. OpisAI pobiera przenośne narzędzie Google do ./gcloud w folderze OpisAI i używa wybranego modelu Gemini.',local:'Model działa LOKALNIE na Twoim GPU — dane nie opuszczają komputera (RODO). Wymaga Ollamy i pobranego modelu — kliknij „Pobierz model lokalny” poniżej (jednorazowo, ~9 GB). Generacja zwalnia VRAM po sobie, więc dyktowanie (Whisper) i epikryza (Qwen) wymieniają się na karcie.'}[s.auth];
+    const actions=s.auth==='profile'?`${cfgButton('Otwórz przeglądarkę z profilem OpisAI','profile',s.label+' — ten sam profil, którego OpisAI używa do generowania.','primary oa-cfg-wide')}<p class="oa-cfg-muted">${esc(s.label)} — ten sam profil co przy generowaniu. Możesz się zalogować i sprawdzić ustawienia serwisu.</p>`
+      :`<div class="oa-inline-controls">${['cookie','edge_cookie'].includes(s.auth)?cfgButton('Wykryj ponownie','redetect','Szuka zapisanej sesji w przeglądarkach na tym komputerze.')+cfgButton('Zaloguj przez Edge...','edge','Otwiera Edge do zalogowania i pobiera lokalną sesję.'):''}${['api_key','gcloud_oauth'].includes(s.auth)?cfgButton('🔑 Pobierz klucz Gemini API','gemini-key','Pierwszy klik sam pobiera portable gcloud do folderu ./gcloud w folderze OpisAI i otwiera logowanie Google. Gdy konto nie ma projektu, tworzy projekt OpisAI, włącza wymagane API i tworzy klucz ograniczony do Gemini. Wznowienie używa tych samych zasobów. Nie podłącza rozliczeń ani płatnego planu.'):''}${s.auth==='local'?cfgButton('⬇ Pobierz model lokalny','local-model','Rozkłada silnik Ollama w folderze OpisAI (raz, ~1,4 GB) i pobiera wybrany model (tag z pola „Model”). Uruchamia go na sprzęcie z „Liczy na”. Generowanie robi to samo przy pierwszym użyciu; potem model działa w pełni offline.'):''}</div>${tip?cfgHint(esc(tip)):''}`;
+    const ctx=window.Clinic?.getContext?.()||{},main=String(ctx.mainTitle||'[DEMO] Klinika XP - [Przebieg wizyty - Zwierzę domowe]'),sub=String(ctx.title||'[DEMO] Rejestracja wizyty: Wywiad - Badanie - Diagnoza');
+    const keyRow=key?formRow('Klucz / token:',`<input type="password" disabled placeholder="${esc({cookie:'cookie / token sesji (auto Wykryj/Edge albo wklej recznie)',edge_cookie:'cookie jar JSON Gemini z Edge',api_key:'wklej klucz API albo pobierz automatycznie (AQ... / AIza...)'}[s.auth])}" aria-label="Klucz / token" title="${esc('W demonstracji klucze i tokeny nie są potrzebne ani zapisywane'+IN_APP)}">`)+`<label class="oa-switch-row oa-cfg-locked oa-cfg-indent"><input type="checkbox" disabled><div>pokaz klucz</div></label>`:'';
+    const model=s.locked?`<select disabled aria-label="Model" title="Model wybiera interfejs serwisu; OpisAI go nie wysyła."><option>${esc(s.locked)}</option></select>`:`<select data-setting="model" aria-label="Model" ${s.models.length===1?'disabled':''}>${options(s.models,{},modelFor(s,draft.model))}</select>`;
+    area.innerHTML=`<fieldset class="oa-group"><legend>${esc(title)}</legend><p class="oa-cfg-status" data-connection-status>${esc(s.label+' — '+creds)}<br>Ten status nie jest testem połączenia.</p>${actions}</fieldset>`+
+      `<fieldset class="oa-group"><legend>Generowanie</legend>${formRow('Serwis:',`<select data-setting="provider" aria-label="Serwis">${options(ids,Object.fromEntries(ids.map(id=>[id,PROVIDERS.find(x=>x.id===id).label])),s.id)}</select>`)}${formRow('Transport:',`<select data-setting="transport" aria-label="Transport">${options(transports,TRANSPORT_LABELS,s.transport)}</select>`)}`+
+      (auths.length>1?formRow('Autoryzacja:',`<select data-setting="auth" aria-label="Autoryzacja" title="Profil OpisAI/Chrome: otwórz przeglądarkę przyciskiem w sekcji logowania, aby przygotować konto. Cookie z Edge: pobiera lokalną sesję przyciskiem „Zaloguj przez Edge”.">${options(auths,AUTH_LABELS,s.auth)}</select>`):'')+keyRow+formRow('Model:',model)+
+      (s.auth==='local'?formRow('Liczy na:',`<select disabled aria-label="Liczy na" title="${esc('Automatycznie: najmocniejsza dostępna karta graficzna (NVIDIA zewnętrzna, potem wewnętrzna, potem wbudowana). Procesora nie ma na liście: model tej wielkości liczyłby na nim za wolno. Wybór konkretnej karty jest ścisły: gdy jej nie ma, OpisAI powie o tym.'+IN_APP)}">${options(Object.keys(HW_LLM),HW_LLM,'auto')}</select>`):'')+
+      formRow('Tytuł okna głównego:',`<input type="text" readonly value="Klinika" placeholder="Klinika" aria-label="Tytuł okna głównego" title="Fragment tytułu okna GŁÓWNEGO Kliniki (lista pacjentów / mainform). Z niego czytane są rączki (Pacjent/Właściciel) i tu celuje przycisk „Uruchom Klinikę”.">`)+
+      formRow('Tytuł podokna opisu:',`<input type="text" readonly value="Rejestracja wizyty" placeholder="np. 'Wizyta' / 'Edycja opisu' — puste = wybierz później" aria-label="Tytuł podokna opisu" title="Fragment tytułu PODOKNA opisu wizyty (otwierane na konkretną wizytę). Tu czytamy notatkę i wpisujemy wygenerowaną epikryzę. Pusty = nieskonfigurowane (przy generacji apka poprosi o picker).">`)+
+      `<p class="oa-form-help oa-cfg-windows">W demonstracji oba okna Kliniki XP są przypisane na stałe: okno główne „${esc(main)}” i podokno opisu „${esc(sub)}”, otwierane z okna głównego (F2). Fragment podokna nie zawiera słowa „Klinika”, więc OpisAI nie bierze okna głównego za podokno.</p></fieldset>`+
+      `<div class="oa-cfg-note">${notice('W demonstracji OpisAI nie łączy się z serwisem: odpowiedź AI jest lokalną symulacją, a przeglądarka, cookie, klucze i model lokalny nie są używane. Wybór serwisu zmienia opis połączenia i zgodę w oknie przygotowania tak jak w aplikacji. Nowa instalacja OpisAI zaczyna od Claude · Cookie HTTP · claude-sonnet-4-6; demonstracja od ChatGPT w przeglądarce.')}</div>`;
+  }
+  function settingsAction(action,draft){
+    const s=providerSpec(draft);
+    if(action==='open-history')history();
+    else if(action==='profile')demoOnly(`W demonstracji przeglądarka się nie otwiera. W aplikacji ten przycisk otwiera osobny profil OpisAI dla ${s.label} — ten sam, którego OpisAI używa do generowania.`);
+    else if(action==='redetect')demoOnly(`W demonstracji OpisAI nie szuka sesji w przeglądarkach. W aplikacji „Wykryj ponownie” odczytuje zapisaną sesję ${s.label} z tego komputera.`);
+    else if(action==='edge')demoOnly('W demonstracji Edge się nie otwiera. W aplikacji „Zaloguj przez Edge...” pobiera lokalną sesję po zalogowaniu.');
+    else if(action==='gemini-key')demoOnly('W demonstracji nic nie jest pobierane ani logowane. W aplikacji przycisk pobiera przenośne narzędzie Google do folderu OpisAI i przygotowuje klucz Gemini.');
+    else if(action==='local-model')demoOnly('W demonstracji model nie jest pobierany. W aplikacji OpisAI rozkłada silnik Ollama w swoim folderze i pobiera wybrany model (jednorazowo).');
+    else if(action==='diagnose')diagnoseFields();
+    else if(action==='shortcut')demoOnly('W demonstracji skrót nie jest tworzony. W aplikacji przycisk dodaje skrót OpisAI na pulpicie Windows.');
+    else if(action==='matrix')matrixWindow();
+    else if(action==='xlsx')demoOnly('W demonstracji nie ma pliku XLSX. W aplikacji przycisk otwiera skoroszyt matrycy w Excelu, a gdy go brak — najpierw tworzy go z domyślnej matrycy.');
+  }
+  /* Sekcje opisu (_build_polish_sections_section, _build_prompt_section): fields on top, the subsections of the selected
+   * field below, panel row with its parameter rows. The demonstration uses the rc32 defaults; editing works in the app. */
+  const DISABLED_SUBSECTIONS={'Dotychczasowe leczenie i choroby współistniejące':'wcześniejsze/obecne leczenie i leki, choroby współistniejące, profilaktyka, dieta, środowisko','Uzasadnienie':'opcjonalnie maksymalnie jedno krótkie zdanie z faktami z notatki; bez planu i zaleceń'}; // document_defaults: off by default
+  function sectionsPage(area){
+    const sections=DOC_KEYS.map(k=>Doc().sectionByKey(k));let active=0;
+    area.innerHTML=`<fieldset class="oa-group"><legend>Sekcje opisu wizyty</legend><div class="oa-cfg-table"><table class="oa-options-table oa-doc-layout oa-cfg-grid" role="grid" aria-label="Pola wizyty"><thead><tr><th>ON</th><th>Etykieta</th><th>Pole tekstowe</th><th>Instrukcja (dla AI)</th></tr></thead><tbody>${sections.map((s,i)=>`<tr data-section="${i}"><td><input type="checkbox" checked disabled aria-label="Sekcja włączona"></td><td>${esc(s.label)}</td><td title="W demonstracji pole Kliniki jest przypisane na stałe. W aplikacji: identyfikator kontrolki (ClassNN) wskazany z menu bąbelka.">${esc(s.field)}</td><td class="oa-cfg-clip" title="${esc(s.instruction)}">${esc(s.instruction)}</td></tr>`).join('')}</tbody></table></div>`+
+      `<div class="oa-inline-controls oa-cfg-split">${offButton('Wyczyść pole tekstowe','Usuń przypisane pole tekstowe ClassNN dla zaznaczonej sekcji. Sekcja pozostanie w konfiguracji, ale nie będzie generowana, dopóki ponownie nie użyjesz „Wskaż pole tekstowe...”.')}<span class="oa-pg-gap"></span>${offButton('Reset (domyślne)','Przywróć domyślne sekcje i prompty kondycjonujące. Przypisane pola tekstowe ClassNN zostaną zachowane.')}</div>`+
+      `<h3 class="oa-cfg-subhead" data-sub-label></h3><div class="oa-cfg-table"><table class="oa-options-table oa-cfg-subs" aria-label="Podsekcje pola"><thead><tr><th>ON</th><th>Nazwa (nagłówek)</th><th>Opis (podpowiedź dla AI)</th><th>Parametry</th></tr></thead><tbody data-subs></tbody></table></div>`+
+      `<div class="oa-inline-controls">${offButton('+','Dodaj podsekcję')}${offButton('−','Usuń zaznaczoną podsekcję')}${offButton('↑','Przesuń podsekcję w górę')}${offButton('↓','Przesuń podsekcję w dół')}${offButton('Panel + opis badania','Dodaj albo usuń podsekcję: panel parametrów + opis badania ze źródeł. Ma jeden nagłówek. Jej opis dla AI możesz edytować w tabeli; wiersze parametrów ustawisz przyciskiem „Konfiguruj” w tym wierszu. Kolejność zmieniasz przeciąganiem albo ↑↓.')}</div>`+
+      lockedSwitch('Kontroluj powtórzenia panelu w epikryzie','Dotyczy opisu pod panelem w tej samej podsekcji, gdy wybrano wariant „+ parametry”.',true)+cfgHint('Opis pod aktywnym panelem uzupełnia jego parametry pozostałymi ustaleniami z badania.')+
+      cfgHint('Góra = pola; dół = podsekcje wybranego pola (nagłówki w wygenerowanym opisie). Dwuklik nazwy lub opisu = edycja. „Nazwa” trafia do opisu jako nagłówek; „Opis” to tylko podpowiedź dla AI (nie pojawia się w wyniku). <b>Kolejność: przeciągnij wiersz łapką</b> (albo ↑↓). <b>Prawy klik na podsekcji</b> = przenieś ją do innego pola. <b>Panel parametrów + opis badania ze źródeł</b> to jedna podsekcja z jednym nagłówkiem. Przy wariancie „+ parametry” lokalny panel poprzedza opis kliniczny ze źródeł. Przycisk <b>Konfiguruj</b> otwiera wiersze parametrów; podpowiedź dla opisu edytujesz obok. Bez wariantu „+ parametry” pozostaje sam opis. „Pole tekstowe” (ClassNN) ustawiasz z menu traya; zaznaczone możesz wyczyścić przyciskiem nad tabelą.')+`</fieldset>`+
+      `<details class="oa-cfg-prompt"><summary>Prompt kondycjonujący (zaawansowane)</summary><div>${cfgHint('Te reguły określają sposób pisania w wariancie <b>Bogato</b>. Nazwy i kolejność podsekcji ustawiasz w tabeli. Puste pole oznacza domyślny wbudowany tekst.')}<label for="oa-cfg-prompt-head">Zasady stylu:</label><textarea id="oa-cfg-prompt-head" readonly placeholder="W demonstracji treść promptu nie jest pokazywana."></textarea><label for="oa-cfg-prompt-foot">Kontrola końcowa:</label><textarea id="oa-cfg-prompt-foot" readonly placeholder="W demonstracji treść promptu nie jest pokazywana."></textarea><div class="oa-inline-controls oa-cfg-end">${offButton('Przywróć domyślny prompt','Przywraca wbudowane zasady stylu i kontrolę końcową')}</div></div></details>`+
+      `<div class="oa-cfg-note">${notice(`W demonstracji sekcje, podsekcje i wzorzec panelu są stałe: to ustawienia domyślne OpisAI ${VERSION}, z których korzysta przygotowanie opisu. W aplikacji edytujesz je w tych tabelach, a pola tekstowe wskazujesz z menu bąbelka.`)}</div>`;
+    const rows=$$('[data-section]',area);
+    function select(i,focus){
+      active=i;rows.forEach((tr,j)=>{tr.classList.toggle('selected',j===i);tr.setAttribute('aria-selected',String(j===i));tr.tabIndex=j===i?0:-1;});if(focus)rows[i].focus();
+      const s=sections[i];$('[data-sub-label]',area).textContent='Podsekcje pola: '+s.label;
+      $('[data-subs]',area).innerHTML=[...s.subsections.map(x=>({...x,enabled:true})),...(s.disabled||[]).map(name=>({name,description:DISABLED_SUBSECTIONS[name]||'',enabled:false}))].map(x=>x.panel
+        ?`<tr class="oa-cfg-panel-row"><td aria-label="Panel parametrów">⚙</td><td title="Panel parametrów + opis badania ze źródeł. Jeden nagłówek dla obu części. Dwuklik: zmień nazwę."><b>${esc(x.name)}</b></td><td title="${esc(x.description+'\n\nPodpowiedź dla opisu badania ze źródeł. Dwuklik: edytuj. Wiersze parametrów ustawisz przyciskiem obok.')}">${esc(x.description)}</td><td><button type="button" class="oa-link-btn oa-cfg-link" data-vitals title="Konfiguruj wiersze panelu parametrów życiowych.">Konfiguruj</button></td></tr>`
+        :`<tr><td><input type="checkbox" ${x.enabled?'checked':''} disabled aria-label="Podsekcja włączona"></td><td title="${esc(x.name)}">${esc(x.name)}</td><td title="${esc(x.description)}">${esc(x.description)}</td><td></td></tr>`).join('');
+      $$('[data-vitals]',area).forEach(b=>b.addEventListener('click',vitalsWindow));
+    }
+    rows.forEach((tr,i)=>{tr.addEventListener('click',()=>select(i,true));tr.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();select(Math.max(0,Math.min(rows.length-1,i+(e.key==='ArrowDown'?1:-1))),true);}});});
+    select(0,false);
+  }
+  function vitalsWindow(){ // VitalParamsConfigDialog: the small-animal template the workflow uses, fixed here
+    const rows=Doc().TEMPLATE.map(r=>`<tr><td><input type="checkbox" checked disabled aria-label="Parametr włączony"></td><td>${esc(r.label)}</td><td>${esc(r.reference)}</td><td>${esc(r.unit)}</td></tr>`).join('');
+    const html=`<div class="oa-app oa-vitals"><div class="oa-content"><h2>Wiersze panelu parametrów życiowych</h2><p class="oa-vitals-lead">Wariant „+ parametry” dołącza cały szablon do opisu badania klinicznego. Tutaj ustawiasz jego wiersze, ich kolejność, treść i jednostki. Wartości z notatki zastępują odpowiednie pozycje szablonu.</p><div class="oa-form-row"><label for="oa-vitals-species">Gatunek pacjentów:</label><select id="oa-vitals-species" disabled title="${esc('Wybór gatunku ładuje DOMYŚLNY panel parametrów dla tego gatunku. Psy/koty mają inne normy niż konie (tętno, oddechy, temperatura, osłuchanie jelit w 4 kwadrantach, tętno palcowe/kopyta...). Po załadowaniu możesz dalej edytować wiersze.'+IN_APP)}"><option selected>Psy / koty</option><option>Konie</option></select></div><table class="oa-options-table"><thead><tr><th>ON</th><th>Nazwa</th><th>Treść szablonu</th><th>Jednostka</th></tr></thead><tbody>${rows}</tbody></table><div class="oa-inline-controls oa-vitals-tools">${offButton('+','Dodaj parametr')}${offButton('−','Usuń zaznaczony parametr')}${offButton('↑','Przesuń parametr w górę')}${offButton('↓','Przesuń parametr w dół')}${offButton('Reset','Przywróć domyślne parametry życiowe')}</div>${cfgHint('Panel pojawia się automatycznie razem z opisem badania. Przed wpisaniem możesz poprawić całą treść w podglądzie wyniku. Jednostkę wybierz z listy albo wpisz własną.')}<p class="oa-form-help">W demonstracji wzorzec jest stały: domyślne wiersze dla psów i kotów z OpisAI ${VERSION}, z których korzysta panel w przygotowaniu opisu.</p></div><footer class="oa-footer"><span class="oa-pg-gap"></span>${button('Anuluj','close')}${button('Zapisz parametry','save-vitals','primary','',`disabled title="${esc('Zapisuje wiersze panelu'+IN_APP)}"`)}</footer></div>`;
+    const win=makeWindow('opisai-vitals','OpisAI — konfiguracja parametrów życiowych',900,640,html);escapeCloses(win);bind(win.content,'close',()=>win.close());setTimeout(()=>$('[data-action="close"]',win.content)?.focus(),0);
+  }
+  /* Odczyt pola (zaawansowane): WM_GETTEXT, then UI Automation + MSAA, both always on; the read-only field diagnostics. */
+  function fieldsPage(area){
+    area.innerHTML=`<fieldset class="oa-group"><legend>Odczyt pola (zaawansowane)</legend><p class="oa-cfg-text">Gdy zwykły odczyt pola zwraca pusto (pole oparte na TRichView, Addict albo innym nie-natywnym toolkicie — np. Tk — nie oddającym tekstu przez WM_GETTEXT), OpisAI może spróbować nieinwazyjnego odczytu przez Windows UI Automation / MSAA.</p>`+
+      lockedSwitch('0. Standardowy odczyt — WM_GETTEXT (Win32, domyślny)','Podstawowy, najszybszy i nieinwazyjny odczyt pola (Win32 SendMessage); robiony jako PIERWSZY i działa dla zwykłych pól EDIT/RichEdit. Metoda jest zawsze włączona, bo stanowi bazowy etap kaskady odczytu.',true)+cfgHint('Metoda zapasowa (uruchamiana tylko gdy odczyt powyżej zwróci pusto lub jest wyłączony):')+
+      lockedSwitch('1. UI Automation + MSAA (nieinwazyjne)','Odczyt przez Windows UI Automation (TextPattern / ValuePattern / LegacyIAccessible; też ElementFromPoint ze środka pola) oraz MSAA/IAccessible (oleacc) jako zapas. Nie rusza fokusu, kursora ani schowka — bezpieczne, dlatego metoda jest zawsze włączona.',true)+
+      cfgHint('Włącz, jeśli generowanie kończy się błędem „Pole notatki jest puste”, mimo że w polu widać tekst. Każdy etap jest logowany w konsoli lub opcjonalnym logu plikowym (linie [read]). Odczyt zapasowy działa wyłącznie na Windows i tylko z włączoną bramką RODO (odczyt na głównym wątku).')+
+      cfgButton('🔧 Diagnostyka pola','diagnose','Bezpieczna (read-only) diagnostyka skonfigurowanych pól: nazwa klasy kontrolki, co widzi każda metoda odczytu (WM_GETTEXT / UIA / MSAA) i czy UIA pozwala pisać (ValuePattern). NIE modyfikuje pól. Wymaga otwartego okna Kliniki. Wynik w okienku; przy uruchomieniu z --log-file także w pliku logu (linie [diag]).','oa-cfg-wide')+
+      `</fieldset><div class="oa-cfg-note">${notice('W demonstracji OpisAI czyta trzy pola podokna opisu makiety Kliniki XP, przypisane na stałe. W aplikacji okna i pola wskazujesz z menu bąbelka: „Wybierz okno główne...”, „Wybierz podokno opisu...” i „Wskaż pole tekstowe”. Podkreślenia pisowni włączasz w menu bąbelka: „Podpowiedzi pisowni”.')}</div>`;
+  }
+  function diagnoseFields(){ // _on_diagnose_field: needs the open description sub-window and never changes the fields
+    const id='opisai-settings-message';
+    if(!window.Clinic?.getContext?.()?.editorOpen){messageBox({id,title:'Diagnostyka pola',icon:'warning',text:'Nie znaleziono podokna opisu wizyty. Otwórz wizytę w Klinice i spróbuj ponownie.'});return;}
+    const values=getFields(),report=DOC_KEYS.map(k=>{const n=String(values[k]||'').length,c=n+' zn.'+(n?'':'  (PUSTE)');return [`=== ${Doc().sectionByKey(k).label} — pole „${DOC_FIELD[k]}” ===`,'WM_GETTEXT: '+c,'UIA odczyt: '+c,'MSAA odczyt: '+c].join('\n');}).join('\n\n');
+    messageBox({id,title:'Diagnostyka pola',icon:'info',heading:'Diagnostyka pola',text:report,informative:'Przykładowy raport demonstracji: liczby znaków pochodzą z pól makiety. W aplikacji raport podaje też klasę kontrolki, wzorce UI Automation i ocenę drogi zapisu; pól nie zmienia.'});
+  }
+  /* AiActMatrixDialog: three sheets of the working AI Act / RODO matrix. A read-only sample of the default rows. */
+  const AI_ACT_SAMPLE=[
+    ['Kwalifikacja',['Obszar','Kwalifikacja / decyzja','Uzasadnienie / dowód'],[28,52,76],[
+      ['System','OpisAI','Asystent przygotowania roboczej dokumentacji wizyty weterynaryjnej.'],
+      ['Intended use','Przygotowanie roboczego tekstu epikryzy / opisu wizyty oraz opcjonalnego rozpoznania roboczego na podstawie notatek lekarza.','System porządkuje notatki, rozdziela sekcje, proponuje wstępne wnioskowanie, rozpoznanie robocze i zalecenia do weryfikacji.'],
+      ['Excluded use','Brak samodzielnej diagnozy ostatecznej, brak automatycznej ordynacji leczenia, brak triage, brak automatycznej decyzji klinicznej.','Pole Rozpoznanie robocze jest propozycją do weryfikacji; każdy output wymaga kontroli i akceptacji lekarza weterynarii/operatora.'],
+      ['Użytkownik docelowy','Lekarz weterynarii / upoważniony operator kliniki.','Narzędzie nie jest przeznaczone dla właściciela zwierzęcia ani do samodzielnej interpretacji.'],
+      ['Rola AI','Asystent redakcyjny i porządkujący dokumentację, z opcjonalną propozycją rozpoznania roboczego.','AI nie zastępuje badania klinicznego ani decyzji lekarza; rozpoznanie robocze nie jest diagnozą ostateczną.'],
+      ['AI Act - high-risk','Wstępnie: nie high-risk przy obecnym przeznaczeniu.','System tworzy roboczą dokumentację weterynaryjną i opcjonalne rozpoznanie robocze do obowiązkowej weryfikacji przez lekarza; nie wykonuje triage, scoringu, autonomicznego dawkowania ani automatycznych decyzji klinicznych. Do ponownej kwalifikacji przy zmianie funkcji lub sprzedaży jako narzędzie diagnostyczne/terapeutyczne.'],
+      ['RODO / dane osobowe','Założenie projektowe: do OpisAI trafiają dane kliniczne pacjenta-zwierzęcia, nie dane ludzi.','Dane zwierzęcia zwykle nie są danymi osobowymi. Dane właściciela, lekarza, pracownika, identyfikatory klienta i inne informacje pozwalające zidentyfikować osobę nie są potrzebne do działania OpisAI i nie powinny trafiać do promptu. Bramka RODO/podgląd służy jako kontrola błędu operatora przed wysłaniem treści do zewnętrznego providera AI.'],
+      ['Decyzja kwalifikacyjna','Używać jako narzędzie wsparcia dokumentacji, nie jako narzędzie diagnostyczne.','Tak opisywać w UI, dokumentacji i materiałach wdrożeniowych.'],
+      ['Zastrzeżenie','Robocza matryca produktowa, nie opinia prawna.','Wdrożenie komercyjne powinno przejść review prawny/RODO.']]],
+    ['Ryzyka_i_kontrole',['ID','Ryzyko','Skutek','Prawdop.','Waga','Kontrole obecne','Działania zalecane','Właściciel'],[8,34,36,14,14,42,52,22],[
+      ['R-01','Halucynacja rozpoznania lub zaleceń.','Błędna dokumentacja / ryzyko kliniczne.','Średnie','Wysoka','Prompt: dane tylko z notatki; wnioskowanie jako wstępne; human review.','UI notice + testy regresji + zakaz gotowych dawek/leków bez notatki.','OpisAI / klinika'],
+      ['R-04','Błędne pole Kliniki zostaje nadpisane.','Utrata lub pomieszanie dokumentacji.','Niskie/Śr.','Wysoka','Field picker, undo bubble, snapshot przed zapisem.','Czytelny podgląd targetów; test cofania.','OpisAI'],
+      ['R-06','Operator ufa AI bez kontroli.','Błędy kliniczne w dokumentacji.','Średnie','Wysoka','RODO/confirm flow częściowo.','AI literacy notice + checkbox pierwszego uruchomienia.','Klinika / OpisAI'],
+      ['R-07','Przypadkowe dane osobowe ludzi w promptach.','Niepotrzebna ekspozycja danych właściciela/personelu u providera.','Niskie','Wysoka','RODO okno potwierdzenia.','Instrukcja minimalizacji: do OpisAI wpisywać opis pacjenta-zwierzęcia i wizyty, bez danych właściciela/personelu.','Klinika / OpisAI'],
+      ['R-09','Rozpoznanie robocze brzmi jak diagnoza ostateczna.','Nadmierny autorytet tekstu AI w dokumentacji.','Średnie','Wysoka',"Osobne pole, etykieta 'robocze', RODO wybór '+ rozpoznanie', human review.",'Testy regresji fraz kategorycznych; instrukcja AI literacy: rozpoznanie zatwierdza lekarz.','OpisAI / klinika']]],
+    ['Checklista',['Priorytet','Zadanie','Opis','Status','Dowód / plik'],[12,30,76,18,32],[
+      ['P0','UI notice AI draft','Komunikat: AI przygotowuje wersję roboczą, lekarz musi zweryfikować.','Do zrobienia','Config / first-run dialog'],
+      ['P1','Instrukcja AI literacy','Krótka lokalna instrukcja: sprawdzaj fakty, leki, dawki, rozpoznania, dane osobowe.','Do zrobienia','Okno Pomoc / Zgodność AI'],
+      ['P1','Provider disclosure','Tabela providerów: OpenAI/Anthropic/Google, co jest wysyłane, linki do terms/DPA.','Do zrobienia','Dokumentacja / UI'],
+      ['P2','Change review trigger','Przy funkcjach: dawki, triage, automatyczne decyzje - ponowna kwalifikacja.','Do zrobienia','Procedura release checklist']]]];
+  function matrixWindow(){
+    let sheet=0;
+    const html=`<div class="oa-app oa-matrix"><div class="oa-content"><p>Edytuj roboczą matrycę zgodności. Źródłem prawdy jest plik XLSX; zmiany zapisane w Excelu i zmiany zapisane tutaj trafiają do tego samego skoroszytu.</p><p class="oa-form-help">Demonstracja: wybrane wiersze domyślnej matrycy OpisAI ${VERSION}, tylko do odczytu. W aplikacji arkusze edytujesz i zapisujesz do pliku XLSX.</p><div class="oa-tabs" role="tablist" aria-label="Arkusze matrycy" data-sheets></div><div class="oa-matrix-table" role="tabpanel" tabindex="0" data-sheet></div><div class="oa-inline-controls">${offButton('+','Dodaj wiersz do aktywnego arkusza')}${offButton('−','Usuń zaznaczony wiersz')}${offButton('↑','Przesuń zaznaczony wiersz w górę')}${offButton('↓','Przesuń zaznaczony wiersz w dół')}<span class="oa-pg-gap"></span>${offButton('Zapisz XLSX','Zapisze aktualne tabele do pliku XLSX')}${offButton('Odśwież z XLSX','Wczytuje ponownie skoroszyt, np. po edycji i zapisie w Excelu.')}${offButton('Otwórz w Excelu','Otwiera plik matrycy')}${offButton('Reset domyślnych','Przywraca domyślną matrycę z kodu. Zapisz, aby nadpisać XLSX.')}</div></div><footer class="oa-footer"><span class="oa-pg-gap"></span>${button('Zamknij','close','primary')}</footer></div>`;
+    const win=makeWindow('opisai-matrix','OpisAI — matryca AI Act / RODO',1180,760,html),root=win.content;escapeCloses(win);
+    function draw(){
+      $('[data-sheets]',root).innerHTML=AI_ACT_SAMPLE.map(([name],i)=>`<button type="button" role="tab" class="oa-tab ${i===sheet?'active':''}" aria-selected="${i===sheet}" tabindex="${i===sheet?0:-1}" data-tab="${i}">${esc(name)}</button>`).join('');
+      const [,headers,widths,rows]=AI_ACT_SAMPLE[sheet],total=widths.reduce((a,b)=>a+b,0);
+      $('[data-sheet]',root).innerHTML=`<table class="oa-options-table oa-matrix-cells"><colgroup>${widths.map(w=>`<col style="width:${(w/total*100).toFixed(1)}%">`).join('')}</colgroup><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      $$('[data-tab]',root).forEach(t=>{t.addEventListener('click',()=>{sheet=+t.dataset.tab;keepFocus(root,draw);});t.addEventListener('keydown',e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;e.preventDefault();sheet=(sheet+(e.key==='ArrowRight'?1:AI_ACT_SAMPLE.length-1))%AI_ACT_SAMPLE.length;draw();$(`[data-tab="${sheet}"]`,root)?.focus();});});
+    }
+    bind(root,'close',()=>win.close());draw();setTimeout(()=>$('[data-tab].active',root)?.focus(),0);
   }
   /* History (ui/history_window.py, ui/history_document.py): every prepared document, its status and the
    * stored states. rc32 keeps it in a protected local database; the demonstration keeps it in this tab. */
@@ -1236,22 +1414,186 @@
     historyRefresh = () => { if (win.el?.isConnected) draw(); };
     draw();
   }
-  function clearHistory(after) {
-    if (!state.history.length) { toast('Historia jest już pusta.'); return; }
-    messageBox({id: 'opisai-clear-history', title: 'OpisAI — wyczyść historię', icon: 'info', heading: 'Potwierdzenie', text: 'Wyczyścić historię tej sesji? Wpisy znikną z listy. Treść wizyty w Klinice pozostanie bez zmian.', buttons: [{label: 'Anuluj', action: 'close', default: true}, {label: 'Wyczyść historię', action: 'clear', primary: true, onClick: () => { state.history = []; historyRefresh?.(); after?.(); }}]});
-  }
+  /* O aplikacji OpisAI (ui/about.py, domain/app_info.py): header above the tabs, short pages that never scroll, copy
+   * buttons without settings or keys. Contact: name, company and e-mail only (the full data are in the application);
+   * licences as in rc32, with a third entry for the demonstration page itself. */
+  const APP_RELEASE_NOTES=['Panel badania ma poprawioną pisownię notatki; cytat lekarza w szczegółach.','Tylko pisownia: inne słowa, liczby i przeczenia zostają jak w notatce.','„Szmerów” zostaje przy drogach oddechowych; nazwa wiersza się nie dubluje.','„Sygnalment” zamiast „Sygnalement”; kreski nie chowają się pod Kliniką.']; // RELEASE_NOTES["0.12.0rc32"]
+  const APP_CAPABILITIES=['Epikryzy z notatek i wpisywanie zatwierdzonej treści do Kliniki.','Dyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce (próba).','Podgląd tekstu na żywo i kontrola układu dokumentacji.','Konfiguracja Gemini z logowaniem Google.']; // capability_summary()
+  const TRANSCRIPTION_SUMMARY='Gemini, Whisper lokalnie, ChatGPT w przeglądarce (próba)'; // transcription.TRANSCRIPTION_BACKENDS labels
+  const APP_UPDATE_STATUS='Aktualizacje online: nie skonfigurowano źródła wydań.',LICENSE_NAME='PolyForm Internal Use 1.0.0',CONTACT_EMAIL='guziczak@proton.me';
+  const providerNames=()=>uniq(PROVIDERS.map(s=>s.id)).map(id=>PROVIDERS.find(s=>s.id===id).label); // provider_names()
+  const applicationInfoText=()=>[`OpisAI ${VERSION}`,'Asystent dokumentacji weterynaryjnej','Generowanie: '+providerNames().join(', '),'Dyktowanie: '+TRANSCRIPTION_SUMMARY,'Kontrola informacji o wydaniu (lokalnie): spójne',APP_UPDATE_STATUS,'Licencja: '+LICENSE_NAME].join('\n'); // application_info_text()
+  const THIRD_PARTY_LICENSES=[['PySide6 (Qt for Python)','LGPL v3'],['shiboken6','LGPL v3'],['pywinauto','BSD-3-Clause'],['pywin32','PSF License'],['cryptography','Apache 2.0 / BSD-3'],['cloudscraper','MIT'],['patchright','Apache 2.0'],['Chromium','BSD-3-Clause i inne'],['whisper.cpp (silnik dyktowania osadzony w programie)','MIT'],['Ollama (pobierana przy pierwszym użyciu lokalnego AI)','MIT']];
+  const LICENSE_TEXTS={ // LICENSE.txt of 0.12.0rc32, license_summary() with THIRD_PARTY_LICENSES, and this page
+    app:`OpisAI
+Copyright (c) 2026 Łukasz Guziczak (GUITS). Wszelkie prawa zastrzeżone.
+
+Licencja: PolyForm Internal Use License 1.0.0
+https://polyformproject.org/licenses/internal-use/1.0.0
+
+Rozpowszechnianie, odsprzedaż lub udostępnianie OpisAI innym podmiotom
+wymaga pisemnej zgody Łukasza Guziczaka (GUITS).
+
+================================================================================
+
+# PolyForm Internal Use License 1.0.0
+
+<https://polyformproject.org/licenses/internal-use/1.0.0>
+
+## Acceptance
+
+In order to get any license under these terms, you must agree
+to them as both strict obligations and conditions to all
+your licenses.
+
+## Copyright License
+
+The licensor grants you a copyright license for the software
+to do everything you might do with the software that would
+otherwise infringe the licensor's copyright in it for any
+permitted purpose.  However, you may only make changes or
+new works based on the software according to [Changes and New
+Works License](#changes-and-new-works-license), and you may
+not distribute the software.
+
+## Changes and New Works License
+
+The licensor grants you an additional copyright license to
+make changes and new works based on the software for any
+permitted purpose.
+
+## Patent License
+
+The licensor grants you a patent license for the software that
+covers patent claims the licensor can license, or becomes able
+to license, that you would infringe by using the software.
+
+## Fair Use
+
+You may have "fair use" rights for the software under the
+law. These terms do not limit them.
+
+## Internal Business Use
+
+Use of the software for the internal business operations of
+you and your company is use for a permitted purpose.
+
+## No Other Rights
+
+These terms do not allow you to sublicense or transfer any of
+your licenses to anyone else, or prevent the licensor from
+granting licenses to anyone else.  These terms do not imply
+any other licenses.
+
+## Patent Defense
+
+If you make any written claim that the software infringes or
+contributes to infringement of any patent, your patent license
+for the software granted under these terms ends immediately. If
+your company makes such a claim, your patent license ends
+immediately for work on behalf of your company.
+
+## Violations
+
+The first time you are notified in writing that you have
+violated any of these terms, or done anything with the software
+not covered by your licenses, your licenses can nonetheless
+continue if you come into full compliance with these terms,
+and take practical steps to correct past violations, within
+32 days of receiving notice.  Otherwise, all your licenses
+end immediately.
+
+## No Liability
+
+***As far as the law allows, the software comes as is, without
+any warranty or condition, and the licensor will not be liable
+to you for any damages arising out of these terms or the use
+or nature of the software, under any kind of legal claim.***
+
+## Definitions
+
+The **licensor** is the individual or entity offering these
+terms, and the **software** is the software the licensor makes
+available under these terms.
+
+**You** refers to the individual or entity agreeing to these
+terms.
+
+**Your company** is any legal entity, sole proprietorship,
+or other kind of organization that you work for, plus all
+organizations that have control over, are under the control of,
+or are under common control with that organization.  **Control**
+means ownership of substantially all the assets of an entity,
+or the power to direct its management and policies by vote,
+contract, or otherwise.  Control can be direct or indirect.
+
+**Your licenses** are all the licenses granted to you for the
+software under these terms.
+
+**Use** means anything you do with the software requiring one
+of your licenses.
+
+================================================================================
+
+MEDICAL DISCLAIMER (DODATKOWY)
+
+OpisAI jest narzędziem pomocniczym do tworzenia dokumentacji weterynaryjnej.
+Treści generowane przez aplikację (epikryzy, rozpoznania, zalecenia) opierają
+się na modelach AI i MUSZĄ być zweryfikowane przez wykwalifikowanego
+lekarza weterynarii przed wykorzystaniem w dokumentacji medycznej pacjenta.
+
+Aplikacja NIE zastępuje profesjonalnej oceny lekarskiej, badania klinicznego
+ani decyzji diagnostyczno-terapeutycznej. Autorzy i kontrybutorzy nie ponoszą
+odpowiedzialności za błędy diagnostyczne, terapeutyczne ani administracyjne
+wynikłe z użycia tego oprogramowania.
+
+Lekarz weterynarii korzystający z aplikacji ponosi pełną odpowiedzialność
+zawodową za treść dokumentacji medycznej pacjenta.
+`,
+    deps:['Licencja programu: '+LICENSE_NAME+' — do użytku wewnętrznego licencjobiorcy, bez prawa rozpowszechniania. Biblioteki i modele zachowują własne licencje; ich pełne teksty są dołączone do pakietów poszczególnych zależności.','','Wybrane biblioteki:','',...THIRD_PARTY_LICENSES.map(([name,license])=>name+' — '+license),'','Pełne teksty licencji bibliotek i ich zależności są dołączone do odpowiednich pakietów.'].join('\n'),
+    demo:`Interaktywna demonstracja OpisAI (ta strona)
+© 2026 Łukasz Guziczak (GUITS). Wszelkie prawa zastrzeżone, o ile nie zaznaczono inaczej.
+
+Strona odtwarza interfejs OpisAI ${VERSION} w HTML, CSS i JavaScript. Nie zawiera programu OpisAI ani jego bibliotek; licencja PolyForm Internal Use 1.0.0 opisana wyżej dotyczy aplikacji.
+
+Zasoby strony:
+Selawik (zapasowa czcionka zamiast Segoe UI) — SIL Open Font License 1.1, © Microsoft Corporation; pełny tekst w assets/fonts/LICENSE.txt.
+Tapety Horyzont i ikony narzędzi — przygotowane dla tej demonstracji (assets/ASSET_SOURCES.md).
+
+Znaki towarowe:
+Klinika XP jest produktem firmy BRI. Makieta okna Kliniki w tej demonstracji to niezależna rekonstrukcja z fikcyjnymi danymi, a nie produkt BRI.
+Windows jest znakiem towarowym Microsoft Corporation. Pulpit demonstracji to jego własna stylizacja.
+
+Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
   function about(initial='about'){
-    let page=typeof initial==='string'?initial:'about';
-    const html=`<div class="oa-app"><nav class="oa-tabs" style="padding-top:9px">${[['about','O aplikacji'],['changes','Co nowego'],['contact','Kontakt'],['licenses','Licencje']].map(([id,label])=>`<button class="oa-tab ${page===id?'active':''}" data-about="${id}">${label}</button>`).join('')}</nav><div class="oa-content" data-about-page style="padding-top:20px"></div><footer class="oa-footer"><span class="oa-footnote">OpisAI ${VERSION} · interaktywna demonstracja</span>${button('Kopiuj informacje','copy-about','','copy')}${button('Zamknij','close','primary')}</footer></div>`;
-    const win=makeWindow('opisai-about','OpisAI — o aplikacji',680,560,html),root=win.content;
+    let page=['about','changes','contact','licenses'].includes(initial)?initial:'about',license='app';
+    const tabs=[['about','O aplikacji'],['changes','Co nowego'],['contact','Kontakt'],['licenses','Licencje']];
+    const html=`<div class="oa-app oa-about"><header class="oa-about-head"><span class="oa-about-mark" aria-hidden="true">${icon('opisai',30)}</span><div class="oa-about-id"><div class="oa-about-title"><h1>OpisAI</h1><span class="oa-about-version">Wersja ${VERSION}</span></div><p>Asystent dokumentacji weterynaryjnej</p></div></header><div class="oa-tabs oa-about-tabs" role="tablist" aria-label="Informacje o aplikacji">${tabs.map(([id,label])=>`<button type="button" role="tab" class="oa-tab" data-about="${id}">${label}</button>`).join('')}</div><div class="oa-about-page" role="tabpanel" data-about-page></div><p class="oa-about-demo">Interaktywna demonstracja w przeglądarce — bez połączeń z AI i bez mikrofonu.</p><footer class="oa-footer oa-about-foot">${button('Kopiuj wersję','copy-version')}${button('Kopiuj informacje','copy-about','','','title="Kopiuj wersję i możliwości aplikacji — bez ustawień i kluczy"')}<span class="oa-pg-gap"></span>${button('Zamknij','close','primary')}</footer></div>`;
+    const win=makeWindow('opisai-about','O aplikacji OpisAI',840,540,html),root=win.content;escapeCloses(win);
+    if(win.options)Object.assign(win.options,{minWidth:Math.min(640,innerWidth-16),minHeight:Math.min(460,innerHeight-60)}); // AboutDialog.setMinimumSize(640, 460)
     function draw(){
-      $$('[data-about]',root).forEach(el=>el.classList.toggle('active',el.dataset.about===page));const target=$('[data-about-page]',root);
-      if(page==='about')target.innerHTML=`<div class="oa-about-brand"><div class="oa-about-logo">${icon('opisai',44)}</div><div><h1>OpisAI</h1><p>Asystent dokumentacji weterynaryjnej</p><p class="oa-small">Wersja ${VERSION}</p></div></div><div class="oa-about-features">${[['document','Opis z notatki','Uporządkowanie źródeł i wybór wariantu.'],['mic','Dyktowanie','Od transkrypcji do sprawdzonego wpisu.'],['eye','Przegląd wyniku','Porównanie, edycja i świadome zatwierdzenie.'],['clinic','Obok Twojego programu','Praca na polach istniejącej wizyty.']].map(([ic,title,text])=>`<div class="oa-about-feature">${icon(ic,20)}<div><strong>${title}</strong><small>${text}</small></div></div>`).join('')}</div>${notice('To interaktywne demo OpisAI dla systemu Microsoft Windows. Przykładowe generowanie i dyktowanie działają lokalnie. Strona nie łączy się z modelami AI i nie używa mikrofonu.')}<div class="oa-about-block"><h3>Jak zacząć</h3><p>Kliknij niebieski bąbelek, aby opracować notatkę. Przytrzymaj go przez chwilę, aby zobaczyć dyktowanie, albo przeciągnij go na pole Kliniki, aby opracować tylko to pole. Po najechaniu pod bąbelkiem pojawiają się akcje „Opisz” i „Dyktuj”. Prawy przycisk otwiera menu OpisAI, takie samo jak w ikonie w zasobniku.</p></div>`;
-      else if(page==='changes')target.innerHTML=`<div class="oa-about-block"><h2>Co nowego</h2><p class="oa-muted">Funkcje odwzorowane z aplikacji ${VERSION}</p><h3>Kontrolowany przebieg dokumentacji</h3><ul><li>Edytowalne źródła i sześć wariantów opracowania.</li><li>Podgląd wersji roboczej podczas generowania.</li><li>Porównanie źródła z edytowalnym wynikiem.</li><li>Osobne zatwierdzenie dokładnej treści przed wpisaniem.</li><li>Kontrola konfliktów oraz cofanie potwierdzonego wpisu.</li></ul><h3>Dyktowanie i wygoda</h3><ul><li>Panel transkrypcji, fala mikrofonu i stany kart.</li><li>Kontynuacja nagrania lub przygotowanie opisu z notatki.</li><li>Podpisane akcje przy bąbelku.</li><li>Ustawienia połączeń, wyglądu, pisowni i historii.</li></ul></div>`;
-      else if(page==='contact'){target.innerHTML=`<div class="oa-about-block"><h2>Porozmawiajmy o OpisAI</h2><p class="oa-muted">Chcesz zobaczyć aplikację w swoim gabinecie?</p><div class="oa-contact-card"><strong>Łukasz Guziczak</strong><p>Autor OpisAI</p><a class="oa-contact-mail" href="mailto:guziczak@proton.me?subject=OpisAI%20%E2%80%94%20zapytanie%20z%20dema">guziczak@proton.me</a><div class="oa-inline-controls"><a class="oa-btn primary" href="mailto:guziczak@proton.me?subject=OpisAI%20%E2%80%94%20zapytanie%20z%20dema">${icon('send',15)} Napisz wiadomość</a>${button('Kopiuj adres','copy-email','','copy')}</div></div><p>W wiadomości możesz podać nazwę programu gabinetowego i opisać, jak dziś przygotowujesz dokumentację.</p></div>`;bind(target,'copy-email',()=>copyText('guziczak@proton.me',$('[data-action="copy-email"]',target)));}
-      else target.innerHTML=`<div class="oa-about-block"><h2>Licencje i informacje</h2><p class="oa-muted">Demonstracja odtwarza interfejs OpisAI.</p><h3>Aplikacja desktopowa</h3><p>OpisAI wykorzystuje między innymi Python, PySide6, silniki rozpoznawania mowy i składniki przeglądarki. Pełne informacje o licencjach są dostępne w dostarczonym programie.</p><h3>Ta witryna</h3><p>Interfejs demonstracyjny jest napisany w HTML, CSS i JavaScript. Nie uruchamia programu Python ani dołączonych do niego bibliotek.</p><h3>Dane przykładu</h3><p>Przypadek kliniczny ma charakter demonstracyjny. Wynik pokazuje funkcje interfejsu i wymaga weryfikacji — nie jest poradą weterynaryjną.</p></div>`;
+      $$('[data-about]',root).forEach(el=>{const on=el.dataset.about===page;el.classList.toggle('active',on);el.setAttribute('aria-selected',String(on));el.tabIndex=on?0:-1;});
+      const target=$('[data-about-page]',root);target.setAttribute('aria-label',tabs.find(t=>t[0]===page)[1]);
+      if(page==='about')target.innerHTML=`<section class="oa-about-card oa-about-grow"><h2>Możliwości</h2><ul>${APP_CAPABILITIES.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></section><p>Generowanie: ${esc(providerNames().join(' · '))}</p><p>Przed wpisaniem do dokumentacji lekarz weterynarii sprawdza i zatwierdza treść. OpisAI nie zastępuje oceny lekarskiej.</p>`;
+      else if(page==='changes')target.innerHTML=`<h2>Zmiany w wersji ${VERSION}</h2><ul class="oa-about-notes">${APP_RELEASE_NOTES.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><span class="oa-pg-gap"></span><p title="Automatyczna kontrola informacji zapisanych w tym wydaniu aplikacji.">Wersja i informacje o wydaniu są spójne.</p><p>${esc(APP_UPDATE_STATUS)}</p>`;
+      else if(page==='contact'){
+        target.innerHTML=`<div class="oa-about-columns"><section class="oa-about-card"><h2>Autor i kontakt</h2><h3>Łukasz Guziczak</h3><p class="oa-about-select">${CONTACT_EMAIL}</p></section><section class="oa-about-card"><h2>GUITS</h2><p class="oa-muted">Pełne dane kontaktowe autora i firmy (telefon, adres, NIP i REGON) są w aplikacji, w tej samej zakładce. Demonstracja pokazuje tylko imię i nazwisko, nazwę firmy i e-mail.</p></section></div><div class="oa-inline-controls"><a class="oa-btn" href="mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('OpisAI — wsparcie')}" title="Otwórz nową wiadomość w programie pocztowym">Napisz e-mail</a>${button('Kopiuj e-mail','copy-email')}${button('Kopiuj dane kontaktowe','copy-contact')}</div>`;
+        bind(target,'copy-email',()=>copyText(CONTACT_EMAIL,$('[data-action="copy-email"]',target)));
+        bind(target,'copy-contact',()=>copyText(`Łukasz Guziczak — GUITS\n${CONTACT_EMAIL}`,$('[data-action="copy-contact"]',target)));
+      } else {
+        target.innerHTML=`<select data-license aria-label="Wybierz dokument licencyjny">${[['app','Licencja OpisAI — pełny tekst'],['deps','Wybrane biblioteki i licencje'],['demo','Ta demonstracja — prawa i zasoby strony']].map(([value,label])=>`<option value="${value}" ${value===license?'selected':''}>${label}</option>`).join('')}</select><textarea readonly class="oa-about-license" aria-label="Treść dokumentu licencyjnego"></textarea>`;
+        const view=$('textarea',target),select=$('[data-license]',target);view.value=LICENSE_TEXTS[license];
+        select.addEventListener('change',()=>{license=select.value;view.value=LICENSE_TEXTS[license]||'';view.scrollTop=0;});
+      }
     }
-    $$('[data-about]',root).forEach(el=>el.addEventListener('click',()=>{page=el.dataset.about;draw();}));bind(root,'close',()=>win.close());bind(root,'copy-about',()=>copyText(`OpisAI ${VERSION}\nAsystent dokumentacji weterynaryjnej\nInteraktywna demonstracja OpisAI\nhttps://guziczak.github.io/opisai/\nguziczak@proton.me`,$('[data-action="copy-about"]',root)));draw();
+    $$('[data-about]',root).forEach(el=>{
+      el.addEventListener('click',()=>{page=el.dataset.about;draw();});
+      el.addEventListener('keydown',e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;e.preventDefault();const i=tabs.findIndex(t=>t[0]===page);page=tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length][0];draw();$(`[data-about="${page}"]`,root)?.focus();});
+    });
+    bind(root,'close',()=>win.close());
+    bind(root,'copy-version',()=>copyText(`OpisAI ${VERSION}`,$('[data-action="copy-version"]',root)));
+    bind(root,'copy-about',()=>copyText(applicationInfoText(),$('[data-action="copy-about"]',root)));
+    draw();setTimeout(()=>$('[data-about].active',root)?.focus(),0);
   }
 
   /* ---------------------------------------------------------------- bubble
@@ -1626,11 +1968,11 @@
     orbKick();
   }
   function showChips(){if(orb.exit||orb.soak||orb.soaked||orb.phys||orb.pressed||pointer)return;orb.chips=true;orbKick();}
-  function hintText(){return orb.phys?'⌨ TRYB FIZYKI (30s)\n←→ poruszanie\nSPACJA hold = ladowanie odbicia (zwolnij = launch!)':`OpisAI · ${preferences.model}\nOpisAI ${VERSION}`;}
+  function hintText(){return orb.phys?'⌨ TRYB FIZYKI (30s)\n←→ poruszanie\nSPACJA hold = ladowanie odbicia (zwolnij = launch!)':`OpisAI · ${modelLabel()}\nOpisAI ${VERSION}`;}
   function showHint(text=hintText()){
     if(!orb.el||state.closed)return;
     let hint=$('.oa-orb-hint');if(!hint){hint=document.createElement('div');hint.className='oa-orb-hint';hint.setAttribute('role','tooltip');hint.id='oa-orb-hint';(document.getElementById('overlay-layer')||document.body).append(hint);}
-    hint.textContent=text;hint.hidden=false;hint.classList.toggle('oa-theme-dark',preferences.theme==='dark'); // BubbleHint uses shell.colors(): the OpisAI theme
+    hint.textContent=text;hint.hidden=false;hint.classList.toggle('oa-theme-dark',themeName()==='dark'); // BubbleHint uses shell.colors(): the OpisAI theme
     // ui/hint_geometry.place_hint: left, right, above or below the disc and its actions, inside the work area.
     const a=workArea(),R=ORB_R*Math.max(1.1,orb.scale,orb.scaleTarget)+6,chips=ORB_ACTIONS[stateKey()]?{w:($('.oa-orb-actions',orb.el)?.offsetWidth||125)+8,top:orb.y+59-4,bottom:orb.y+85+4}:null;
     const box={x:orb.x-Math.max(R,chips?chips.w/2:0),y:orb.y-R,r:orb.x+Math.max(R,chips?chips.w/2:0),b:chips?Math.max(orb.y+R,chips.bottom):orb.y+R};
@@ -1715,7 +2057,7 @@
   function showMenu(x,y,options={}){ // the bubble's right click shows the tray menu (_on_bubble_right_click)
     if(state.closed){launch();return;}
     if(settingsOpen()&&!options.tray)return;
-    const el=Shell.menu(orbMenuItems(),x,y,{className:'oa-menu'+(preferences.theme==='dark'?' oa-theme-dark':''),flip:true,onClose:()=>{orb.menuBlock=nowS()+.35;}}); // submenus share the class
+    const el=Shell.menu(orbMenuItems(),x,y,{className:'oa-menu'+(themeName()==='dark'?' oa-theme-dark':''),flip:true,onClose:()=>{orb.menuBlock=nowS()+.35;}}); // submenus share the class
     if(options.keyboard&&el?.querySelector)el.querySelector('button:not(:disabled)')?.focus();
     return el;
   }
@@ -1756,8 +2098,8 @@
    * _show_problem), history, About, a profile view. The operation record is not either: "Odrzuć" or × leave it behind. */
   const SPELLING_WORK=['opisai-compose','opisai-review','opisai-undo','opisai-progress','opisai-settings','opisai-dictation','opisai-discard'];
   const spellingBusy=()=>!!(state.job||state.review||state.recording||state.receipt)||['processing','recording','review'].includes(state.phase)||SPELLING_WORK.some(id=>!!windows.get(id)?.el?.isConnected);
-  window.OpisAISpelling?.connect({enabled:()=>!!preferences.spelling,busy:spellingBusy,running:()=>!state.closed,theme:()=>preferences.theme}); // assets/opisai-spelling.js
-  function trayTooltip(){return state.closed?'OpisAI — zamknięte\nKliknij, aby uruchomić':`OpisAI — ${preferences.model}\nKlik: opisz · Przytrzymaj: dyktuj · Prawy: menu`;}
+  window.OpisAISpelling?.connect({enabled:()=>!!preferences.spelling,busy:spellingBusy,running:()=>!state.closed,theme:()=>themeName()}); // assets/opisai-spelling.js
+  function trayTooltip(){return state.closed?'OpisAI — zamknięte\nKliknij, aby uruchomić':`OpisAI — ${modelLabel()}\nKlik: opisz · Przytrzymaj: dyktuj · Prawy: menu`;}
   function syncTray(){$('.tray-opisai')?.setAttribute('aria-label',state.closed?'OpisAI — zamknięte. Kliknij, aby uruchomić.':'OpisAI. Kliknij: opisz. Prawy przycisk lub Shift+F10: menu.');}
 
   /* One animation loop, active only while something moves (Bubble._tick and its settle rule). */
@@ -1907,9 +2249,7 @@
   function init(){
     if(!window.Shell||!window.Icons)return;
     createOrb();
-    document.documentElement.style.setProperty('--oa-font-size',preferences.fontSize+'px');
     Shell.registerApp({id:'opisai',title:'OpisAI',icon:'opisai',open:showBubble}); // a second start raises the running bubble
-    Object.keys(FIELDS).forEach((key,i)=>FIELDS[key]=preferences.clinicalSections[i]||defaults.clinicalSections[i]);
     window.addEventListener('clinic:focus',event=>{state.activeField=event.detail?.field||state.activeField;});
     document.addEventListener('keydown',dictationEnterShortcut,true); // Enter in the dictated Badanie field: "Przepisz fragment" (ChatGPT)
     window.OpisAI={open:describe,prepare:describe,describe,dictate,settings,history,about,showBubble,launch,undo,showMenu,trayTooltip,isClosed:()=>state.closed,getState:()=>({phase:state.phase,history:state.history.length,recording:!!state.recording,closed:state.closed,preferences:{...preferences}})};
