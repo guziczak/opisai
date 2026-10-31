@@ -149,7 +149,7 @@ const SAMPLE = {
 };
 const WINDOW_CHANGED = 'Zmieniło się okno, proces programu lub mapowanie pól. Odczytaj pola ponownie.';
 function fixture({fields = SAMPLE, storage: saved = {}} = {}) {
-  const doc = new Target(), win = new Target(), timers = new Map(), frames = new Map(), toasts = [], failures = [], api = {}, storage = new Map(Object.entries(saved));
+  const doc = new Target(), win = new Target(), timers = new Map(), frames = new Map(), toasts = [], failures = [], api = {}, storage = new Map(Object.entries(saved)), clipboard = [];
   let now = 0, serial = 0;
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body);
   doc.createElement = tag => new Element(tag, doc); doc.createElementNS = (_, tag) => new Element(tag, doc);
@@ -177,7 +177,7 @@ function fixture({fields = SAMPLE, storage: saved = {}} = {}) {
     edit(key, text) { clinic.fields[key] = text; }, reopen() { clinic.session += 1; }};
   win.Clinic = clinic; win.Shell = shell;
   const context = vm.createContext({window: win, document: doc, Element, Clinic: clinic, Shell: shell, __api: api, __failures: failures,
-    CSS: {escape: text => String(text).replace(/(["\\])/g, '\\$1')}, innerWidth: 1400, innerHeight: 900, navigator: {}, performance: {now: () => now},
+    CSS: {escape: text => String(text).replace(/(["\\])/g, '\\$1')}, innerWidth: 1400, innerHeight: 900, navigator: {clipboard: {writeText: async text => { clipboard.push(text); }}}, performance: {now: () => now},
     matchMedia: () => ({matches: false, addEventListener() {}}),
     localStorage: {getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key)},
     setTimeout: (fn, delay = 0) => { timers.set(++serial, {fn, due: now + delay}); return serial; }, clearTimeout: id => timers.delete(id),
@@ -196,7 +196,7 @@ function fixture({fields = SAMPLE, storage: saved = {}} = {}) {
     }
     now = end;
   }
-  const f = {api, doc, clinic, windows, toasts, failures, storage, advance,
+  const f = {api, doc, clinic, windows, toasts, failures, storage, clipboard, advance,
     win: id => windows.get(id), root: id => windows.get(id)?.content,
     q(id, selector) { const el = windows.get(id)?.content.querySelector(selector); assert.ok(el, `${id}: ${selector}`); return el; },
     click(id, selector) { f.q(id, selector).click(); f.advance(0); },
@@ -454,6 +454,38 @@ test('focus: a rebuilt review tab, field action, comparison or detail tab keeps 
   f.press('opisai-review', '[data-tab="details"]');
   active = f.press('opisai-review', '[data-details="controls"]');
   assert.ok(active.isConnected); assert.equal(active.dataset.details, 'controls');
+});
+
+test('history: the copy is the epikryza (field texts without labels); every request source is kept; tabs and entries keep the focus', () => {
+  const f = fixture(); f.compose(); f.generate(); f.approve();
+  f.click('opisai-message', '[data-action="mb-close"]');
+  f.compose(); f.generate(); f.click('opisai-review', '[data-action="reject"]');
+  f.api.history();
+  let active = f.press('opisai-history', '[data-page="sources"]');
+  assert.ok(active.isConnected); assert.equal(active.dataset.page, 'sources');
+  const read = f.clinic.fields; // the second document read the fields after the first write
+  assert.equal(f.q('opisai-history', '[data-doc-text]').value, `Badanie kliniczne:\n${read.badanie}\n\nWywiad:\n${read.wywiad}\n\nDiagnoza:\n${SAMPLE.diagnoza}`, 'the diagnosis outside the scope is a request source too');
+  const entries = f.root('opisai-history').querySelectorAll('[data-entry]'), written = f.api.state.history.find(e => e.status === 'written');
+  active = f.press('opisai-history', `[data-entry="${entries[1].dataset.entry}"]`);
+  assert.ok(active.isConnected); assert.equal(active.dataset.entry, written.id);
+  f.click('opisai-history', '[data-action="copy-history"]');
+  assert.equal(f.clipboard.at(-1), `${f.clinic.fields.badanie}\n\n${f.clinic.fields.wywiad}`, 'exactly what was written, without headings');
+});
+
+test('undo: a conflicting write is the last receipt; undo asks to clarify it instead of reverting an older write', () => {
+  const f = fixture(); f.compose({field: 'wywiad'}); f.generate(); f.approve();
+  assert.equal(f.win('opisai-message').title, 'OpisAI — wpisano do pól');
+  f.click('opisai-message', '[data-action="mb-close"]');
+  const written = f.clinic.fields.wywiad;
+  f.compose({field: 'badanie'}); f.generate();
+  f.clinic.edit('badanie', SAMPLE.badanie + ' Dopisek lekarza.');
+  f.approve();
+  assert.equal(f.win('opisai-message').title, 'OpisAI — sprawdź wynik wpisania');
+  f.click('opisai-message', '[data-action="mb-close"]');
+  f.api.undo(); f.advance(1000);
+  assert.equal(f.messageText(), 'Najpierw wyjaśnij niepotwierdzony wynik poprzedniego zapisu.', 'WriteService.inverse refuses a conflict receipt');
+  assert.ok(!f.win('opisai-undo'), 'opisai-undo is closed');
+  assert.equal(f.clinic.fields.wywiad, written);
 });
 
 test('Esc is reject(): compose cancels, the read and the generation ask to cancel, the review is rejected, undo is not accepted, history closes', () => {

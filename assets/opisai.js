@@ -579,8 +579,9 @@
     }
     const message = receipt.results.map(r => `${r.label}: ${names[r.status]}${r.detail ? '. ' + r.detail : ''}`).join('\n') + '\n\n' + RECEIPT_NOTE;
     if (plan.result && !plan.inverse) recordHistory(plan.result, receipt.status === 'verified' ? 'written' : receipt.status, receipt);
+    state.lastReceipt = receipt; // coordinator._written keeps every receipt; undo refuses one that is not verified or partial
     if (receipt.status === 'verified') {
-      state.lastReceipt = state.lastWrite = receipt; setPhase('done');
+      state.lastWrite = receipt; setPhase('done');
       messageBox({title: 'OpisAI — wpisano do pól', icon: 'info', text: 'Wpisano i odczytano kontrolnie wszystkie zatwierdzone pola.\n\nWizyta nie została przez to zapisana w bazie Kliniki. Zapisz ją w programie gabinetowym.', details: message,
         buttons: [{label: 'Cofnij wpisanie', action: 'undo', onClick: () => setTimeout(undo, 0)}, {label: 'Gotowe', action: 'close', primary: true, default: true}]});
     } else { setPhase('idle'); messageBox({title: 'OpisAI — sprawdź wynik wpisania', icon: 'warning', text: message, buttons: [{label: 'Gotowe', action: 'close', primary: true, default: true}]}); }
@@ -766,7 +767,7 @@
     let entry = state.history.find(e => e.id === result.historyId);
     if (!entry) { entry = {id: result.historyId = 'doc-' + (++historySerial), ts: new Date()}; state.history.unshift(entry); }
     Object.assign(entry, {status, mode: result.mode === 'dictation' ? 'dictation' : result.variant.rich ? 'rich' : 'faithful', panel: !!result.variant?.panel,
-      sources: result.generated ? result.generated.request.sources.filter(s => s.included && s.text.trim()).map(s => ({label: s.label, text: s.text})) : [{label: 'Dyktowanie', text: result.sent}],
+      sources: result.generated ? result.generated.request.sources.map(s => ({label: s.label, text: s.text, included: s.included !== false})) : [{label: 'Dyktowanie', text: result.sent}],
       proposal: result.keys.map(k => ({key: k, label: result.full[k], text: result.original[k]})), reviewed: result.keys.map(k => ({key: k, label: result.full[k], text: fieldText(result, k)})),
       before: result.keys.map(k => ({key: k, label: result.full[k], text: String(result.snapshot[k] ?? '')})), approved: receipt ? receipt.plan.changes.map(c => ({key: c.key, label: c.label, text: c.after})) : null,
       results: receipt ? receipt.results : null, review: result.doc ? result.doc.snapshot() : null, original: result.generated ? Doc().reviewDocument(result.generated).snapshot() : null,
@@ -801,6 +802,7 @@
       ['configuration', 'Ustawienia', 'Ustawienia', [`Tryb: ${HISTORY_MODE[entry.mode] || ''}`, 'Model: przykład demonstracyjny — bez AI', 'Panel parametrów: ' + (entry.panel ? 'włączony' : 'wyłączony'), ...entry.sections.flatMap(s => ['\n' + s.label, ...s.subsections.map(n => '• ' + n)])].join('\n')]);
     return pages;
   }
+  const historyCopy = entry => (entry.approved || entry.reviewed).map(f => f.text).join('\n\n'); // entry['epikryza']: field texts joined by blank lines, no labels
   const historyStamp = (date, seconds) => { const p = n => String(n).padStart(2, '0'); return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())} ${p(date.getHours())}:${p(date.getMinutes())}${seconds ? ':' + p(date.getSeconds()) : ''}`; };
   function history() {
     let filter = '', selectedId = null, page = 'result';
@@ -817,12 +819,12 @@
       $('[data-doc-tabs]', root).innerHTML = pages.map(([id, label, title]) => `<button type="button" role="tab" class="oa-tab ${page === id ? 'active' : ''}" aria-selected="${page === id}" data-page="${id}" title="${esc(title)}">${esc(label)}</button>`).join('');
       $$('[data-page]', $('[data-doc-tabs]', root)).forEach(el => el.addEventListener('click', () => { page = el.dataset.page; draw(); }));
       const text = $('[data-doc-text]', root); text.hidden = !entry; text.value = pages.find(p => p[0] === page)?.[3] || '';
-      const copy = $('[data-action="copy-history"]', root); copy.disabled = !entry; $('span', copy).textContent = entry?.approved ? 'Kopiuj wynik' : 'Kopiuj wersję roboczą';
+      const copy = $('[data-action="copy-history"]', root); copy.disabled = !(entry && historyCopy(entry)); $('span', copy).textContent = entry?.approved ? 'Kopiuj wynik' : 'Kopiuj wersję roboczą';
       $('[data-action="delete-history"]', root).disabled = !entry;
     }
     $('[data-list]', root).addEventListener('keydown', e => { if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return; e.preventDefault(); const items = visible(), i = items.findIndex(x => x.id === selectedId), next = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (next) { selectedId = next.id; draw(); $('.oa-hist-item.selected', root)?.focus(); } });
     $('.oa-hist-search', root).addEventListener('input', e => { filter = e.target.value.trim().toLowerCase(); draw(); });
-    bind(root, 'copy-history', () => { const e = state.history.find(x => x.id === selectedId); if (e) copyText((e.approved || e.reviewed).map(f => f.label + ':\n' + f.text).join('\n\n'), $('[data-action="copy-history"]', root)); });
+    bind(root, 'copy-history', () => { const e = state.history.find(x => x.id === selectedId); if (e && historyCopy(e)) copyText(historyCopy(e), $('[data-action="copy-history"]', root)); });
     bind(root, 'delete-history', () => { const id = selectedId; if (!id) return; messageBox({id: 'opisai-history-delete', title: 'Usuń wpis z historii?', icon: 'question', text: 'Usunąć ten dokument z historii OpisAI?', buttons: [{label: 'Nie', action: 'close', default: true}, {label: 'Tak', action: 'yes', primary: true, onClick: () => { state.history = state.history.filter(e => e.id !== id); draw(); }}]}); });
     bind(root, 'refresh', draw); bind(root, 'close', () => win.close());
     historyRefresh = () => { if (win.el?.isConnected) draw(); };
