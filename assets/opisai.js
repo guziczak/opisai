@@ -7,6 +7,10 @@
   const FIELDS = {wywiad: 'Wywiad', badanie: 'Badanie kliniczne', diagnoza: 'Rozpoznanie'};
   const PREF_KEY = 'opisai-demo-settings-v12';
   const defaults = {provider:'ChatGPT',transport:'Przeglądarka',model:'Wybrany w ChatGPT',theme:'light',transcriber:'ChatGPT',cardMode:'Nagrywa OpisAI',spelling:true,animations:true,idleBounce:true,bounceInterval:10,bounceMax:0,history:true,retention:'30 dni',fontSize:13,livePreview:true,language:'Polski',sentenceLines:false,dictationConsent:false,panel:true,rich:false,diagnosis:false,clinicalSections:['Wywiad','Badanie kliniczne','Rozpoznanie'],panelRows:{temperature:true,heart:true,bcs:true,mass:true},customPrompt:''};
+  /* Dyktowanie (rc32 Config): engine (default Gemini Live), ChatGPT language clip, card mode and Autoenter, Gemini mode and
+   * consent, local Whisper hardware, model and speakers, and the remembered details view. rc32 has no language or
+   * one-sentence-per-line control. */
+  Object.assign(defaults,{transcriber:'gemini',chatgptClip:true,cardMode:'own',autoEnter:false,autoEnterSeconds:10,geminiMode:'transcribe',dictationConsent:false,whisperHardware:'auto',whisperModel:'large-v3',diarization:false,diarizationOverlay:true,labelDoctor:'Lekarz',labelOther:'Właściciel',dictationDetails:false});delete defaults.language;delete defaults.sentenceLines;
   let preferences = {...defaults};
   try { const saved = JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); for (const key of Object.keys(defaults)) if (key in saved && typeof saved[key] === typeof defaults[key]) preferences[key] = saved[key]; } catch (_) {}
   if(!Array.isArray(preferences.clinicalSections)||preferences.clinicalSections.length!==3)preferences.clinicalSections=[...defaults.clinicalSections];
@@ -15,6 +19,9 @@
   /* Config idle_bounce_*: 10–3600 s between bounces, 0 = no limit per idle window. */
   const normalizeBounce=p=>{p.bounceInterval=Number.isFinite(+p.bounceInterval)?Math.max(10,Math.min(3600,Math.round(+p.bounceInterval))):defaults.bounceInterval;p.bounceMax=Number.isFinite(+p.bounceMax)?Math.max(0,Math.min(999,Math.round(+p.bounceMax))):defaults.bounceMax;};
   normalizeBounce(preferences);
+  /* Saved dictation choices as rc32 identifiers (the demo's earlier labels map onto them); Autoenter whole seconds 5–600, otherwise 10. */
+  const normalizeDictation=p=>{p.transcriber={ChatGPT:'chatgpt_browser','Gemini Live':'gemini','Whisper (lokalnie)':'local_whisper'}[p.transcriber]||(['gemini','local_whisper','chatgpt_browser'].includes(p.transcriber)?p.transcriber:defaults.transcriber);p.cardMode={'Nagrywa OpisAI':'own','Dwie karty':'two'}[p.cardMode]||(['own','two'].includes(p.cardMode)?p.cardMode:'own');if(!['transcribe','agent'].includes(p.geminiMode))p.geminiMode='transcribe';const s=Math.round(Number(p.autoEnterSeconds));p.autoEnterSeconds=s>=5&&s<=600?s:10;if(!['auto','nvidia_external','nvidia_internal','integrated','cpu'].includes(p.whisperHardware))p.whisperHardware='auto';if(!['large-v3','large-v3-turbo','medium','small'].includes(p.whisperModel))p.whisperModel='large-v3';};
+  normalizeDictation(preferences);
   const state = {phase:'idle',active:null,operation:null,review:null,history:[],lastWrite:null,token:0,recording:null,receipt:null,job:null,orb:null,closed:false,handlingFailure:false,failureSerial:0,activeField:null};
   const windows = new Map();
   const $ = (sel,root=document) => root.querySelector(sel);
@@ -613,73 +620,473 @@
     if(control&&ok){const span=$('span',control);if(span){const old=span.textContent;span.textContent='Skopiowano';setTimeout(()=>{if(span.isConnected)span.textContent=old;},1800);}}else toast(ok?'Skopiowano do schowka.':'Zaznacz tekst i użyj Ctrl+C, aby skopiować.');
   }
 
-  /* Recording is deliberately scripted: the microphone is never requested. */
-  const DICTATION_TEXT='Pacjent jest dziś spokojniejszy. Właściciel zgłasza poprawę apetytu od wczoraj. Nadal obserwuje kichanie i wydzielinę wokół nozdrzy. Kontynuujemy obserwację objawów. Notatka do sprawdzenia przed wpisaniem.';
-  /* Hold, "Dyktuj" and the menu (MacroController._on_triple_click): a second hold stops the
-   * recording; an open OpisAI window is recalled instead; no dictation during generation. */
+  /* ---------------------------------------------------------------- dictation
+   * 0.12.0rc32 live dictation (MacroController._on_triple_click, application/dictation_session.py,
+   * ui/transcript_overlay.py): always into the configured "Badanie kliniczne" field, a frameless
+   * preview over that field and the engine chosen in Konfiguracja → Dyktowanie. The microphone is
+   * never requested: fictional exam findings for Fistaszek are "spoken" word by word with pauses
+   * between fragments; each dictation speaks the next sample that is not yet in the field (or in the
+   * continued text), and "Kontynuuj dyktowanie" moves on to the sample after the last one. */
+  const DICTATION_SAMPLES=[
+    ['Błony śluzowe bladoróżowe, czas powrotu kapilarnego około 2 sekund.','Oddechy około 140 na minutę, z udziałem tłoczni brzusznej.','Węzły chłonne podżuchwowe niepowiększone. Brzuch miękki, niebolesny.'],
+    ['Nawodnienie prawidłowe, fałd skórny rozprostowuje się od razu.','Siekacze prawidłowej długości, bez przerostu.'],
+    ['Małżowiny uszne i przewody słuchowe czyste, bez wydzieliny.']];
+  const DT_STEP=.12,DT_DELAY=1.5,DT_QUIET=.0025; // TranscriptionTextEdit.SAMPLE_SECONDS and QUIET_LEVEL; a card plays OpisAI's recording 1.5 s later
+  const DT_ENGINES={gemini:'Gemini Live — chmura (wymaga klucza API Gemini)',local_whisper:'Lokalny Whisper — na tym komputerze, offline (RODO)',chatgpt_browser:'ChatGPT — dyktowanie w przeglądarce (próba)'};
+  const DT_STRATEGY={ // ui/dictation_strategy.py STRATEGY_COPY: label, summary, details, interval label and its tooltip
+    own:['Nagrywa OpisAI — dwie karty przepisują (polecany)','OpisAI nagrywa mikrofon i dzieli wypowiedź w pauzach; karty ChatGPT tylko przepisują kolejne fragmenty. Przełączenie kart nie przerywa nagrywania, a każdy fragment trafia do jednej karty.','Mikrofon otwiera OpisAI (karty ChatGPT nie używają mikrofonu), więc możesz mówić bez przerwy — także wtedy, gdy karty jeszcze przepisują. Fragment kończy się w pauzie: po podanym czasie, po dłuższym zawieszeniu głosu albo po Enterze (bez Autoenter tylko po Enterze). Karta, która zostaje w tyle, nie dostaje środka dłuższej pauzy (słowa i krótkie pauzy idą zawsze w całości), więc tekst przychodzi szybciej po Enterze. Fragment, którego karta nie przepisze, przepisuje druga karta z nagrania w pamięci. Nagranie jest tylko w pamięci OpisAI i znika po zakończeniu dyktowania; ChatGPT, jak w trybie dwóch kart, dostaje dźwięk fragmentów do przepisania.','Długość fragmentu:','Po tylu sekundach OpisAI zamyka fragment w najbliższej pauzie w mowie. Dłuższe zawieszenie głosu zamyka go wcześniej; Enter też. Po wyłączeniu Autoenter fragment kończy tylko Enter albo zakończenie dyktowania; dopiero po 2 minutach bez Entera OpisAI zamyka go w najbliższej pauzie.'],
+    two:['Dwie karty nagrywają na zmianę','Karty same nagrywają mikrofon i przekazują sobie nagrywanie; wynik jest składany z kolejnych fragmentów. Tryb zapasowy, gdy „Nagrywa OpisAI” nie działa na tym komputerze.','Enter zleca przepisanie fragmentu: druga karta przejmuje mikrofon i nagrywa do następnego polecenia (A → B → A …), a poprzednia oddaje tekst i czeka gotowa. Następne polecenie wymaga gotowości drugiej karty; Autoenter nie gwarantuje wyniku dokładnie co podaną liczbę sekund.','Odstęp fragmentów:','Odstęp automatycznych próśb o przepisanie fragmentu, liczony od przejęcia nagrywania przez bieżącą kartę. Gotowość drugiej karty może opóźnić wykonanie, bez zaległych przełączeń. Po wyłączeniu Autoenter używaj Entera.']};
+  const DT_REASONS={accepted:'Przyjęto prośbę o przepisanie fragmentu.',segment_pause:'Zamknę fragment w najbliższej pauzie w mowie, żeby nie przeciąć słowa. Mów dalej; nie ponawiaj Entera.',pause:'Przekazuję w najbliższej pauzie w mowie, żeby nie przeciąć słowa. Nie ponawiaj Entera.'};
+  const DT_ACTIVE=['queued','starting','recording','transcribing','stabilizing'];
+
+  /* Hold, "Dyktuj" and the menu (MacroController._on_triple_click). A second hold stops the recording;
+   * a hold while the Gemini question waits cancels that start; the configuration blocks it; any open
+   * OpisAI window, compose, progress, review and undo included, is recalled silently
+   * (ui_windows().raise_active); only a review waiting behind the bubble is "another operation"
+   * (_start_transcription_planned, safe.busy), and nothing starts during generation. */
   function dictate(options={}){
     options=validOption(options);
     if(state.closed)launch();
     if(state.recording){finishDictation();return;}
     if(state.receipt)return;
-    // rc32 _start_transcription_planned: while compose/review is open (safe.busy) dictation does not start and does not recall the window.
-    if(!options.direct&&liveWindows().some(w=>['opisai-compose','opisai-progress','opisai-review','opisai-undo'].includes(w.id))){errorCard('Trwa inna operacja — zakończ ją przed dyktowaniem.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});return;}
+    if(state.consent){state.consent.cancelled=true;return;} // _dictation_starting: the question stays, the start is cancelled
+    if(!options.direct&&settingsOpen())return;
+    if(!options.direct&&raiseActive())return; // the open view comes forward and nothing starts
     if(state.job)return;
-    if(!window.Clinic?.isEditorOpen?.()){errorCard('Nie znaleziono podokna wizyty — otwórz wizytę w Klinice.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});return;}
+    if(!options.direct&&state.review){errorCard('Trwa inna operacja — zakończ ją przed dyktowaniem.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});return;}
+    if(!window.Clinic?.isEditorOpen?.()){errorCard('Nie znaleziono podokna wizyty — otwórz wizytę w Klinice.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});restoreDictationReview(options);return;}
     beginOperation();startDictation(options);
   }
-  function startDictation(options){
-    const field=FIELDS[options.field]?options.field:(Clinic.getActiveField?.()||state.activeField||'wywiad');
-    const snapshot=clone(options.snapshot||getFields());
-    state.review=null;closeWin('opisai-compose');closeWin('opisai-review');
-    state.recording={id:++state.token,field,snapshot,session:options.session??window.Clinic?.getContext?.().session,base:options.base||'',text:'',wordIndex:0,seconds:0,paused:false,listening:false,started:Date.now(),tick:null,canvasFrame:null,continuation:!!options.continuation};
-    const rec=state.recording;setPhase('processing');showDictation(); // dots until the microphone is confirmed
-    setTimeout(()=>{if(state.recording===rec){rec.listening=true;setPhase('recording');}},700); // red REC only while it records
-    const words=DICTATION_TEXT.split(' ');
-    rec.tick=setInterval(()=>{if(state.recording!==rec){clearInterval(rec.tick);return;}if(rec.paused||!rec.listening)return;rec.seconds+=.45;if(rec.wordIndex<words.length){rec.text+=(rec.wordIndex?' ':'')+words[rec.wordIndex++];}updateDictation();},450);
+  function startDictation(options){ // Gemini asks before the first recording (MacroController._confirm_gemini_dictation)
+    if(preferences.transcriber!=='gemini'||preferences.dictationConsent){openDictation(options);return;}
+    askGeminiConsent(accepted=>{if(accepted)openDictation(options);else restoreDictationReview(options);});
   }
-  function showDictation(){
-    const rec=state.recording;if(!rec)return;
-    const old=windows.get('opisai-dictation');if(old?.el?.isConnected){old.show();old.focus();state.active=old;return;}
-    const html=`<div class="oa-app"><header class="oa-header"><div class="oa-dictation-header"><span class="oa-rec-status"></span><div><h2 data-record-status>Dyktowanie</h2><p>${esc(FIELDS[rec.field])} · ${esc(preferences.transcriber)} · Polski</p></div><span class="oa-dictation-time">00:00</span></div></header><div class="oa-content" style="display:flex;flex-direction:column"><div style="display:flex;align-items:center;gap:8px"><span class="oa-recording-badge">Przykładowe dyktowanie</span><span class="oa-muted oa-small">Demo nie korzysta z mikrofonu.</span></div><div class="oa-dictation-wave"><canvas aria-label="Przykładowy przebieg głośności"></canvas><span class="oa-wave-caption">Mikrofon · przykład</span><span class="oa-wave-unit">−48 dB&nbsp;&nbsp; 0 dB</span></div><div class="oa-section-label">Nowa transkrypcja</div><div class="oa-transcript-block" data-transcript aria-live="polite"><span class="oa-transcript-placeholder">Rozpoczynam przykładowe dyktowanie…</span></div><div class="oa-dictation-controls">${button('Wstrzymaj','pause','small','pause')}${button('Przepisz fragment','flush','small','document')}<span>Enter — zakończ i sprawdź</span></div><div class="oa-lanes"><div class="oa-lane"><span class="oa-lane-name">Karta A</span><div class="oa-lane-track"><div class="oa-lane-fill" data-lane="a"></div></div><span class="oa-lane-state" data-lane-state="a">Nagrywa</span></div><div class="oa-lane"><span class="oa-lane-name">Karta B</span><div class="oa-lane-track"><div class="oa-lane-fill" data-lane="b"></div></div><span class="oa-lane-state" data-lane-state="b">Gotowa</span></div></div><details class="oa-disclosure"><summary>Treść pola przed dyktowaniem</summary><p>${esc(rec.snapshot[rec.field]||'(puste pole)')}</p></details></div><footer class="oa-footer"><span class="oa-footnote">Tekst wpiszesz po sprawdzeniu.</span>${button('Anuluj','discard')}${button('Zakończ i sprawdź tekst','finish','primary','stop')}</footer></div>`;
-    const win=makeWindow('opisai-dictation','OpisAI — dyktowanie',690,640,html);state.active=win;const root=win.content;
-    bind(root,'pause',()=>{rec.paused=!rec.paused;updateDictation();});
-    bind(root,'flush',()=>{toast('Dotychczasowy fragment jest dostępny w podglądzie.');$('.oa-transcript-block',root).classList.add('oa-flushed');updateDictation();});
-    bind(root,'finish',finishDictation);
-    bind(root,'discard',()=>confirmDiscardDictation());
-    root.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!['TEXTAREA','INPUT','BUTTON','SELECT'].includes(event.target.tagName)){event.preventDefault();finishDictation();}});
-    animateWave(root,rec);updateDictation();
+  function askGeminiConsent(done){ // ui/dictation.py, a compact dialog: dismissal never authorizes or stores consent
+    const ask=state.consent={cancelled:false};let answered=false;
+    const answer=value=>{if(answered)return;answered=true;if(state.consent===ask)state.consent=null;done(value&&!ask.cancelled);}; // consent given during a cancelled start is still remembered
+    const html=`<div class="oa-app oa-consent"><div class="oa-content"><h2>Dyktowanie przez Gemini Live</h2><p>Dźwięk z mikrofonu będzie przesyłany do usługi Google Gemini Live w celu zamiany mowy na tekst. Podczas nagrywania zobaczysz transkrypcję, a po zakończeniu sprawdzisz ją przed wpisaniem do Kliniki.</p>${check('Zapamiętaj zgodę na dyktowanie przez Gemini Live','oa-gemini-remember',true)}<p class="oa-muted">Zgodę możesz cofnąć w konfiguracji, w sekcji transkrypcji głosowej.</p></div><footer class="oa-footer"><span class="oa-footnote"></span>${button('Anuluj','cancel')}${button('Rozpocznij dyktowanie','start','primary')}</footer></div>`;
+    const id='opisai-gemini-consent',win=Shell.createWindow({id,title:'OpisAI — dyktowanie',icon:'opisai',width:610,height:290,minWidth:420,minHeight:250,className:'oa-host oa-theme-'+preferences.theme,content:html,resizable:false,maximizable:false,taskbar:false,onClose:()=>answer(false)}),root=win.content;
+    windows.set(id,win);if(win.el)win.el.dataset.oaWindow=id;holdPosition();
+    const max=win.el?.querySelector?.('[data-caption="max"]');if(max)max.hidden=true; // CompactDialog: only "×" in its title bar
+    bind(root,'cancel',()=>win.close());
+    bind(root,'start',()=>{if($('#oa-gemini-remember',root)?.checked){preferences.dictationConsent=true;savePreferences();}answer(true);win.close();});
+    setTimeout(()=>$('[data-action="cancel"]',root)?.focus?.(),0); // "Anuluj" is the default button
   }
-  function updateDictation(){
-    const rec=state.recording,root=windows.get('opisai-dictation')?.content;if(!rec||!root)return;
-    const seconds=Math.floor(rec.seconds);$('.oa-dictation-time',root).textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
-    const text=rec.base?rec.base+'\n\n'+rec.text:rec.text;
-    const transcript=$('[data-transcript]',root);transcript.innerHTML=text?esc(text)+(!rec.paused?'<span class="oa-type-cursor"></span>':''):'<span class="oa-transcript-placeholder">Rozpoczynam przykładowe dyktowanie…</span>';transcript.scrollTop=transcript.scrollHeight;
-    $('[data-record-status]',root).textContent=rec.paused?'Dyktowanie wstrzymane':'Dyktowanie';$('.oa-rec-status',root).classList.toggle('paused',rec.paused);$('[data-action="pause"] span',root).textContent=rec.paused?'Wznów':'Wstrzymaj';
-    const active=Math.floor(seconds/7)%2===0?'a':'b';$$('[data-lane-state]',root).forEach(el=>el.textContent=rec.paused?'Wstrzymana':el.dataset.laneState===active?'Nagrywa':'Odbiera tekst');$$('[data-lane]',root).forEach(el=>el.style.width=(30+(seconds*3)%50)+'%');
+  /* _start_transcription_planned → SafeCoordinator.begin_dictation: the field is read now; a continuation
+   * keeps its edited text only for the same window and an unchanged field. */
+  function openDictation(options){
+    if(!window.Clinic?.isEditorOpen?.()){errorCard('Nie znaleziono podokna wizyty — otwórz wizytę w Klinice.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});restoreDictationReview(options);return;}
+    const key='badanie',ctx=window.Clinic.getContext?.()||{},fields=getFields(),saved=options.continuation?dictationSaved(options):null;let base=fields[key]||'';
+    if(options.continuation){
+      if(options.session!==undefined&&options.session!==ctx.session||String(options.snapshot?.[key]??base)!==base){errorCard('Zmieniła się wizyta lub treść jej pola. Zachowano wcześniejszy tekst dyktowania.',{title:'⚠ Transkrypcja',accent:'#e74c3c'});restoreDictationReview(options);return;} // DictationContinuationInput.validate → _show_transcribe_info(error=True)
+      base=String(options.base??saved?.edited?.[key]??'');
+    }
+    const engine=preferences.transcriber,chat=engine==='chatgpt_browser',two=chat&&preferences.cardMode==='two',after=options.continuation?(saved?.takes||1):0,heard=normal(base);
+    const take=DICTATION_SAMPLES.findIndex((sample,i)=>i>=after&&!heard.includes(normal(sample[0]))); // the next sample not yet in the text: a written note or a continuation never repeats one; none left, silence
+    const prep=chat?(two?1.4:1.6):engine==='gemini'?1.1:2.2,diarization=engine==='local_whisper'&&preferences.diarization;
+    if(diarization)errorCard('Rozpoznawanie mówców pominięte: brak biblioteki pyannote. Konfiguracja → sekcja transkrypcji → Rozpoznawanie mówców → „Pobierz brakujące składniki”.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});
+    const rec=state.recording={id:++state.token,engine,chat,two,clip:chat&&preferences.chatgptClip,auto:chat&&preferences.autoEnter?preferences.autoEnterSeconds:0,key,label:FIELDS[key],snapshot:{[key]:fields[key]||''},session:ctx.session,base, // capture(hwnd,[key]): only the dictated field guards the note's write
+      continuation:!!options.continuation,restore:options.continuation?options:null,takes:take<0?DICTATION_SAMPLES.length:take+1,t:0,at:performance.now(),prep,started:null,listening:false,stopping:null,stopAt:null,result:false,resultAt:0,cancelled:false,
+      status:chat?(two?'Otwieram dyktowanie ChatGPT… Zacznij mówić po potwierdzeniu uruchomienia mikrofonu.':'Otwieram karty ChatGPT… Mikrofon otworzy OpisAI, gdy pierwsza karta będzie gotowa.'):engine==='gemini'?'🎙 Łączę z Gemini… za chwilę mów. Przytrzymaj bąbelek, aby zakończyć.':'🧠 Ładuję lokalny model Whisper… pierwsze użycie może chwilę potrwać. Przytrzymaj bąbelek, aby zakończyć.',
+      command:null,text:'',shown:'',said:'',speech:dictationSpeech(DICTATION_SAMPLES[take]||[],prep+.9),audio:[],level:null,wave:{cols:[],clock:0,last:null,quiet:null,bucket:null},
+      fragments:[],following:true,userHidden:false,details:!!preferences.dictationDetails,baseOpen:false};
+    rec.words=rec.speech.flatMap(f=>f.words);
+    setPhase('processing'); // dots until the microphone is confirmed
+    dictationOverlay(rec);renderDictation(rec);followDictation(rec);
+    rec.tick=setInterval(()=>dictationStep(rec),DT_STEP*1000);
   }
-  function animateWave(root,rec){
-    const canvas=$('.oa-dictation-wave canvas',root),ctx=canvas.getContext('2d');
-    function frame(now){if(state.recording!==rec||!canvas.isConnected)return;const box=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);if(canvas.width!==Math.round(box.width*dpr)||canvas.height!==Math.round(box.height*dpr)){canvas.width=Math.round(box.width*dpr);canvas.height=Math.round(box.height*dpr);}ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,box.width,box.height);const center=box.height*.56;ctx.strokeStyle=preferences.theme==='dark'?'#3b424c':'#dfe5ed';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,center);ctx.lineTo(box.width,center);ctx.stroke();ctx.strokeStyle=rec.paused?'#b1bac6':'#44b782';ctx.lineWidth=2;const t=rec.paused?0:now/1000;for(let x=8;x<box.width-8;x+=4){const a=rec.paused?1:(5+32*Math.abs(Math.sin(x*.029+t*2.3))*Math.abs(Math.cos(x*.1-t*1.4)));ctx.beginPath();ctx.moveTo(x,center-a);ctx.lineTo(x,center+a);ctx.stroke();}rec.canvasFrame=requestAnimationFrame(frame);}
-    rec.canvasFrame=requestAnimationFrame(frame);
+  function dictationSpeech(sample,from){ // the scripted speaker: word timings, a pause after each fragment
+    let at=from;
+    return sample.map(text=>{const words=text.split(' ').map(word=>{const w={word,at,end:at+.14+.042*word.length};at=w.end+.06;return w;});at+=1.3;return {text,words,start:words[0].at,end:words.at(-1).end};}); // about two words a second
   }
+  const spokenWords=(rec,from,to)=>rec.words.filter(w=>w.at>=from-1e-6&&w.end<=Math.min(to,rec.stopAt??Infinity)+1e-6).map(w=>w.word).join(' ');
+  function speechLevel(rec,t){ // a deterministic speech envelope: syllable-shaped words, quiet gaps and pauses
+    if(t>(rec.stopAt??Infinity))return .0012;
+    if(!rec.speech.some(f=>t>=f.start&&t<f.end))return .0012;
+    const w=rec.words.find(x=>t>=x.at&&t<x.end),r=Math.sin((t*7.3+rec.id)*12.9898)*43758.5453,n=r-Math.floor(r);
+    return w?.04+.14*(.35+.65*n)*(.6+.4*Math.sin(Math.PI*(t-w.at)/(w.end-w.at))):.014+.012*n;
+  }
+  /* TranscriptionTextEdit._append_audio_level: at most one column per 120 ms; after half a second of
+   * measured silence the display clock slows (1/10, then logarithmically), so silence is compressed. */
+  function waveSample(w,level,now){
+    let elapsed=w.last==null?0:Math.max(0,now-w.last),wasSlow=w.quiet!=null&&now-w.quiet>=.5,slow=0,slowDisplay=0;
+    if(elapsed>=.8){elapsed=DT_STEP;w.quiet=null;wasSlow=false;}
+    if(level<=DT_QUIET){if(w.quiet==null)w.quiet=now;const age=Math.max(0,now-w.quiet-.5);slow=Math.min(elapsed,age);slowDisplay=3/10*Math.log1p(slow/(3+age-slow));}else w.quiet=null;
+    if(elapsed)w.clock+=Math.min(elapsed,DT_STEP)*(elapsed-slow+slowDisplay)/elapsed;w.last=now;
+    const bucket=Math.floor((w.clock+1e-9)/DT_STEP);
+    if(w.cols.length&&bucket===w.bucket&&!(wasSlow&&level>DT_QUIET)){const c=w.cols.at(-1);c[0]=Math.max(c[0],level);c[1]=now;}else w.cols.push([level,now]);
+    w.bucket=bucket;
+  }
+  /* One 120 ms step of the scripted session: capture, the speaker, commands, cards and the stop protocol. */
+  function dictationStep(rec){
+    if(state.recording!==rec){clearInterval(rec.tick);return;}
+    const t=rec.t=Math.round((rec.t+DT_STEP)*1000)/1000;rec.at=performance.now();
+    if(rec.started==null&&rec.stopping==null){
+      if(rec.engine==='gemini'&&t>=.6)rec.status=t<rec.prep-.2?'Łączę z Gemini Live…':`Gemini Live — ${preferences.geminiMode==='agent'?'agent audio: gemini-3.1-flash-live-preview':'transkrypcja: gemini-3.5-transcribe-live'}`;
+      if(t>=rec.prep){rec.started=t;rec.listening=true;if(rec.chat)openFragment(rec,t);setPhase('recording');} // red REC only once the microphone records
+    }
+    if(rec.listening){
+      const level=speechLevel(rec,t);rec.audio.push([t,level]);if(rec.audio.length>600&&rec.audio[0][0]<t-30)rec.audio.splice(0,rec.audio.findIndex(a=>a[0]>=t-25));rec.level=level;waveSample(rec.wave,level,t);
+      if(!rec.chat){const text=spokenWords(rec,0,t-(rec.engine==='gemini'?.45:.7));if(text!==rec.text){rec.text=text;rec.wave.cols=[];}} // live partials; a new snapshot restarts the tail
+    }
+    if(rec.chat)dictationCards(rec,t);
+    if(rec.stopping!=null&&!rec.result){
+      if(!rec.chat&&t-rec.stopping>=(rec.started==null?.6:1.2)){rec.text=rec.started==null?'':spokenWords(rec,0,rec.stopAt);rec.result=true;rec.resultAt=t;}
+      else if(rec.chat&&t-rec.stopping>=.5&&!rec.fragments.some(f=>DT_ACTIVE.includes(f.stage))){rec.result=true;rec.resultAt=t;}
+    }
+    if(rec.result&&t-rec.resultAt>=.5){closeDictation(rec);return;}
+    renderDictation(rec);
+  }
+  function dictationCards(rec,t){ // own audio: the open fragment's card plays it 1.5 s later, then transcribes; "two": the card records it
+    const c=rec.command;
+    if(c&&rec.listening){
+      const open=rec.fragments.find(f=>f.end==null);
+      if(c.phase==='accepted'&&t-c.at>=.3){
+        if(!open||!spokenWords(rec,open.start,t))rec.command=null; // segment_empty: nothing said since the last cut
+        else{const f=rec.speech.find(x=>t>=x.start&&t<x.end);if(f)Object.assign(c,{phase:'executing',reason:rec.two?'pause':'segment_pause',until:f.end});else{cutFragment(rec,t);rec.command=null;}}
+      }else if(c.phase==='executing'&&t>=c.until){cutFragment(rec,t);rec.command=null;}
+    }
+    if(rec.auto&&rec.listening&&!rec.command){const open=rec.fragments.find(f=>f.end==null);if(open&&t-open.start>=rec.auto&&!rec.speech.some(f=>t>=f.start&&t<f.end)&&spokenWords(rec,open.start,t))cutFragment(rec,t);} // Autoenter: in the first pause after the interval
+    for(const f of rec.fragments){
+      if(f.stage==='queued'&&!rec.fragments.some(x=>x!==f&&x.card===f.card&&['starting','recording','transcribing','stabilizing'].includes(x.stage)))Object.assign(f,{stage:'starting',since:t,lag:rec.two?0:Math.max(DT_DELAY,t-f.start)});
+      else if(f.stage==='starting'&&t-f.since>=.4)Object.assign(f,{stage:'recording',since:t});
+      else if(f.stage==='recording'&&f.end!=null&&t>=f.end+f.lag)Object.assign(f,{stage:f.text?'transcribing':'discarded',since:t});
+      else if(f.stage==='transcribing'&&t-f.since>=(rec.clip?2:1.6))Object.assign(f,{stage:'stabilizing',since:t});
+      else if(f.stage==='stabilizing'&&t-f.since>=.4){Object.assign(f,{stage:'done',since:t});
+        rec.text=rec.fragments.filter(x=>x.stage==='done'&&x.text).sort((a,b)=>a.n-b.n).map(x=>x.text).join(' ');
+        rec.wave.cols=rec.wave.cols.filter(col=>col[1]>f.end);} // acknowledge_audio: transcribed audio leaves the inline wave
+    }
+  }
+  function openFragment(rec,at){const n=rec.fragments.length+1;rec.fragments.push({n,card:n%2?'A':'B',start:at,end:null,stage:'queued',since:at,lag:0,text:''});}
+  function cutFragment(rec,at){ // the fragment ends in a pause; the other card takes the next one
+    const f=rec.fragments.find(x=>x.end==null);if(!f)return;
+    f.end=at;f.text=spokenWords(rec,f.start,at);
+    if(f.stage==='queued'||f.stage==='starting')f.stage=f.text?f.stage:'discarded';
+    if(rec.stopping==null)openFragment(rec,at);
+  }
+  function cardState(rec,name,t){ // the card's current recording, as RecordingSnapshot.states would say
+    const f=rec.fragments.filter(x=>x.card===name&&x.stage!=='queued'&&x.stage!=='discarded').at(-1);
+    if(!f)return ['idle',null];
+    if(f.stage==='done')return [t-f.since<1.2?'done':'idle',f];
+    return [f.stage==='stabilizing'?'stabilizing_result':f.stage==='recording'&&f.end!=null&&!rec.two?'draining':f.stage,f];
+  }
+  function requestFlush(rec,source){ // Enter / "Przepisz fragment ↵": DictationCommands.request, accepted or coalesced
+    if(!rec?.chat||!rec.listening||rec.stopping!=null||rec.cancelled)return false;
+    const flush=rec.el?.querySelector('[data-dt="flush"]');
+    if(flush&&document.activeElement===flush)rec.el.querySelector('[data-dt-scroll]')?.focus?.(); // the next Enter still belongs to the panel
+    if(!rec.command)rec.command={phase:'accepted',reason:'accepted',at:rec.t,source};
+    renderDictation(rec);return true;
+  }
+  function dictationEnterShortcut(event){ // ui/dictation_shortcut.py: during a ChatGPT dictation Enter in the dictated field never reaches it
+    const rec=state.recording;
+    if(!rec?.chat||event.key!=='Enter'||event.shiftKey||event.ctrlKey||event.altKey||event.metaKey||!event.target?.closest?.(`[data-clinic-field="${rec.key}"]`)||window.Clinic?.getContext?.().session!==rec.session)return;
+    event.preventDefault();event.stopPropagation();
+    if(!event.repeat&&rec.el&&!rec.el.hidden)requestFlush(rec,'keyboard'); // the next fragment needs the visible panel; otherwise the press is only kept out of the field
+  }
+  /* "Zakończ i sprawdź tekst", a second hold or "Zakończ": request_finish. The panel stays and says what
+   * the stop still waits for; the review opens once the last text has arrived. */
   function finishDictation(){
-    const rec=state.recording;if(!rec)return;clearInterval(rec.tick);cancelAnimationFrame(rec.canvasFrame);state.recording=null;closeWin('opisai-dictation');
-    let text=[rec.base,rec.text].filter(Boolean).join('\n\n').trim();
-    if(preferences.sentenceLines)text=text.replace(/([.!?])\s+(?=[A-ZĄĆĘŁŃÓŚŹŻ])/g,'$1\n');
-    if(!text){setPhase('idle');toast('Nie odebrano tekstu do sprawdzenia.');return;}
-    const withBefore=rec.base?text:[rec.snapshot[rec.field],text].filter(Boolean).join('\n\n'),receipt=state.receipt={id:rec.id};
-    setPhase('processing'); // REC ends with the recording; the last text is still arriving
-    receipt.deliver=()=>{if(state.receipt!==receipt)return;state.receipt=null;review({id:rec.id,snapshot:rec.snapshot,sources:{...rec.snapshot,[rec.field]:withBefore},output:{[rec.field]:withBefore},variant:{rich:false,panel:false,diagnosis:false},field:rec.field,session:rec.session,mode:'dictation',route:'Przykładowe dyktowanie',created:new Date().toISOString()});};
-    setTimeout(receipt.deliver,600); // "Pokaż" or a click delivers it at once
+    const rec=state.recording;if(!rec||rec.stopping!=null||rec.cancelled)return;
+    if(document.activeElement?.matches?.('[data-dt="finish"],[data-dt="flush"]')&&rec.el?.contains(document.activeElement))rec.el.querySelector('[data-dt-scroll]')?.focus?.(); // both get disabled: keep the focus in the panel, where the stop is announced
+    rec.stopping=rec.t;rec.stopAt=rec.t;rec.listening=false;rec.command=null;
+    if(rec.chat)cutFragment(rec,rec.t);
+    setPhase('processing');renderDictation(rec);
   }
-  function dropDictation(){ // discard the recording, its microphone start or its last-text receipt
-    const rec=state.recording;if(rec){clearInterval(rec.tick);cancelAnimationFrame(rec.canvasFrame);}
-    state.recording=null;state.receipt=null;closeWin('opisai-dictation');closeWin('opisai-discard');state.active=null;setPhase('idle');
+  function dropDictation(){ // SafeCoordinator.cancel: the microphone start, the stop or the last-text receipt; never a review
+    const rec=state.recording;state.recording=null;state.receipt=null;state.active=null;setPhase('idle');
+    if(!rec)return;
+    if(rec.el&&!rec.el.hidden){rec.cancelled=true;renderDictation(rec);setTimeout(()=>disposeDictation(rec),350);}else disposeDictation(rec);
+    if(rec.continuation)restoreDictationReview(rec.restore);
   }
-  function confirmDiscardDictation(){
-    const html=`<div class="oa-app"><header class="oa-header"><h2>Odrzucić bieżące dyktowanie?</h2></header><div class="oa-content"><p>Tekst tego dyktowania nie zostanie wpisany do pól. Możesz też zakończyć nagranie i sprawdzić zachowaną notatkę.</p></div><footer class="oa-footer">${button('Wróć do nagrania','back')}${button('Odrzuć','discard','danger')}${button('Sprawdź tekst','review','primary')}</footer></div>`;
-    const win=makeWindow('opisai-discard','OpisAI — zakończenie dyktowania',560,250,html);bind(win.content,'back',()=>win.close());bind(win.content,'review',()=>{win.close();finishDictation();});bind(win.content,'discard',()=>{win.close();dropDictation();});
+  function disposeDictation(rec){
+    clearInterval(rec.tick);clearInterval(rec.follow);cancelAnimationFrame(rec.frame);rec.observer?.disconnect?.();
+    const focused=!!rec.el?.contains(document.activeElement);
+    if(rec.onResize)window.removeEventListener('resize',rec.onResize);rec.el?.remove();rec.el=null;if(focused)returnDictationFocus(rec);
+  }
+  function returnDictationFocus(rec){ // a hidden or closed panel never keeps the focus ("Zwiń" is NoFocus in rc32): the dictated field of the same window, else the bubble
+    if(window.Clinic?.getContext?.().session!==rec.session||!window.Clinic?.focusField?.(rec.key))orb.el?.querySelector('.oa-orb')?.focus?.();
+  }
+  function closeDictation(rec){ // the worker finished: teardown, then the review of the text (DictationSession.release)
+    state.recording=null;disposeDictation(rec);
+    const transcript=rec.text.trim();
+    if(!transcript){setPhase('idle');if(rec.continuation)restoreDictationReview(rec.restore);errorCard('Nagranie zakończone bez tekstu. Dotychczasowa notatka została zachowana.',{title:'🎙 Transkrypcja',accent:'#2ecc71'});return;}
+    const after=rec.base+(rec.base?'\n':'')+transcript; // dictation_draft: the field's text once, then a single line break
+    const result={id:rec.id,snapshot:rec.snapshot,sources:{[rec.key]:rec.continuation?after:transcript},output:{[rec.key]:after},variant:{rich:false,panel:false,diagnosis:false},field:rec.key,session:rec.session,
+      mode:'dictation',route:'Przykładowe dyktowanie',transcription:dictationSource(rec),takes:rec.takes,created:new Date().toISOString()};
+    state.lastDictation=result;review(result);
+  }
+  function dictationSource(rec){ // TranscriptionSource of the session, for the review's "Transkrypcja:" line
+    if(rec.chat)return {backend:'chatgpt_browser',model:rec.two?'model niepotwierdzony (dyktowanie WWW)':'model niepotwierdzony (dyktowanie WWW, dźwięk nagrywa OpisAI)',language:'auto',mode:'dictation',realtime_model:''};
+    if(rec.engine==='gemini'){const agent=preferences.geminiMode==='agent';return {backend:'gemini',model:agent?'gemini-3.1-flash-live-preview':'gemini-3.5-transcribe-live',language:'pl-PL',mode:agent?'agent':'transcribe',realtime_model:''};}
+    const cpp=['integrated','cpu'].includes(preferences.whisperHardware);
+    return {backend:'local_whisper',model:preferences.whisperModel,language:'pl',mode:cpp?'whisper_cpp':'realtime',realtime_model:cpp?'':'small'};
+  }
+  const dictationSaved=options=>options?.review||state.lastDictation||null;
+  function restoreDictationReview(options){ // _restore_dictation_continuation: the edited review waits behind the bubble ("Sprawdź")
+    if(!options?.continuation)return;
+    const saved=dictationSaved(options);if(!saved)return;
+    if(saved.edited&&options.base!==undefined)saved.edited[saved.field||'badanie']=options.base;
+    state.review=saved;setPhase('review');
+  }
+  function showDictation(){ // the bubble's "Pokaż" or click: recall the preview (TranscriptOverlay.recall), focus for the keyboard
+    const rec=state.recording;if(!rec?.el)return;
+    rec.userHidden=false;followDictation(rec);if(!rec.el.hidden)rec.el.querySelector('[data-dt-scroll]')?.focus?.();
+  }
+
+  /* TranscriptOverlay: never a taskbar window and never activated by itself; its stacking follows the
+   * Klinika sub-window, its geometry follows the field (FOLLOW_MS 300) and it hides without the field. */
+  function dictationOverlay(rec){
+    const el=document.createElement('section');el.className='oa-dictation oa-host oa-theme-'+preferences.theme;el.setAttribute('aria-label','OpisAI — dyktowanie');el.hidden=true;el.dataset.engine=rec.engine;
+    el.innerHTML=`<div class="oa-dt-target"><span data-dt-target></span>${rec.speech.length?'<span class="oa-dt-demo" title="Demonstracja nie używa mikrofonu: odtwarza zapisany przykład.">Przykładowe dyktowanie</span>':'<span class="oa-dt-demo" title="Demonstracja nie używa mikrofonu. Zapisane przykłady się skończyły, więc to nagranie pozostanie ciche.">Przykładowe dyktowanie — cisza</span>'}</div>`+
+      `<div class="oa-dt-head"><span class="oa-dt-indicator" data-dt-indicator aria-hidden="true">●</span><div class="oa-dt-status" data-dt-status></div><span class="oa-dt-meter" data-dt-meter role="meter" aria-label="Poziom sygnału mikrofonu" aria-valuemin="0" aria-valuemax="100" hidden><i></i></span><button type="button" class="oa-dt-hide" data-dt="hide" aria-label="Ukryj podgląd; dyktowanie trwa dalej" title="Ukryj podgląd. Dyktowanie trwa dalej; ikoną OpisAI możesz przywołać podgląd.">Zwiń</button></div>`+
+      `<div class="oa-dt-body"><button type="button" class="oa-dt-toggle" data-dt="base" aria-expanded="false" title="Rozwiń tekst zachowany przed tym nagraniem. Nowe dyktowanie pojawia się osobno poniżej." hidden>Dotychczasowy tekst</button><div class="oa-dt-base" data-dt-base tabindex="0" aria-label="Tekst przed nagraniem — tylko do podglądu" hidden></div>`+
+      `<div class="oa-dt-stream"><div class="oa-dt-scroll" data-dt-scroll tabindex="0" role="textbox" aria-readonly="true" aria-multiline="true" aria-label="Nowe dyktowanie — rozpoznawany tekst" title="Zielona fala za tekstem pokazuje mikrofon przed klipem i opóźnieniem kart. To kompaktowy podgląd aktywności (cisza skrócona), nie liniowa oś czasu. Pełne pomiary i osie A/B/C/D są w szczegółach poniżej."><div class="oa-dt-text"><span data-dt-text></span><span data-dt-end></span><span class="oa-dt-placeholder" data-dt-placeholder></span><canvas data-dt-wave aria-hidden="true"></canvas></div></div><button type="button" class="oa-dt-flush" data-dt="flush" hidden disabled>Przepisz fragment ↵</button></div></div>`+
+      `<button type="button" class="oa-dt-toggle" data-dt="details" aria-expanded="false">Szczegóły dyktowania — mikrofon</button><div class="oa-dt-summary" data-dt-summary hidden></div><canvas class="oa-dt-timeline" data-dt-timeline role="img" aria-label="Mikrofon teraz oraz wejścia rejestratorów — wspólna oś czasu" hidden></canvas><button type="button" class="oa-dt-toggle oa-dt-plain" data-dt="diagnostics" title="Identyfikatory, stany i liczniki; bez tekstu wizyty i bez nagrania." hidden>Kopiuj diagnostykę kart</button>`+
+      `<div class="oa-dt-row"><span class="oa-dt-note">Tekst roboczy — jeszcze niewpisany do Kliniki.</span><button type="button" class="oa-dt-toggle oa-dt-plain" data-dt="latest" aria-label="Wróć do końca transkrypcji" title="Wróć do końca tekstu. Włącz podążanie za nową treścią." hidden>Na żywo ↓</button><button type="button" class="oa-dt-toggle oa-dt-plain" data-dt="browser" aria-label="Pokaż okno ChatGPT" title="Przywołaj własną kartę ChatGPT bez zmieniania zapamiętanego położenia i rozmiaru okna." hidden>Pokaż ChatGPT</button></div>`+
+      `<button type="button" class="oa-dt-finish" data-dt="finish">Zakończ i sprawdź tekst</button><div class="sr-only" data-dt-live role="status" aria-live="polite"></div>`;
+    (document.getElementById('windows')||document.body).append(el);rec.el=el;
+    const q=sel=>el.querySelector(sel),on=(name,fn)=>q(`[data-dt="${name}"]`)?.addEventListener('click',fn);
+    on('hide',()=>{rec.userHidden=true;followDictation(rec);});
+    on('base',()=>{rec.baseOpen=!rec.baseOpen;renderDictation(rec);followDictation(rec);});
+    on('details',()=>{rec.details=!rec.details;preferences.dictationDetails=rec.details;savePreferences();renderDictation(rec);followDictation(rec);}); // remembered at once, like rc32
+    on('flush',()=>requestFlush(rec,'panel'));on('finish',()=>finishDictation());
+    on('latest',()=>{rec.following=true;const s=q('[data-dt-scroll]');s.scrollTop=s.scrollHeight;renderDictation(rec);});
+    on('browser',()=>toast('„Pokaż ChatGPT” jest niedostępne w demonstracji: dyktowanie nie otwiera przeglądarki ChatGPT.'));
+    on('diagnostics',()=>copyText(JSON.stringify({wersja:VERSION,silnik:rec.engine,tryb:rec.two?'two':'own',karty:Object.fromEntries(['A','B'].map(n=>[n,cardState(rec,n,rec.t)[0]])),fragmenty:rec.fragments.map(f=>({klucz:f.card+f.n,etap:f.stage}))},null,2),q('[data-dt="diagnostics"]')));
+    const scroll=q('[data-dt-scroll]');
+    scroll.addEventListener('scroll',()=>{const following=scroll.scrollTop>=scroll.scrollHeight-scroll.clientHeight-2;if(following!==rec.following){rec.following=following;renderDictation(rec);}});
+    el.addEventListener('keydown',event=>{ // Enter is "Przepisz fragment" wherever the focus is in this panel; Finish keeps its own Enter, the copy button copies
+      if(event.key==='Enter'&&rec.chat&&!event.shiftKey&&!event.ctrlKey&&!event.altKey&&!event.metaKey&&!event.target.closest?.('[data-dt="finish"],[data-dt="diagnostics"],input,textarea,select')){event.preventDefault();if(!event.repeat)requestFlush(rec,'panel');}
+      else if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase?.()==='a'){event.preventDefault();selectNode(q('[data-dt-text]'));}
+    });
+    el.addEventListener('contextmenu',event=>{if(event.target.closest?.('button'))return;event.preventDefault();Shell.menu?.([{label:'Zaznacz wszystko',shortcut:'Ctrl+A',onClick:()=>selectNode(q('[data-dt-text]'))},{label:'Kopiuj dyktowanie',icon:'copy',onClick:()=>copyText(rec.text)}],event.clientX,event.clientY,{className:'oa-menu'+(preferences.theme==='dark'?' oa-theme-dark':'')});});
+    el.addEventListener('pointerdown',event=>{ // dragging moves it until the next follow tick anchors it to the field again
+      if(event.button!==0||event.target.closest?.('button,[data-dt-scroll],[data-dt-base]'))return;
+      const r=el.getBoundingClientRect();rec.drag={id:event.pointerId,dx:event.clientX-r.left,dy:event.clientY-r.top};try{el.setPointerCapture(event.pointerId);}catch(_){}
+    });
+    el.addEventListener('pointermove',event=>{if(rec.drag?.id===event.pointerId){el.style.left=(event.clientX-rec.drag.dx)+'px';el.style.top=(event.clientY-rec.drag.dy)+'px';}});
+    for(const type of ['pointerup','pointercancel'])el.addEventListener(type,event=>{if(rec.drag?.id===event.pointerId)rec.drag=null;});
+    rec.follow=setInterval(()=>followDictation(rec),300);rec.onResize=()=>followDictation(rec);window.addEventListener('resize',rec.onResize);
+    const editor=window.Shell?.windows?.get?.('clinic-editor')?.el;
+    if(editor&&typeof MutationObserver==='function'){rec.observer=new MutationObserver(()=>followDictation(rec));rec.observer.observe(editor,{attributes:true,attributeFilter:['style','class','hidden']});}
+  }
+  function selectNode(node){if(!node||!window.getSelection||!document.createRange)return;const range=document.createRange();range.selectNodeContents(node);const s=window.getSelection();s.removeAllRanges();s.addRange(range);}
+  function orbRect(){return orb.el&&!state.closed&&!orb.soaked?{x:orb.x-64,y:orb.y-64,w:128,h:128}:null;} // WindowManager._orb_rect: the disc with its hover growth
+  /* ui/overlay_geometry.place_dictation_overlay and ui/state.place_around_orb / fit_rect. */
+  function fitRect(d,work,margin=12){
+    margin=Math.min(Math.max(0,margin),Math.max(0,Math.floor((Math.min(work.w,work.h)-1)/2)));
+    const w=Math.min(Math.max(1,d.w),Math.max(1,work.w-2*margin)),h=Math.min(Math.max(1,d.h),Math.max(1,work.h-2*margin));
+    return {x:Math.max(work.x+margin,Math.min(d.x,work.x+work.w-margin-w)),y:Math.max(work.y+margin,Math.min(d.y,work.y+work.h-margin-h)),w,h};
+  }
+  const overlaps=(a,b)=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;
+  function placeAroundOrb(desired,work,orbBox,minimum,gap){
+    const fit=fitRect(desired,work);if(!orbBox)return fit;
+    const ob={x:orbBox.x-gap,y:orbBox.y-gap,w:orbBox.w+2*gap,h:orbBox.h+2*gap};if(!overlaps(fit,ob))return fit;
+    const inner=fitRect(work,work),inside=r=>r.x>=inner.x&&r.y>=inner.y&&r.x+r.w<=inner.x+inner.w&&r.y+r.h<=inner.y+inner.h,distance=r=>(r.x-fit.x)**2+(r.y-fit.y)**2;
+    let candidates=[[ob.x-fit.w,fit.y],[ob.x+ob.w,fit.y],[fit.x,ob.y-fit.h],[fit.x,ob.y+ob.h]].map(([x,y])=>({x,y,w:fit.w,h:fit.h})).filter(inside);
+    if(candidates.length)return candidates.reduce((a,b)=>distance(b)<distance(a)?b:a);
+    const minW=Math.min(minimum[0],fit.w),minH=Math.min(minimum[1],fit.h);
+    candidates=[{x:inner.x,y:inner.y,w:Math.max(0,ob.x-inner.x),h:inner.h},{x:ob.x+ob.w,y:inner.y,w:Math.max(0,inner.x+inner.w-ob.x-ob.w),h:inner.h},{x:inner.x,y:inner.y,w:inner.w,h:Math.max(0,ob.y-inner.y)},{x:inner.x,y:ob.y+ob.h,w:inner.w,h:Math.max(0,inner.y+inner.h-ob.y-ob.h)}]
+      .filter(region=>region.w>=minW&&region.h>=minH).map(region=>fitRect(fit,region,0)).filter(r=>!overlaps(r,ob));
+    return candidates.length?candidates.reduce((a,b)=>{const ka=fit.w*fit.h-a.w*a.h,kb=fit.w*fit.h-b.w*b.h;return kb<ka||kb===ka&&distance(b)<distance(a)?b:a;}):fit;
+  }
+  function placeDictationPanel(anchor,work,orbBox,minimum,preferred=280){ // the field's width and bottom edge, at least 320 × 260, growing upward
+    const width=Math.max(anchor.w,minimum[0]),height=Math.max(minimum[1],Math.min(anchor.h,preferred));
+    return placeAroundOrb({x:anchor.x,y:anchor.y+anchor.h-height,w:width,h:height},work,orbBox,minimum,12);
+  }
+  function followDictation(rec){ // _follow_tick / _apply_follow_rect: a missing, minimized or reopened target hides, never retargets
+    const el=rec?.el;if(!el)return;
+    const win=window.Shell?.windows?.get?.('clinic-editor'),ctx=window.Clinic?.getContext?.();
+    const field=win?.visible&&ctx?.session===rec.session?win.el?.querySelector?.(`[data-clinic-field="${rec.key}"]`):null,r=field?.getBoundingClientRect?.();
+    if(!r||r.width<120||r.height<40||rec.userHidden){const focused=!el.hidden&&el.contains(document.activeElement);el.hidden=true;if(focused)returnDictationFocus(rec);return;}
+    if(rec.drag)return;
+    const wasHidden=el.hidden;el.hidden=false;el.style.zIndex=win.el.style?.zIndex||'';el.style.width=Math.max(320,r.width)+'px';el.style.height='auto';
+    const body=el.querySelector('.oa-dt-body'),a=workArea(),natural=(el.offsetHeight||0)+Math.max(0,(body?.scrollHeight||0)-(body?.clientHeight||0)); // the body's content beyond its 44 px minimum
+    const g=placeDictationPanel({x:r.left,y:r.top,w:r.width,h:r.height},{x:a.left,y:a.top,w:a.right-a.left,h:a.bottom-a.top},orbRect(),[320,Math.max(260,Math.ceil(natural))]);
+    Object.assign(el.style,{left:g.x+'px',top:g.y+'px',width:g.w+'px',height:g.h+'px'});
+    if(wasHidden){renderDictation(rec);if(rec.following){const s=el.querySelector('[data-dt-scroll]');if(s)s.scrollTop=s.scrollHeight;}}
+    dictationFrames(rec);
+  }
+
+  /* DictationSession.view(): one message for the observed state, the most specific first. */
+  function dictationMessage(rec){
+    const t=rec.t,frags=rec.fragments,pending=frags.filter(f=>f.stage==='transcribing'||f.stage==='stabilizing');
+    const key=f=>f.card+f.n,wait=f=>Math.max(0,Math.floor(t-f.since));
+    if(rec.cancelled)return 'Anuluję dyktowanie — czekam na zwolnienie zasobów…';
+    if(rec.result)return 'Wyniki odebrane — zwalniam karty i przygotowuję tekst do sprawdzenia…';
+    if(rec.stopping!=null){
+      if(rec.started==null)return 'Kończę przygotowanie — czekam na zwolnienie zasobów…';
+      if(!rec.chat)return 'Kończę — odbieram ostatnie słowa i zwalniam zasoby…';
+      if(t-rec.stopping<.5)return 'Kończę nagrywanie — zatrzymuję wejścia mikrofonu…'; // dictation_presentation.ending_message
+      const closing=frags.filter(f=>['starting','recording'].includes(f.stage)),details=pending.map(f=>f.stage==='stabilizing'?`Tekst ${key(f)} widoczny — sprawdzam stabilność wyniku.`:`Strona przetwarza ${key(f)}: ${wait(f)} s.`);
+      if(closing.length)return ['Kończę nagrywanie — zamykam wejście '+closing.map(f=>key(f)+' (kończę nagranie)').join(', ')+'.',...details].join(' ');
+      return ['Nagrywanie zakończone.',...(details.length?details:['Odbieram ostatnie teksty i porządkuję karty…'])].join(' ');
+    }
+    if(!rec.listening)return rec.status;
+    if(!rec.chat)return rec.text?'Słucham.':'Słucham — tekst jeszcze nie wrócił.';
+    let message=pending.length?`Słucham. Czekam na wyniki wcześniejszych fragmentów: ${pending.length}.`:rec.command?'Słucham — przygotowuję przepisanie fragmentu…':rec.text?'Słucham.':'Słucham — tekst jeszcze nie wrócił.';
+    if(rec.command)message=DT_REASONS[rec.command.reason]+(rec.command.phase==='accepted'?' Bieżący fragment nie jest jeszcze zamykany.':'');
+    const longest=pending.slice().sort((a,b)=>a.since-b.since)[0];
+    if(longest){const live=['A','B'].filter(n=>cardState(rec,n,t)[0]==='recording');message=(live.length?'Nagrywam dalej w '+live.join('/')+'. ':'')+(longest.stage==='stabilizing'?`Tekst ${key(longest)} widoczny; sprawdzam stabilność wyniku.`:`Strona sygnalizuje przetwarzanie ${key(longest)}; czekam na wynik: ${wait(longest)} s.`);} // result_wait_message wins
+    return message;
+  }
+  function renderDictation(rec){
+    const el=rec?.el;if(!el)return;const q=sel=>el.querySelector(sel),set=(node,text)=>{if(node&&node.textContent!==text)node.textContent=text;};
+    const message=dictationMessage(rec),listening=rec.listening&&!rec.cancelled,stopping=rec.stopping!=null||rec.cancelled;
+    set(q('[data-dt-target]'),'Dyktowanie do: '+rec.label);
+    const status=q('[data-dt-status]');set(status,message);status.title=message;
+    const plain=message.replace(/\d+(?:,\d+)? s\b/g,''); // counters tick every second; announce the stage, not each second
+    if(plain!==rec.announced){rec.announced=plain;set(q('[data-dt-live]'),message);}
+    q('[data-dt-indicator]').classList.toggle('on',listening);
+    const meter=q('[data-dt-meter]'),shown=!rec.chat&&listening&&rec.level!=null;meter.hidden=!shown;
+    if(shown){const db=rec.level>0?20*Math.log10(rec.level):-60,value=Math.round(Math.max(0,Math.min(1,(db+60)/54))*100);meter.firstElementChild&&(meter.firstElementChild.style.width=value+'%');meter.setAttribute('aria-valuenow',String(value));meter.title=rec.level>DT_QUIET?'Mikrofon odbiera dźwięk':'Mikrofon: cisza';} // dBFS −60…−6 for readability only
+    const baseToggle=q('[data-dt="base"]'),baseBox=q('[data-dt-base]');baseToggle.hidden=!rec.base;baseToggle.setAttribute('aria-expanded',String(rec.baseOpen&&!!rec.base));baseBox.hidden=!(rec.baseOpen&&rec.base);set(baseBox,rec.base);
+    if(rec.text!==rec.shown){ // StreamTextEdit: each snapshot at once, only its newest characters briefly emphasized
+      const span=q('[data-dt-text]'),old=rec.shown;rec.shown=rec.text;
+      span.innerHTML=old&&rec.text.startsWith(old)&&!orbReduced()?esc(old)+`<span class="oa-dt-fresh">${esc(rec.text.slice(old.length))}</span>`:!old&&rec.text&&!orbReduced()?`<span class="oa-dt-fresh">${esc(rec.text)}</span>`:esc(rec.text);
+      const added=rec.text.startsWith(rec.said)?rec.text.slice(rec.said.length).trim():rec.text;if(added&&(rec.chat||/[.!?]$/.test(added))){rec.said=rec.text;set(q('[data-dt-live]'),added);}
+    }
+    const placeholder=q('[data-dt-placeholder]');placeholder.hidden=!!(rec.text||rec.wave.cols.length);set(placeholder,rec.text?'':message);
+    const flush=q('[data-dt="flush"]');flush.hidden=!rec.chat;
+    if(rec.chat){
+      const waiting=['A','B'].some(n=>['transcribing','stabilizing_result'].includes(cardState(rec,n,rec.t)[0]));
+      const labels=stopping?['Kończę dyktowanie…','Kończę…']:rec.command?['Przepisanie przyjęte…','Przyjęto…']:waiting?['Czekam na wynik fragmentu…','Czekam na wynik…']:['Przepisz fragment ↵','Przepisz ↵','↵'];
+      const narrow=(q('.oa-dt-stream')?.clientWidth||400)<250;set(flush,labels[narrow?1:0]);flush.setAttribute('aria-label',labels[0]);
+      flush.title=stopping?'Kończę przechwytywanie i odbieram rozpoczęte wyniki.':rec.command?'Żądanie jest zachowane. Stan jego wykonania jest pokazany nad tekstem; nie trzeba ponawiać Entera.':'Przepisz fragment i kontynuuj dyktowanie zgodnie z wybranym trybem.';
+      flush.disabled=!(listening&&!rec.command);
+    }
+    const cards=rec.chat&&rec.started!=null,details=q('[data-dt="details"]');set(details,'Szczegóły dyktowania — mikrofon'+(cards?' i karty A/B':''));details.setAttribute('aria-expanded',String(rec.details));
+    const counts=cards?['A','B'].map(n=>`${n}: ${rec.fragments.filter(f=>f.card===n&&f.stage!=='queued').length}`).join(' · '):'',received=rec.fragments.filter(f=>f.stage==='done').length;
+    const summary=q('[data-dt-summary]');set(summary,counts?'Przydziały kart — '+counts+(received?'   |   Wyniki — tekst: '+received:''):'');summary.hidden=!(rec.details&&counts);
+    q('[data-dt-timeline]').hidden=!rec.details;q('[data-dt="diagnostics"]').hidden=!(rec.details&&cards);
+    q('[data-dt="browser"]').hidden=!rec.chat;q('[data-dt="latest"]').hidden=rec.following;
+    const finish=q('[data-dt="finish"]');finish.disabled=stopping;set(finish,rec.cancelled?'Anuluję…':rec.stopping!=null?'Kończę — czekam na wynik…':'Zakończ i sprawdź tekst');
+    if(rec.following){const s=q('[data-dt-scroll]');if(s&&s.scrollHeight)s.scrollTop=s.scrollHeight;}
+    dictationFrames(rec);
+  }
+  /* Canvases: the wave at the end of the text and the detailed timeline, repainted while visible (CardTimeline.FRAME_MS 50). */
+  function dictationFrames(rec){
+    if(!rec?.el||rec.el.hidden||rec.frame)return;
+    rec.frame=requestAnimationFrame(now=>{rec.frame=0;if(!rec.el||rec.el.hidden)return;
+      if(now-(rec.painted||0)>=45){rec.painted=now;const t=rec.t+Math.min(DT_STEP,Math.max(0,(performance.now()-rec.at)/1000));drawDictationWave(rec,now);if(rec.details)drawDictationTimeline(rec,t,now);}
+      if(state.recording===rec||rec.cancelled)dictationFrames(rec);});
+  }
+  const dtAccent=()=>preferences.theme==='dark'?'#85dec2':'#147a62'; // StreamTextEdit._accent
+  function canvasFor(canvas,width,height){ // a crisp 2D context of the CSS size; null where canvases are unavailable
+    const ctx=canvas?.getContext?.('2d');if(!ctx)return null;const dpr=Math.min(window.devicePixelRatio||1,2);
+    if(canvas.width!==Math.round(width*dpr)||canvas.height!==Math.round(height*dpr)){canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';}
+    ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);return ctx;
+  }
+  function drawDictationWave(rec,now){ // TranscriptionTextEdit.paintEvent: rows of 4 px columns from the end of the text
+    const el=rec.el,box=el.querySelector('.oa-dt-text'),end=el.querySelector('[data-dt-end]'),canvas=el.querySelector('[data-dt-wave]');if(!box||!end||!canvas)return;
+    const cols=rec.wave.cols,b=box.getBoundingClientRect(),e=end.getBoundingClientRect(),rowH=21,left=0,right=Math.max(4,b.width-3);
+    const x0=rec.text?e.left-b.left+5:left,top0=rec.text?e.top-b.top+(e.height-rowH)/2:0,first=Math.max(0,Math.floor((right-x0)/4)),full=Math.max(1,Math.floor((right-left)/4));
+    const rows=cols.length?1+Math.ceil(Math.max(0,cols.length-first)/full):0;box.style.paddingBottom=Math.max(0,rows-1)*rowH+'px';
+    const ctx=canvasFor(canvas,b.width,Math.max(b.height,top0+rows*rowH));if(!ctx||!cols.length)return;
+    const accent=hexRgb(dtAccent()),ink=`rgba(${accent},.75)`,fill=`rgba(${accent},.28)`;let index=0,lastRect=null;
+    for(let row=0;row<rows&&index<cols.length;row++){
+      const x=row?left:x0,y=top0+row*rowH,count=Math.min(cols.length-index,row?full:first);if(!count)continue;
+      const center=y+rowH/2,max=rowH*.4,half=level=>level<=DT_QUIET?.5:Math.max(.5,max*Math.min(1,(level/.18)**.55)),slice=cols.slice(index,index+count);index+=count;
+      ctx.beginPath();ctx.moveTo(x,center);slice.forEach(([level],i)=>ctx.lineTo(x+(i+.5)*4,center-half(level)));ctx.lineTo(x+count*4,center);
+      for(let i=slice.length-1;i>=0;i--)ctx.lineTo(x+(i+.5)*4,center+half(slice[i][0]));ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=ink;ctx.lineWidth=1.1;ctx.stroke();lastRect={x:x+count*4,center};
+    }
+    const live=rec.listening&&!rec.cancelled||rec.stopping!=null&&!rec.result;
+    if(lastRect&&live){const pulse=orbReduced()?1:.83+.13*Math.sin(now/1000*Math.PI*2*.8);ctx.fillStyle=`rgba(${accent},${Math.max(.2,Math.min(1,(pulse-.5)*1.7)).toFixed(3)})`;ctx.beginPath();ctx.arc(lastRect.x-1.5,lastRect.center,1.8,0,Math.PI*2);ctx.fill();}
+  }
+  function cardColors(accent){ // CardTimeline.card_colors: A in the accent's hue, B a third of the colour wheel further
+    const [r,g,b]=hexRgb(accent).map(v=>v/255),max=Math.max(r,g,b),min=Math.min(r,g,b),l=(max+min)/2,d=max-min,s=d?d/(1-Math.abs(2*l-1)):0,h=(d?max===r?((g-b)/d+6)%6:max===g?(b-r)/d+2:(r-g)/d+4:0)/6;
+    const tone=hue=>{const S=Math.max(.45,s),L=Math.min(.6,Math.max(.4,l)),c=(1-Math.abs(2*L-1))*S,x=c*(1-Math.abs((hue*6)%2-1)),m=L-c/2,k=Math.floor(hue*6)%6;return rgbHex([[c,x,0],[x,c,0],[0,c,x],[0,x,c],[x,0,c],[c,0,x]][k].map(v=>(v+m)*255));};
+    return {A:tone(h),B:tone((h+1/3)%1)};
+  }
+  function drawDictationTimeline(rec,now){ // CardTimeline: microphone now, then each card's recorder input; the last 20 s, now on the right
+    const canvas=rec.el.querySelector('[data-dt-timeline]'),width=Math.floor((rec.el.clientWidth||0)-24),cards=rec.chat&&rec.started!=null?['A','B']:[];if(width<=0)return;
+    const height=38+cards.length*32+12+3,ctx=canvasFor(canvas,width,height);if(!ctx)return;
+    const css=window.getComputedStyle?.(rec.el)||{getPropertyValue:()=>''},ink=css.getPropertyValue('--oa-ink').trim()||'#222a36',muted=css.getPropertyValue('--oa-muted').trim()||'#5e6878',line=css.getPropertyValue('--oa-line').trim()||'#ccd4df',accent=css.getPropertyValue('--oa-accent').trim()||'#2563eb';
+    const colors=cardColors(/^#[\da-f]{6}$/i.test(accent)?accent:'#2563eb'),mic='#63a998',area={x:164,y:1,w:Math.max(1,width-167),h:38+cards.length*32},X=at=>area.x+area.w-(now-at)*area.w/20;
+    ctx.font='9px "Segoe UI",Selawik,Arial,sans-serif';ctx.textBaseline='middle';
+    for(const s of [5,10,15]){const x=area.x+area.w-s*area.w/20;ctx.strokeStyle=line;ctx.globalAlpha=.55;ctx.setLineDash([1,2]);ctx.beginPath();ctx.moveTo(x,area.y);ctx.lineTo(x,area.y+area.h);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;ctx.fillStyle=muted;ctx.textAlign='center';ctx.fillText(`−${s} s`,x,area.y+area.h+7);}
+    ctx.textAlign='right';ctx.fillStyle=muted;ctx.fillText('teraz',area.x+area.w,area.y+area.h+7);
+    const elide=(text,max)=>{if(ctx.measureText(text).width<=max)return text;let s=text;while(s&&ctx.measureText(s+'…').width>max)s=s.slice(0,-1);return s+'…';}; // Qt.ElideRight
+    const caption=(title,detail,y,color)=>{ctx.save();ctx.beginPath();ctx.rect(32,y,126,30);ctx.clip();ctx.textAlign='left';ctx.font='10px "Segoe UI",Selawik,Arial,sans-serif';ctx.fillStyle=color;ctx.fillText(elide(title,124),33,y+8);ctx.font='9px "Segoe UI",Selawik,Arial,sans-serif';ctx.fillStyle=muted;ctx.fillText(elide(detail,124),33,y+23);ctx.restore();};
+    const envelope=(samples,y,h,color,alpha=.30)=>{ // runs break at gaps over 0.2 s (unmeasured time is not silence)
+      const center=y+h/2,max=h*.36,half=level=>level<=DT_QUIET?.5:Math.max(.5,max*Math.min(1,(level/.18)**.55)),runs=[];let run=[];
+      for(const p of samples){if(run.length&&p[0]-run.at(-1)[0]>.2){runs.push(run);run=[];}run.push(p);}if(run.length)runs.push(run);
+      const rgb=hexRgb(color);ctx.fillStyle=`rgba(${rgb},${alpha})`;ctx.strokeStyle=`rgba(${rgb},.85)`;ctx.lineWidth=1;
+      for(const r of runs){ctx.beginPath();ctx.moveTo(X(r[0][0]),center);r.forEach(([at,level])=>ctx.lineTo(X(at),center-half(level)));ctx.lineTo(X(r.at(-1)[0]),center);for(let i=r.length-1;i>=0;i--)ctx.lineTo(X(r[i][0]),center+half(r[i][1]));ctx.closePath();ctx.fill();ctx.stroke();}
+    };
+    const visible=rec.audio.filter(([at])=>at>=now-21),lastAt=rec.audio.at(-1)?.[0];
+    caption('Mikrofon — teraz',!rec.audio.length?(rec.listening?'brak pomiarów':'brak nagrania'):!rec.listening?'pomiar zakończony':`pomiar: ${Math.max(0,now-lastAt).toFixed(1).replace('.',',')} s temu`,area.y,mic);
+    ctx.save();ctx.beginPath();ctx.rect(area.x,area.y+2,area.w,34);ctx.clip();envelope(visible,area.y,38,mic);ctx.restore();
+    const marks={starting:'◌',recording:'●',draining:'…',transcribing:'…',stabilizing_result:'…',done:'✓'},labels={idle:'czeka',starting:'uruchamia mikrofon',recording:'nagrywa',draining:'kończy opóźnione audio',transcribing:'strona przetwarza',stabilizing_result:'sprawdza tekst',done:'tekst odebrany'};
+    cards.forEach((name,row)=>{
+      const y=area.y+38+row*32,color=colors[name],[stateName,current]=cardState(rec,name,now),rgb=hexRgb(color);
+      ctx.fillStyle=`rgba(${rgb},.22)`;ctx.beginPath();ctx.roundRect?.(2,y+2,14,28,3);ctx.fill();ctx.font='bold 9px "Segoe UI",Selawik,Arial,sans-serif';ctx.textAlign='center';ctx.fillStyle=color;ctx.fillText(name,9,y+16);
+      const mark=marks[stateName];if(mark){ctx.font='9px "Segoe UI",Selawik,Arial,sans-serif';ctx.fillStyle=stateName==='recording'?`rgba(209,36,47,${orbReduced()?1:(.55+.45*Math.abs(((now*1.6)%2)-1)).toFixed(2)})`:muted;ctx.fillText(mark,23,y+16);}
+      const playing=current&&['starting','recording'].includes(current.stage)&&!rec.two,detail=playing?(current.stage==='starting'?`fragment ${current.n}: uruchamia nagrywanie`:`fragment ${current.n}, ${Math.max(0,now-Math.min(now-current.lag,current.end??Infinity)).toFixed(1).replace('.',',')} s później`)
+        :current&&['transcribing','stabilizing'].includes(current.stage)?`${labels[stateName]}: ${Math.max(0,Math.floor(now-current.since))} s`:stateName==='recording'?'bez dodanego opóźnienia':labels[stateName];
+      caption('Wejście rejestratora',detail,y,color);
+      ctx.save();ctx.beginPath();ctx.rect(area.x,y+1,area.w,30);ctx.clip();
+      for(const f of rec.fragments.filter(x=>x.card===name&&!['queued','discarded'].includes(x.stage))){
+        const until=['starting','recording'].includes(f.stage)?Math.min(f.end??Infinity,now-f.lag):f.end,samples=rec.audio.filter(([at])=>at>=f.start&&at<=until&&at>=now-21);
+        if(rec.clip&&f.stage!=='starting'){const a=X(f.start),z=Math.min(X(f.start+.9),X(until));if(z>a){ctx.fillStyle=`rgba(${rgb},.10)`;ctx.fillRect(a,y+2,z-a,28);}} // the language clip before each fragment
+        envelope(samples,y,32,color);
+        const x=samples.length?X(samples.at(-1)[0]):null;if(x==null)continue;
+        ctx.textAlign='left';
+        if(f.stage==='recording'){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y+16,2.2,0,Math.PI*2);ctx.fill();if(f.end!=null&&!rec.two){ctx.fillStyle=muted;ctx.fillText(area.x+area.w-x-6>ctx.measureText('końcówka audio…').width?'końcówka audio…':'…',x+5,y+16);}} // the live tip; after the cut it plays the delayed end
+        else{ctx.strokeStyle=/^#[\da-f]{6}$/i.test(ink)?`rgba(${hexRgb(ink)},.7)`:ink;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x,y+2);ctx.lineTo(x,y+30);ctx.stroke();ctx.fillStyle=f.stage==='done'?color:muted;const text=f.stage==='done'?'✓':f.stage==='transcribing'?'strona przetwarza…':'…';ctx.fillText(area.x+area.w-x-3>ctx.measureText(text).width?text:'…',x+3,y+16);}
+      }
+      ctx.restore();
+    });
+  }
+
+  /* Konfiguracja → Dyktowanie: ConfigDialog._build_transcription_section with the engine panels it shows
+   * (_on_transcriber_backend_changed). Controls that need a key, an installation or a recording work in
+   * the application; here they are disabled and say so. */
+  function dictationSettings(area,draft){
+    const engine=DT_ENGINES[draft.transcriber]?draft.transcriber:'gemini',strategy=DT_STRATEGY[draft.cardMode]||DT_STRATEGY.own,inApp=' — w aplikacji';
+    const options=(map,current)=>Object.entries(map).map(([value,label])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(label)}</option>`).join('');
+    const select=(key,map,label,extra='')=>`<select data-setting="${key}" aria-label="${esc(label)}" ${extra}>${options(map,draft[key])}</select>`;
+    const toggle=(key,label,title='')=>`<label class="oa-switch-row" ${title?`title="${esc(title)}"`:''}><input type="checkbox" data-setting="${key}" ${draft[key]?'checked':''}><div>${label}</div></label>`;
+    const off=(label,title,kind='')=>`<button type="button" class="oa-btn ${kind}" disabled title="${esc(title+inApp)}"><span>${label}</span></button>`;
+    const gemini=`<div class="oa-dt-engine" data-dt-engine="gemini">${formRow('Tryb Gemini:',select('geminiMode',{transcribe:'Dedykowana transkrypcja — zalecana',agent:'Gemini Live — wejście agenta'},'Tryb dyktowania Gemini'))}<p class="oa-form-help" data-dt-gemini-hint>${esc(draft.geminiMode==='agent'?'Zapisuje mowę rozpoznaną przez model Gemini Live. Korzysta z modelu audio agenta; preferuje język polski.':'Pokazuje tekst podczas mówienia i dopracowuje go po wypowiedzi. Wymaga dostępu do Gemini Transcribe Live; preferuje język polski.')}</p>`+
+      formRow('Klucz Gemini:',`<span class="oa-dt-key"><input type="password" placeholder="Wklej klucz API lub skonfiguruj z Google" aria-label="Wspólny klucz API Gemini" title="Ten sam klucz Gemini jest dostępny również w ustawieniach generowania. Zmiany zapisujesz przyciskiem Zapisz w konfiguracji." disabled>${off('Pokaż','Pokaż klucz API Gemini')}</span>`)+
+      `<p class="oa-form-help">Brak klucza Gemini. Wklej go lub skonfiguruj z Google.<br>W demonstracji klucz nie jest potrzebny: dyktowanie odtwarza przykład bez łączenia z Gemini.</p><div class="oa-inline-controls">${off('Skonfiguruj z Google','Zaloguj się do Google i przygotuj klucz API do dyktowania Gemini.')}${off('Sprawdź dyktowanie','Sprawdza połączenie i dostęp do wybranego trybu. Nie używa mikrofonu.','primary')}</div><p class="oa-form-help">Połączenie niesprawdzone. Test nie używa mikrofonu.</p>`+
+      `<label class="oa-switch-row" title="Wyłączenie tej zgody przywraca pytanie przed kolejnym nagraniem. Tekst nadal sprawdzasz przed wpisaniem do Kliniki."><input type="checkbox" data-setting="dictationConsent" ${draft.dictationConsent?'checked':''}><div>Zezwalaj na wysyłanie audio do Gemini bez pytania</div></label></div>`;
+    const chatgpt=`<div class="oa-dt-engine" data-dt-engine="chatgpt_browser"><p class="oa-dt-info">Dyktowanie korzysta z zalogowanego ChatGPT w przeglądarce OpisAI. Nagranie trafia do ChatGPT; klucz API nie jest potrzebny. ChatGPT przechowuje nagrania dyktowania na koncie przez 30 dni i nie pozwala ich usunąć — przy wrażliwych wizytach dyktuj lokalnym Whisperem. Dostępność zależy od Twojego konta. Przy pierwszym nagraniu przeglądarka może poprosić o dostęp do mikrofonu. Tekst pojawi się w podglądzie, gdy udostępni go ChatGPT — możliwe, że dopiero po zakończeniu nagrania. Przytrzymaj bąbelek ponownie, aby zakończyć i sprawdzić tekst. Możesz wrócić do poprzedniego silnika w tym samym miejscu.</p>`+
+      toggle('chatgptClip','Podpowiadaj ChatGPT język polski','Wstęp i zakończenie: „To jest język polski.” w tym samym strumieniu karty, bez dźwięku w głośnikach i bez zmiany urządzenia. Przed końcową wstawką do rejestratora dociera opóźniona końcówka Twojej mowy. Rozpoznane znane frazy są oddzielane od tekstu; przy niepewności pozostaje wariant do sprawdzenia. Eksperyment — nie gwarantuje polskiego wyniku. Wstawka końcowa wydłuża każde zakończenie o około 2 sekundy. Gdy nagrywa OpisAI, wstęp poprzedza każdy fragment (bez wstawki końcowej) i wydłuża jego przepisanie o około 2 sekundy.')+
+      formRow('Tryb kart:',select('cardMode',{own:DT_STRATEGY.own[0],two:DT_STRATEGY.two[0]},'Tryb pracy kart — jeden wybór dla następnego dyktowania','title="Wybierz jeden tryb. Zapis dotyczy następnego dyktowania, nie zmienia trwającego nagrania."'))+
+      `<p class="oa-dt-info" data-dt-strategy-summary>${esc(strategy[1])}</p><button type="button" class="oa-dt-toggle oa-dt-howto" data-dt-howto aria-expanded="false">Jak działa ten tryb</button><p class="oa-dt-info" data-dt-strategy-details hidden>${esc(strategy[2])}</p>`+
+      `<div class="oa-dt-auto"><label class="oa-dt-check" data-dt-auto-title title="${esc(strategy[4])}"><input type="checkbox" data-setting="autoEnter" ${draft.autoEnter?'checked':''}><span>Autoenter</span></label><span data-dt-interval>${esc(strategy[3])}</span><span class="oa-number"><input type="number" data-setting="autoEnterSeconds" min="5" max="600" step="1" value="${draft.autoEnterSeconds}" aria-label="${esc(strategy[3].replace(':',''))}" title="${esc(strategy[4])}" ${draft.autoEnter?'':'disabled'}><span>s</span></span></div></div>`;
+    const hw=draft.whisperHardware,nvidia=hw==='nvidia_external'||hw==='nvidia_internal',cpp=hw==='integrated'||hw==='cpu'; // "Automatycznie" shows neither panel until the hardware is known
+    const cppStatus=model=>`⬇ Silnik whisper.cpp — OpisAI przygotuje go przy pierwszym dyktowaniu\n⬇ Model mowy ${model} — pobierze się przy pierwszym dyktowaniu (${({'large-v3':'2,9 GB','large-v3-turbo':'1,5 GB',medium:'1,4 GB',small:'0,5 GB'})[model]||''})`;
+    const whisper=`<div class="oa-dt-engine" data-dt-engine="local_whisper">${formRow('Liczy na:',select('whisperHardware',{auto:'Automatycznie (najlepszy dostępny)',nvidia_external:'Karta NVIDIA RTX — zewnętrzna (np. AORUS AI BOX)',nvidia_internal:'Karta NVIDIA RTX — wewnętrzna',integrated:'Karta wbudowana (AMD Radeon / Intel)',cpu:'Procesor'},'Liczy na','title="Automatycznie: najmocniejszy dostępny sprzęt (karta NVIDIA zewnętrzna, potem wewnętrzna, potem wbudowana, na końcu procesor). Wybór konkretnej karty jest ścisły: gdy jej nie ma, OpisAI powie o tym, zamiast po cichu liczyć na czymś innym."'))}`+
+      formRow('Model:',select('whisperModel',{'large-v3':'large-v3','large-v3-turbo':'large-v3-turbo',medium:'medium',small:'small'},'Model','title="large-v3 = najlepsza jakość polskiego (zalecane). turbo = szybszy, ciut gorszy. medium/small = lżejsze, słabsze na terminologii."'))+
+      `<p class="oa-dt-hint">🖥 W demonstracji sprzęt nie jest wykrywany; lokalny Whisper liczy w aplikacji na tym komputerze.</p>`+
+      `<div data-dt-cpp ${cpp?'':'hidden'}><p class="oa-dt-info" data-dt-cpp-status>${esc(cppStatus(draft.whisperModel))}</p><div class="oa-inline-controls">${off('⬇ Przygotuj teraz','Rozkłada dołączony silnik whisper.cpp i pobiera wybrany model mowy (oficjalne pliki, sprawdzana suma kontrolna) do folderu OpisAI. Bez tego zrobi się to samo przy pierwszym dyktowaniu.')}</div></div>`+
+      `<div data-dt-nvidia ${nvidia?'':'hidden'}><div class="oa-inline-controls">${off('🚀 Skonfiguruj automatycznie','Robi wszystko, co automatyzowalne: sprawdza GPU, instaluje PyTorch (CUDA 12.8) + RealtimeSTT, weryfikuje że PyTorch widzi kartę. Model dociągnie się sam przy pierwszym dyktowaniu. Jeśli GPU nie jest widoczne — pokaże JEDEN ręczny krok (sterownik/Thunderbolt) jako link.')}</div><p class="oa-form-help">Jeden przycisk przeprowadza całość automatycznie (GPU → biblioteki → weryfikacja). Sterownika NVIDIA / GIGABYTE Control Center / autoryzacji Thunderbolt nie da się zrobić w tle (admin + restart) — jeśli GPU nie jest widoczne, dostaniesz jeden link do kliknięcia i wracasz tu. Ustawienia zaawansowane (compute_type, język, initial_prompt) są przechowywane w SQLite.</p></div>`+
+      `<h3 class="oa-dt-subhead">Rozpoznawanie mówców</h3><p class="oa-dt-info">Oznacza w transkrypcie, kto mówi — na podstawie Twojego profilu głosu (Ty = pierwsza etykieta, pozostałe osoby = druga). Wypowiedzi niepewne zostają bez etykiety. Audio nie opuszcza komputera.</p>`+
+      toggle('diarization','Oznaczaj mówców w transkrypcie','Wymaga: biblioteki pyannote, modeli diaryzacji i profilu głosu (lista niżej). Gdy czegoś brakuje, dyktowanie działa normalnie — po prostu bez etykiet (dostaniesz komunikat).')+
+      toggle('diarizationOverlay','Podgląd rozmowy przy dyktowaniu (dymki jak w komunikatorze)','Podczas dyktowania z rozpoznawaniem mówców przykrywa pole „Badanie kliniczne” widokiem-czatem: Ty po prawej, rozmówca po lewej, a gdy ktoś właśnie mówi — dymek z trzema kropkami. Czysty podgląd: pod spodem tekst normalnie trafia do pola, a po dyktowaniu podgląd znika i odsłania zapis.')+
+      formRow('Etykieta — Ty:',`<input type="text" data-setting="labelDoctor" maxlength="24" placeholder="Lekarz" value="${esc(draft.labelDoctor)}">`)+formRow('Etykieta — rozmówca:',`<input type="text" data-setting="labelOther" maxlength="24" placeholder="Właściciel" value="${esc(draft.labelOther)}">`)+
+      `<p class="oa-dt-info">⬇ Biblioteki rozpoznawania mówców — do pobrania<br>⬇ Modele głosu — do pobrania<br>Profil głosu — jeszcze nie nagrany<br>Aby nagrać profil, kliknij „Pobierz brakujące składniki”.</p><div class="oa-inline-controls">${off('Pobierz brakujące składniki','Pobiera biblioteki i modele potrzebne do nagrania profilu głosu. Pierwsze przygotowanie może potrwać kilka minut.')}</div><div class="oa-inline-controls" style="margin-top:8px">${off('🎤 Nagraj profil głosu…','Aby nagrać profil, kliknij „Pobierz brakujące składniki”.')}${off('📥 Importuj profil…','Wybierz wcześniej wyeksportowany profil głosu w pliku JSON.')}</div></div>`;
+    area.innerHTML=`<div class="oa-dt-settings"><fieldset class="oa-group"><legend>Dyktowanie</legend><p class="oa-dt-info">Przytrzymaj bąbelek, aby dyktować. Silnik mowy wybierasz niezależnie od generatora opisu — możesz łączyć ChatGPT z dyktowaniem Gemini.</p>${formRow('Silnik:',select('transcriber',DT_ENGINES,'Silnik'))}<p class="oa-dt-info oa-dt-scope" data-dt-scope></p>${{gemini,chatgpt_browser:chatgpt,local_whisper:whisper}[engine]}</fieldset>`+
+      `<div style="margin-top:16px">${notice('W demonstracji dyktowanie odtwarza zapisany przykład: mikrofon, przeglądarka ChatGPT, klucz Gemini ani lokalny model nie są używane. Wybór silnika zmienia przebieg i panel dyktowania tak jak w aplikacji.')}</div></div>`;
+    const root=area.querySelector('.oa-dt-settings'),q=sel=>root.querySelector(sel);
+    const scope=()=>{ // dictation_strategy.scope_message: the form, never the mode of a running recording
+      const dirty=['transcriber','chatgptClip','cardMode','autoEnter','autoEnterSeconds','geminiMode','dictationConsent','whisperHardware','whisperModel','diarization','diarizationOverlay','labelDoctor','labelOther'].some(key=>draft[key]!==preferences[key]);
+      q('[data-dt-scope]').textContent=(dirty?'Niezapisane zmiany w konfiguracji — kliknij „Zapisz”, aby je zachować.':'Ustawienia dla następnego dyktowania.')+'\nZmiana silnika, trybu kart, klipu i Autoenter nie przełącza trwającego nagrania.';
+    };
+    scope();
+    q('[data-dt-howto]')?.addEventListener('click',event=>{const open=event.currentTarget.getAttribute('aria-expanded')!=='true';event.currentTarget.setAttribute('aria-expanded',String(open));q('[data-dt-strategy-details]').hidden=!open;});
+    root.addEventListener('change',event=>{ // after the shared [data-setting] handler has updated the draft
+      const key=event.target?.dataset?.setting;
+      if(key==='autoEnterSeconds'){const s=Math.round(Number(event.target.value));draft.autoEnterSeconds=s>=5&&s<=600?s:10;event.target.value=draft.autoEnterSeconds;} // whole seconds 5–600, otherwise 10
+      if(key==='autoEnter'){const spin=q('[data-setting="autoEnterSeconds"]');if(spin)spin.disabled=!event.target.checked;}
+      if(key==='cardMode'){const copy=DT_STRATEGY[draft.cardMode]||DT_STRATEGY.own;q('[data-dt-strategy-summary]').textContent=copy[1];q('[data-dt-strategy-details]').textContent=copy[2];q('[data-dt-interval]').textContent=copy[3];q('[data-dt-auto-title]').title=copy[4];const spin=q('[data-setting="autoEnterSeconds"]');if(spin){spin.title=copy[4];spin.setAttribute('aria-label',copy[3].replace(':',''));}}
+      if(key==='geminiMode')q('[data-dt-gemini-hint]').textContent=draft.geminiMode==='agent'?'Zapisuje mowę rozpoznaną przez model Gemini Live. Korzysta z modelu audio agenta; preferuje język polski.':'Pokazuje tekst podczas mówienia i dopracowuje go po wypowiedzi. Wymaga dostępu do Gemini Transcribe Live; preferuje język polski.';
+      if(key==='whisperHardware'||key==='whisperModel'){const h=draft.whisperHardware;q('[data-dt-cpp]').hidden=!(h==='integrated'||h==='cpu');q('[data-dt-nvidia]').hidden=!(h==='nvidia_external'||h==='nvidia_internal');q('[data-dt-cpp-status]').textContent=cppStatus(draft.whisperModel);}
+      if(root.isConnected)scope();
+    });
   }
 
   const settingsNav=[
@@ -710,8 +1117,7 @@
         /* The documentation workflow uses the rc32 default sections and the small-animal panel template; the page shows them (read-only) until the settings follow rc32. */
         area.innerHTML=`<h2>Sekcje opisu</h2><p>Układ dokumentacji i parametry odczytywane ze źródeł.</p><fieldset class="oa-group"><legend>Sekcje opisu wizyty</legend><table class="oa-options-table oa-doc-layout"><thead><tr><th>Etykieta</th><th>Pole tekstowe</th><th>Podsekcje</th></tr></thead><tbody>${DOC_KEYS.map(key=>{const s=Doc().sectionByKey(key);return `<tr><td>${esc(s.label)}</td><td>${esc(s.field)}</td><td>${esc(s.subsections.map(x=>x.name).join(', '))}</td></tr>`;}).join('')}</tbody></table></fieldset><fieldset class="oa-group"><legend>Panel parametrów</legend><p class="oa-form-help">${esc(Doc().PANEL_COPY)}</p><table class="oa-options-table"><thead><tr><th>Nazwa</th><th>Treść szablonu</th><th>Jednostka</th></tr></thead><tbody>${Doc().TEMPLATE.map(row=>`<tr><td>${esc(row.label)}</td><td>${esc(row.reference)}</td><td>${esc(row.unit)}</td></tr>`).join('')}</tbody></table></fieldset><p class="oa-form-help">W demonstracji sekcje i wzorzec panelu (Psy / koty) są stałe i odpowiadają ustawieniom domyślnym OpisAI ${VERSION}. Sposób opracowania wybierasz w oknie przygotowania opisu; wariant całej wizyty jest zapamiętywany po rozpoczęciu generowania.</p>`;
       } else if(page==='dictation'){
-        area.innerHTML=`<h2>Dyktowanie</h2><p>Przytrzymaj bąbelek, aby rozpocząć. Silnik mowy jest niezależny od generatora opisu.</p><fieldset class="oa-group"><legend>Rozpoznawanie mowy</legend>${formRow('Silnik',selectControl('transcriber',['ChatGPT','Gemini Live','Whisper (lokalnie)'],draft.transcriber))}${formRow('Język',selectControl('language',['Polski'],draft.language))}${draft.transcriber==='ChatGPT'?formRow('Tryb kart',selectControl('cardMode',['Nagrywa OpisAI','Dwie karty'],draft.cardMode)):''}<p class="oa-form-help">${draft.transcriber==='ChatGPT'?'Nagrywa OpisAI: ciągłe nagranie i dwie karty odbierające kolejne fragmenty.':draft.transcriber==='Gemini Live'?'Transkrypcja strumieniowa w aplikacji desktopowej.':'Lokalne rozpoznawanie mowy w aplikacji desktopowej, bez wysyłania nagrania.'}</p>${switchControl('sentenceLines','Każde zdanie w nowej linii','Sposób prezentacji transkrypcji.',draft)}</fieldset><fieldset class="oa-group"><legend>Mikrofon i podgląd</legend><p class="oa-form-help">W witrynie odtwarzany jest stały przykład. Mikrofon nie jest uruchamiany.</p><div class="oa-inline-controls">${button('Sprawdź dyktowanie','test-dictation','','check')}${button('Uruchom przykład','sample-dictation','','mic')}</div><div class="oa-setting-state" data-dictation-test>Przykład pokazuje nagrywanie, transkrypcję i zatwierdzanie wpisu.</div></fieldset>`;
-        bind(area,'test-dictation',()=>{const el=$('[data-dictation-test]',area);el.textContent='Sprawdzam interfejs dyktowania…';setTimeout(()=>{if(el.isConnected)el.innerHTML='<span class="oa-success-text">Przykład jest gotowy. Mikrofon pozostaje wyłączony.</span>';},750);});bind(area,'sample-dictation',()=>{win.minimize();dictate({direct:true});});
+        dictationSettings(area,draft);
       } else if(page==='fields'){
         const values=getFields();
         area.innerHTML=`<h2>Odczyt pola (Klinika)</h2><p>Powiązanie OpisAI z polami w oknie opisu wizyty.</p><fieldset class="oa-group"><legend>Okno docelowe</legend>${formRow('Program','<div class="oa-form-control"><strong>Klinika XP</strong><div class="oa-form-help">Bieżąca wizyta · przykład interaktywny</div></div>')}<div class="oa-inline-controls">${button('Pokaż Klinikę','show-clinic','','clinic')}${button('Odczytaj ponownie','read-fields','','document')}</div></fieldset><fieldset class="oa-group"><legend>Przypisane pola</legend><table class="oa-options-table"><thead><tr><th>Pole</th><th>Stan</th><th></th></tr></thead><tbody>${Object.entries(FIELDS).map(([key,label])=>`<tr><td>${esc(label)}</td><td><span class="oa-success-text">${icon('check',12)} Przypisane</span><br><small class="oa-muted">${String(values[key]||'').length} znaków</small></td><td>${button('Pokaż','field-'+key,'small','eye')}</td></tr>`).join('')}</tbody></table></fieldset><fieldset class="oa-group"><legend>Pisownia</legend>${switchControl('spelling','Podkreślaj podejrzane słowa w Klinice','Sugestie dotyczą widocznego przykładu. Poprawkę wybierasz samodzielnie.',draft)}</fieldset>`;
@@ -727,7 +1133,7 @@
         bind(area,'open-history',history);bind(area,'clear-history',()=>clearHistory(()=>draw()));bind(area,'last-undo',undo);
       } else if(page==='system'){
         area.innerHTML=`<h2>System</h2><p>Informacje o działającej wersji i ustawieniach przykładu.</p><fieldset class="oa-group"><legend>Aplikacja</legend><dl class="oa-system-info"><dt>Wersja</dt><dd>${VERSION}</dd><dt>Interfejs</dt><dd>OpisAI dla Microsoft Windows · demonstracja w przeglądarce</dd><dt>Dane wizyty</dt><dd>Lokalnie w tej przeglądarce</dd><dt>Ustawienia wyglądu</dt><dd>Zapamiętane w tej przeglądarce</dd></dl><div class="oa-inline-controls">${button('Kopiuj informacje','copy-info','','copy')}${button('O aplikacji','about','','info')}</div></fieldset><fieldset class="oa-group"><legend>Przywracanie</legend><p class="oa-form-help">Przywróć domyślne ustawienia OpisAI. Treść wizyty nie zostanie zmieniona.</p>${button('Przywróć ustawienia domyślne','reset-settings','','undo')}</fieldset>`;
-        bind(area,'copy-info',()=>copyText(`OpisAI ${VERSION}\nInteraktywna demonstracja OpisAI\nGenerator: ${draft.provider}\nDyktowanie: ${draft.transcriber}\nBez danych wizyty i poświadczeń.`,$('[data-action="copy-info"]',area)));bind(area,'about',about);bind(area,'reset-settings',()=>{draft=clone(defaults);dirty();applyTheme(win,draft.theme);draw();});
+        bind(area,'copy-info',()=>copyText(`OpisAI ${VERSION}\nInteraktywna demonstracja OpisAI\nGenerator: ${draft.provider}\nDyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce (próba)\nBez danych wizyty i poświadczeń.`,$('[data-action="copy-info"]',area)));bind(area,'about',about);bind(area,'reset-settings',()=>{draft=clone(defaults);dirty();applyTheme(win,draft.theme);draw();});
       } else {
         area.innerHTML=`<h2>Zgodność AI (RODO)</h2><p>Jawne źródła, nadzór lekarza i zatwierdzanie wpisu.</p><fieldset class="oa-group"><legend>Kontrola danych</legend><div class="oa-about-block"><p>Przed opracowaniem opisu widzisz dokładną treść pól. Możesz poprawić źródła i usunąć dane, których nie chcesz przekazać do wybranego połączenia.</p><p style="margin-top:10px">Zmiana treści lub zakresu unieważnia potwierdzenie. Nowe źródła wymagają ponownego sprawdzenia.</p></div></fieldset><fieldset class="oa-group"><legend>Nadzór nad wynikiem</legend><div class="oa-about-block"><p>OpisAI pokazuje wynik jako propozycję. Przed wpisaniem sprawdzasz tekst, właściwą wizytę i wybrane pola.</p><p style="margin-top:10px">Wpis jest wstrzymywany, jeśli zmienił się kontekst lub treść pól od wcześniejszego odczytu.</p></div></fieldset><div style="margin-top:16px">${notice('Tryb demonstracyjny: witryna nie wysyła treści wizyty do modeli AI, nie uruchamia mikrofonu i nie zapisuje danych w zewnętrznej Klinice. Pokazuje interfejs oraz przebieg pracy aplikacji.')}</div><p class="oa-form-help" style="margin-top:12px">Te funkcje wspierają kontrolę pracy. Sama demonstracja nie stanowi potwierdzenia zgodności prawnej konkretnego wdrożenia.</p>`;
       }
@@ -1498,7 +1904,7 @@
     Shell.registerApp({id:'opisai',title:'OpisAI',icon:'opisai',open:showBubble}); // a second start raises the running bubble
     Object.keys(FIELDS).forEach((key,i)=>FIELDS[key]=preferences.clinicalSections[i]||defaults.clinicalSections[i]);
     window.addEventListener('clinic:focus',event=>{state.activeField=event.detail?.field||state.activeField;});
-    document.addEventListener('keydown',event=>{if(state.recording&&Shell.activeWindow?.id==='opisai-dictation'&&event.key==='Enter'&&!event.shiftKey&&!['TEXTAREA','INPUT','BUTTON','SELECT'].includes(event.target.tagName)){event.preventDefault();finishDictation();}});
+    document.addEventListener('keydown',dictationEnterShortcut,true); // Enter in the dictated Badanie field: "Przepisz fragment" (ChatGPT)
     window.OpisAI={open:describe,prepare:describe,describe,dictate,settings,history,about,showBubble,launch,undo,showMenu,trayTooltip,isClosed:()=>state.closed,getState:()=>({phase:state.phase,history:state.history.length,recording:!!state.recording,closed:state.closed,preferences:{...preferences}})};
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
