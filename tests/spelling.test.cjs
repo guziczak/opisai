@@ -245,6 +245,8 @@ test('the SuggestionCard: "● Literówka" and the word, quiet bars while search
   assert.equal(card.querySelector('.oa-spell-search').textContent, 'Szukam…'); assert.equal(card.querySelector('.oa-spell-skeleton').hidden, false, 'two quiet bars');
   assert.deepEqual(card.querySelectorAll('.oa-spell-foot button').map(button => [button.getAttribute('aria-label'), button.disabled]), [['Pomiń słowo w tej sesji', true], ['Dodaj słowo do mojego słownika', true]]);
   const width = parseFloat(card.style.width); assert(width >= 176 && width <= 240, 'rc24: 176 to 240 px');
+  assert.equal(width, 240); assert.deepEqual(card.querySelectorAll('.oa-spell-foot button').map(button => button.style.flex), ['0 0 60px', '0 0 161px'],
+    '_measure: the 221 px footer shared by the captions\' widths (5 and 17 letters at 7 px, + 14), not split evenly');
   assert.equal(parseFloat(card.style.top), 220 + PAD + LINE + 6, 'six clear pixels below the word');
   assert.equal(f.bar('nastroszna').dataset.strong, 'true', 'the word with an open card gets a stronger line');
   assert.match(f.bar('nastroszna').innerHTML, /stroke-opacity=".28"/, 'with a soft halo');

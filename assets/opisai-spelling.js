@@ -412,11 +412,20 @@
   /* The status label's fixed width (search_status.setFixedWidth(horizontalAdvance("Szukam…"))), one value for
    * the card's width and for the heading's fit. */
   const searchWidth = () => Math.ceil(advance('Szukam…'));
+  /* _footer_button_width: a caption (horizontalAdvance, whole pixels) and its 7 px paddings. */
+  const footerWidths = () => [Math.round(advance('Pomiń')) + 14, Math.round(advance('Dodaj do słownika')) + 14];
+  /* _measure: the footer's stretch factors are those widths and the buttons ignore their size hints, so the whole
+   * row is shared in proportion to the captions, not split evenly; qGeomCalc rounds the first share and gives the
+   * rest to the second (a 240 px card: 66 and 155 px). */
+  function allocateFooter(width) {
+    const [a, b] = footerWidths(), room = Math.max(0, width - 16 - GAP), first = Math.round(room * a / (a + b));
+    card.querySelectorAll('.oa-spell-foot button').forEach((button, i) => { button.style.flex = '0 0 ' + px(i ? room - first : first); });
+  }
   /* _preferred_width, at the opening: the footer, the header (kind, word, "Szukam…", ×) and the choices then
    * known; 176 to 240 px (320 with a context proposal). The controller opens a card before its search, so
    * choices arriving later never widen it. */
   function preferredWidth(word, kind, choices = []) {
-    const footer = advance('Pomiń') + 14 + advance('Dodaj do słownika') + 14 + 3, label = (STYLES[kind] || STYLES.unknown).label;
+    const footer = footerWidths().reduce((a, b) => a + b) + GAP, label = (STYLES[kind] || STYLES.unknown).label;
     const header = advance('● ' + label) + 4 + advance(word, 600) + searchWidth() + HEADER + 8;
     const lines = choices.flatMap((value, i) => typeof value === 'object' ? [value.original, value.replacement] : i === 0 && value ? [word + ' → ' + value] : [value || 'Usuń powtórzone słowo']);
     const candidates = Math.max(0, ...lines.map(line => advance(line))) + 30, limit = choices.some(value => typeof value === 'object') ? CONTEXT_LIMIT : LIMIT;
@@ -447,7 +456,7 @@
     const appearing = card.hidden; card.hidden = false;
     open.reserve = open.searching || open.choices.length > 2;   // present(): the gutter stays until an empty result
     open.width = Math.min(preferredWidth(open.issue.word, open.kind, open.choices), workBounds().right - workBounds().left);
-    renderCard(); sizeCard(true);
+    allocateFooter(open.width); renderCard(); sizeCard(true);
     if (appearing && animationsEnabled()) card.animate?.([{opacity: 0}, {opacity: 1}], {duration: 120, easing: 'cubic-bezier(.33,1,.68,1)'});   // OutCubic, 120 ms
   }
   /* The header ("● Literówka", the word, "Szukam…", ×), the footer and the states of the list. */

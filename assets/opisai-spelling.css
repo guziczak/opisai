@@ -28,7 +28,7 @@
 .oa-spell-kind .name{color:var(--muted)}
 .oa-spell-word{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .oa-spell-search{flex:none;color:var(--muted);white-space:nowrap;overflow:hidden}
-.oa-spell-close{flex:none;width:26px;height:26px;padding:0;font-size:17px!important;line-height:26px!important;text-align:center}
+.oa-spell-card .oa-spell-close{flex:none;width:26px;height:26px;padding:0;line-height:26px;text-align:center}   /* QToolButton "×": the app font, 10 pt */
 .oa-spell-choices{flex:1;min-height:0;display:flex;flex-direction:column;gap:3px;padding-right:2px;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
 .oa-spell-choices.reserve{overflow-y:scroll}
 .oa-spell-choice{flex:none;display:block;width:100%;height:30px;padding:0 7px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -49,7 +49,7 @@
 .oa-spell-skeleton i:first-child{top:11.25px;width:calc((100% - 14px) * .72)}
 .oa-spell-skeleton i:last-child{top:42.75px;width:calc((100% - 14px) * .48)}
 .oa-spell-foot{flex:none;display:flex;gap:3px;height:28px}
-.oa-spell-foot button{flex:1 1 auto;min-width:0;padding:4px 7px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oa-spell-foot button{flex:1 1 auto;min-width:0;padding:4px 7px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* shares set at the opening (_measure) */
 /* QToolTip "Szukam propozycji…" while the right button's menu is prepared. */
 .oa-spell-tip{position:absolute;padding:4px 8px;border:1px solid #ccd4df;border-radius:5px;background:#edf1f7;color:#222a36;font:12px/1.4 'Segoe UI','Selawik',Arial,sans-serif;white-space:nowrap;pointer-events:none}
 .oa-spell-tip.oa-theme-dark{border-color:#42454b;background:#292b2f;color:#edf0f4}
