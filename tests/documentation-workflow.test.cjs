@@ -438,3 +438,22 @@ test('dictation → "Generuj opis" → Anuluj returns to the summary; a changed 
   assert.equal(f.messageText(), 'Pole wizyty zmieniło się podczas dyktowania. Sprawdź je przed dalszym opracowaniem transkrypcji.');
   assert.equal(f.win('opisai-review'), undefined); assert.equal(f.phase, 'review'); assert.equal(f.api.state.review, result);
 });
+
+test('review compaction: no later plain rule undoes a short- or narrow-window rule (ReviewPage._layout_review)', () => {
+  const lines = fs.readFileSync(path.join(__dirname, '../assets/opisai.css'), 'utf8').split('\n');
+  const weight = selector => (selector.match(/[.#[]|:(?!not\b)[\w-]/g) || []).length, last = selector => selector.trim().split(/\s+/).at(-1);
+  const sets = (declarations, property) => declarations.split(';').some(d => { const name = d.split(':')[0].trim(); return name === property || name === property.split('-')[0]; });
+  const plain = lines.flatMap((line, i) => line.startsWith('@') ? [] : [...line.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap(m => m[1].split(',').map(selector => ({i, selector: selector.trim(), declarations: m[2]}))));
+  let checked = 0;
+  lines.forEach((line, i) => {
+    const m = /^@container \(max-(?:height|width):\d+px\)\{(.*)\}/.exec(line); if (!m || !/oa-(?:rv|c2|pg)-/.test(m[1])) return;
+    for (const r of m[1].matchAll(/([^{}]+)\{([^{}]*)\}/g)) for (const selector of r[1].split(',')) for (const property of r[2].split(';').map(d => d.split(':')[0].trim()).filter(Boolean)) {
+      checked++;
+      for (const p of plain) if (p.i > i && last(p.selector) === last(selector) && sets(p.declarations, property))
+        assert.ok(weight(p.selector) < weight(selector), `${selector.trim()} {${property}} at line ${i + 1} is undone by ${p.selector} at line ${p.i + 1}`);
+    }
+  });
+  assert.ok(checked > 10);
+  assert.match(source, /class="oa-footnote oa-rv-fnote"/, 'the footer note has its own class');
+  assert.doesNotMatch(lines.filter(l => l.startsWith('@container')).join('\n'), /\.oa-rv-note\b/, 'the visible quality-note rows are never hidden by width');
+});

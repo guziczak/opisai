@@ -398,14 +398,6 @@
 .oa-pg-foot{padding-top:8px;flex-shrink:0}
 /* review */
 .oa-rv{padding:0 14px;container-type:size}
-/* ReviewPage._layout_review: a short window keeps the text and the approval, then drops the secondary lines */
-@container (max-height:599px){.oa-rv-info{display:none}}
-@container (max-height:479px){.oa-rv-pstatus{display:none}.oa-rv-head{gap:1px;padding-bottom:4px}}
-@container (max-height:459px){.oa-rv-line{display:none}}
-@container (max-height:429px){.oa-rv-pre{display:none}}
-@container (max-height:399px){.oa-rv-summary{display:none}}
-@container (max-width:819px){.oa-rv-note{display:none}}
-@container (max-width:849px){.oa-rv-dnote{display:none}}
 .oa-rv-head{display:flex;flex-direction:column;gap:3px;padding:6px 0 8px;flex-shrink:0}
 .oa-rv-line,.oa-rv-model{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .oa-rv-summary{display:flex;gap:12px;align-items:baseline}.oa-rv-summary>span:first-child{flex:1;min-width:0}.oa-rv-model{max-width:55%;text-align:right}
@@ -446,6 +438,15 @@
 .oa-rv-params,.oa-rv-notelist{flex:1;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:8px 10px;scrollbar-width:thin}
 .oa-rv-param .oa-muted{white-space:pre-line;margin-top:4px}
 .oa-rv-notecard{display:flex;flex-direction:column;gap:6px;padding:8px 10px}.oa-rv-notecard>div:last-child{display:flex}.oa-rv-notemsg{white-space:pre-line}
+/* ReviewPage._layout_review: a short window keeps the text and the approval, then drops the secondary lines.
+   These rules follow the plain review rules and carry the .oa-rv prefix, so a later rule of equal weight cannot undo them. */
+@container (max-height:599px){.oa-rv .oa-rv-info{display:none}}
+@container (max-height:479px){.oa-rv .oa-rv-pstatus{display:none}.oa-rv .oa-rv-head{gap:1px;padding-bottom:4px}}
+@container (max-height:459px){.oa-rv .oa-rv-line{display:none}}
+@container (max-height:429px){.oa-rv .oa-rv-pre{display:none}}
+@container (max-height:399px){.oa-rv .oa-rv-summary{display:none}}
+@container (max-width:819px){.oa-rv .oa-rv-fnote{display:none}} /* footer_note: width >= 820 */
+@container (max-width:849px){.oa-rv .oa-rv-dnote{display:none}}
 /* message boxes and recovery */
 .oa-mb{padding:0 18px}
 .oa-mb-body{display:flex;gap:14px;padding:16px 0 8px;flex:1;min-height:0;overflow:auto}
