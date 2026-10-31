@@ -102,7 +102,7 @@
     if(id==='opisai-settings')return window.OpisAI?.settings();
     if(id==='opisai-about')return window.OpisAI?.about();
     if(id==='help')return openHelp();
-    if(id==='dictate')return window.OpisAI?.dictate();
+    if(id==='dictate')return tryDictation();
     if(id==='shortcuts')return openSettings('accessibility');
     if(id==='notifications')return Shell.showCalendar();
     if(id==='display')return openDisplay();
@@ -110,6 +110,9 @@
     if(id==='fullscreen')return fullscreen();
     if(id==='reset')return Shell.confirm({title:'Przywróć dane demonstracji',icon:'settings',message:'Usunąć zapisane w tej przeglądarce wizyty demonstracyjne, historię OpisAI, notatki i ustawienia? Strona uruchomi się ponownie z przykładową wizytą.',confirmLabel:'Przywróć',onConfirm:()=>{Object.keys(localStorage).filter(k=>k.startsWith('opisai.demo.')||k==='opisai-demo-settings-v12').forEach(k=>localStorage.removeItem(k));location.reload();}});
   }
+  /* "Rozpocznij", "Wypróbuj dyktowanie" and "Uruchom przykład" start the bubble's dictation. Its panel is stacked with the
+   * Klinika sub-window, as the rc32 overlay is, so an open visit comes forward first instead of staying under this window. */
+  function tryDictation(){if(window.Clinic?.isEditorOpen?.()){Shell.windows.get('clinic')?.focus();Shell.windows.get('clinic-editor')?.focus();}return window.OpisAI?.dictate();}
   async function fullscreen() {
     try {if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}
     catch {Shell.toast('Użyj klawisza F11, aby włączyć pełny ekran przeglądarki.');}
@@ -139,7 +142,7 @@
       privacy:`<h1>Dane i prywatność</h1><p>Ta strona pokazuje działanie OpisAI na przykładowej wizycie. Generowanie i dyktowanie są lokalną demonstracją. Nie wykonujemy zapytań do modeli AI i nie włączamy mikrofonu.</p><h2>Co zapamiętuje demo?</h2><p>Zmiany wizyty, notatki i ustawienia są zapamiętywane w tej przeglądarce. Historia operacji OpisAI jest dostępna do odświeżenia lub zamknięcia karty. Możesz je usunąć przez <strong>Ustawienia → Prywatność i zabezpieczenia</strong>.</p><h2>Prawdziwa aplikacja</h2><p>Program OpisAI uruchomiony na komputerze ma własną konfigurację dostawców, urządzeń i integracji. Nie przenosimy do niego ustawień zapisanych na tej stronie.</p><p>Do przeglądania demonstracji nie potrzebujesz konta, hasła ani klucza API.</p><button class="win-button" data-go="privacy">Ustawienia prywatności</button>`
     };
     root.innerHTML=content[helpPage]||content.start;root.scrollTop=0;
-    $$('[data-go]',root).forEach(b=>b.onclick=()=>{const id=b.dataset.go;if(id==='describe')window.OpisAI?.prepare();else if(id==='dictate')window.OpisAI?.dictate();else if(id==='history')window.OpisAI?.history();else if(id==='clinic')window.Clinic?.open();else action(id);});
+    $$('[data-go]',root).forEach(b=>b.onclick=()=>{const id=b.dataset.go;if(id==='describe')window.OpisAI?.prepare();else if(id==='dictate')tryDictation();else if(id==='history')window.OpisAI?.history();else if(id==='clinic')window.Clinic?.open();else action(id);});
   }
   function openTerminal() {
     const existing=Shell.windows.get('terminal');if(existing){existing.show();return;}
