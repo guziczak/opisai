@@ -18,9 +18,10 @@
 .kxp-action:active{background:linear-gradient(#ccdff3,#dcebfb)}
 .kxp-action.has-separator::after{content:"";position:absolute;right:-1px;top:4px;bottom:4px;width:1px;background:#d1d7dd}
 
-/* Scrollable virtual form: small windows scroll instead of clipping (kxp_mock.c layout_main). */
+/* Scrollable virtual form: small windows scroll instead of clipping (kxp_mock.c layout_main). The mock needs
+   1190x606 above its status bar; without the menu (26) and the toolbar (70) the form itself needs 510. */
 .kxp-canvas-scroll{flex:1;min-height:0;overflow:auto;background:#f7f8fa}
-.kxp-canvas{position:relative;min-width:1190px;min-height:611px;height:100%;box-sizing:border-box}
+.kxp-canvas{position:relative;min-width:1190px;min-height:510px;height:100%;box-sizing:border-box}
 .kxp-canvas::after{content:"";position:absolute;left:110px;top:157px;right:0;bottom:0;background:#fff;border-left:1px solid #d2dce5;z-index:0}
 .kxp-canvas>*{position:absolute;z-index:1}
 .kxp-panel{border:1px solid #9dbde0;background:#fff;box-sizing:border-box}
