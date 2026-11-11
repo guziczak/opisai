@@ -27,10 +27,11 @@ All SVGs are embedded locally by `Icons.svg(name, size, extraClass)`. No third-p
 
 ## Klinika XP mock-up icons
 
-`clinic-icons.js` holds the 47 icons of the Klinika XP test mock `kxp_mock.c` 2.4.1 (OpisAI-resources). They were converted 1:1 to 32-unit SVG on 2026-10-31 by compiling the mock's shared `ui_icon()` drawing code with a painter that records rectangles, lines, ellipses and polygons instead of pixels.
+`clinic-icons.js` holds 47 icons, original SVG drawings made for this demonstration on 2026-11-11.
 
-- Source: the mock's own vector drawings of generic functions (calendar, clock, scales, thermometer, microphone, tubes, case bags…), not artwork of the Klinika XP publisher.
-- No bitmap, photograph or external request is used. The patient photo slot shows the mock's "zdjęcie niedostępne" placeholder; the AI-generated photo embedded in `kxp_mock.c` is not used.
+- The 47 names and their motifs are those of the icon set of the test mock `kxp_mock.c` 2.4.1 (calendar, clock, scales, thermometer, microphone, tubes, case bags…), so every icon keeps its place and meaning. The drawings are new: a 32-unit grid, one palette, flat fills and rounded 2-unit strokes. They replace the 1:1 conversion of the mock's `ui_icon()` primitives used until then.
+- They are not artwork of the Klinika XP publisher, and no third-party icon set, font, bitmap, photograph or external request is used. The patient photo slot shows the mock's "zdjęcie niedostępne" placeholder; the AI-generated photo embedded in `kxp_mock.c` is not used.
+- Every icon is inline SVG returned by `KxpIcons.svg(name, size, extraClass)`.
 
 ## Typography
 

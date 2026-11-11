@@ -48,7 +48,7 @@ Wszystkie funkcje dotyczą pulpitu demonstracyjnego. Przeglądarka nie zmienia k
 
 ## Klinika XP (makieta)
 
-Układ, etykiety i zachowanie okna pochodzą z `kxp_mock.c` 2.4.1 z repozytorium zasobów OpisAI, odtworzonego ze zdjęć prawdziwej Kliniki XP. To niezależna rekonstrukcja do pokazania pracy z OpisAI, a nie produkt BRI ani kompletna Klinika XP. Nie zawiera grafik wydawcy; ikony są przeniesionymi 1:1 rysunkami mocka.
+Układ, etykiety i zachowanie okna pochodzą z `kxp_mock.c` 2.4.1 z repozytorium zasobów OpisAI, odtworzonego ze zdjęć prawdziwej Kliniki XP. To niezależna rekonstrukcja do pokazania pracy z OpisAI, a nie produkt BRI ani kompletna Klinika XP. Nie zawiera grafik wydawcy: ikony to własne rysunki SVG tej demonstracji, które zachowują nazwy i motywy z mocka.
 
 - Okno „Przebieg wizyty – Zwierzę domowe”: menu, pasek narzędzi (Zapisz wizytę, Na razie zatrzymaj, Anuluj), ramki NOWA WIZYTA / WŁAŚCICIEL / ZWIERZĘ, miejsce na zdjęcie, etapy wizyty 1–9 i historia wizyt pacjenta.
 - Podokno opisu z trzema sekcjami i ich narzędziami (Mowa, Zredaguj, Typowe… OK, ANULUJ). Narzędzia Kliniki (także etapy 2–7) nie są odtworzone i mówią o tym po kliknięciu; działają OK i ANULUJ. Tytuł podokna ma dopisek z imieniem pacjenta i numerem wizyty, jak w mocku. Wysokość pól zmienia się przeciągnięciem separatora.
@@ -86,7 +86,7 @@ Wizyty makiety Kliniki, dokumenty, ustawienia pulpitu i położenie bąbelka (`o
 | `assets/desktop-apps.js` | Ustawienia pulpitu, przewodnik po demonstracji i terminal |
 | `assets/files-apps.js`, `assets/files-apps.css` | Eksplorator, lokalne dokumenty, Kosz i Notatnik |
 | `assets/clinic.js`, `assets/clinic.css` | Makieta Kliniki XP: przebieg wizyty, podokno opisu, przegląd tylko do odczytu, lista wizyt |
-| `assets/clinic-icons.js` | Ikony makiety Kliniki przeniesione z `kxp_mock.c` |
+| `assets/clinic-icons.js` | Ikony makiety Kliniki (własne rysunki o nazwach i motywach z `kxp_mock.c`) |
 | `assets/opisai.js`, `assets/opisai.css` | Bąbelek, przygotowanie, dyktowanie, przegląd, Konfiguracja i okno „O aplikacji” OpisAI |
 | `assets/opisai-document.js` | Niezależny od DOM model dokumentu przeniesiony z rc32: podsekcje, wzorzec panelu i jego lokalny odczyt, pisownia cytatów, usuwanie powtórzeń, uwagi do treści, dokument przeglądu i symulowana odpowiedź |
 | `assets/orb-motion.js` | Niezależne od DOM modele bąbelka przeniesione z rc32: podążanie i wyhamowanie, rozpoznawanie gestów, obrys, odbicie od paska zadań i krople |
