@@ -1,7 +1,7 @@
-/* Klinika XP mock-up icons: original SVG drawn for this demonstration.
+/* Klinika XP mock-up icons and patient illustrations: original SVG drawn for this demonstration.
    The 47 names and motifs are those of the mock's icon set (calendar, scales, thermometer, case bags…);
    every icon is redrawn on a 32-unit grid with one palette, flat fills and rounded 2-unit strokes.
-   No third-party artwork, not BRI artwork. */
+   The three portraits stand in for the patient photo. No third-party artwork, not BRI artwork. */
 (() => {
   'use strict';
   const C = {
@@ -93,5 +93,60 @@
     ? `<svg class="kxp-icon ${extra}" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${SHAPES[name]}</svg>`
     : '';
 
-  window.KxpIcons = { svg, names: Object.keys(SHAPES) };
+  /* Patient illustrations for the photo slot: one calm, flat portrait per species of the demo's three fictional
+     patients, on a shared pale backdrop. Drawn 144 units wide; the slot shows the top 124 units above its caption,
+     the rest is bleed. Shapes only: no outlines, no gradients, and no likeness of a real animal. */
+  let serial = 0;
+  const backdrop = '<rect width="144" height="144" fill="#e3ecf4"/><circle cx="72" cy="66" r="54" fill="#eef4f9"/>';
+  const hair = (d, colour) => `<path d="${d}" fill="none" stroke="${colour}" stroke-width="1.1" stroke-linecap="round"/>`;
+  const PORTRAITS = {
+    /* Hooded fancy rat, black and white: tail, white body, the hood over the shoulders, forelegs and paws, ears, head, face. */
+    rat: () => backdrop + '<g transform="translate(0 -8)">'
+      + '<path d="M104 126c10 3 20-2 23-12 2-7 2-14 0-20" fill="none" stroke="#d6a8a2" stroke-width="4.2" stroke-linecap="round"/>'
+      + '<path d="M32 160c-4-32 8-54 26-62h28c18 8 30 30 26 62z" fill="#f6f4f0"/>'
+      + '<path d="M50 111c0-10 9-17 22-17s22 7 22 17c-4 6-12 8.5-22 8.5s-18-2.5-22-8.5z" fill="#303136"/>'
+      + '<path d="M58 109c0 5 3 9.5 6.5 12M86 109c0 5-3 9.5-6.5 12" fill="none" stroke="#f6f4f0" stroke-width="7" stroke-linecap="round"/>'
+      + '<ellipse cx="64.5" cy="121.5" rx="4.6" ry="3.6" fill="#e6b3ac"/><ellipse cx="79.5" cy="121.5" rx="4.6" ry="3.6" fill="#e6b3ac"/>'
+      + '<ellipse cx="41" cy="47" rx="14.5" ry="16" fill="#d8aaa4" transform="rotate(-20 41 47)"/><ellipse cx="42.5" cy="48.5" rx="9" ry="10.5" fill="#c39089" transform="rotate(-20 42.5 48.5)"/>'
+      + '<ellipse cx="103" cy="47" rx="14.5" ry="16" fill="#d8aaa4" transform="rotate(20 103 47)"/><ellipse cx="101.5" cy="48.5" rx="9" ry="10.5" fill="#c39089" transform="rotate(20 101.5 48.5)"/>'
+      + '<path d="M72 35c18 0 30 11 30 25 0 11-8 21-15 29-4 6-9 10-15 10s-11-4-15-10c-7-8-15-18-15-29 0-14 12-25 30-25z" fill="#303136"/>'
+      + '<ellipse cx="72" cy="86.5" rx="11.5" ry="10.5" fill="#393b40"/>'
+      + '<path d="M68.4 82.6c0-1.8 7.2-1.8 7.2 0 0 2.6-1.6 4.6-3.6 4.6s-3.6-2-3.6-4.6z" fill="#e39aa1"/>'
+      + '<path d="M72 87.2v3.4M68.5 91.6c1.2 1 2.6.6 3.5-1 .9 1.6 2.3 2 3.5 1" fill="none" stroke="#1d1e21" stroke-width="1" stroke-linecap="round"/>'
+      + '<circle cx="56" cy="62" r="4.1" fill="#0c0d0f"/><circle cx="88" cy="62" r="4.1" fill="#0c0d0f"/><circle cx="54.8" cy="60.7" r="1.1" fill="#fff"/><circle cx="86.8" cy="60.7" r="1.1" fill="#fff"/>'
+      + hair('M61 85.5 35 80M60.5 88 33 89M61.5 90.5 37 98M83 85.5l26-5.5M83.5 88 111 89M82.5 90.5l24.5 7.5', '#a7b0b9') + '</g>',
+    /* Tortoiseshell cat: body and head in dark brown with ginger patches clipped to them, one ear of each colour, face. */
+    cat: () => {
+      const body = `kxp-p${++serial}`, head = `kxp-p${++serial}`;   // clip ids, unique on every call
+      return backdrop + '<g transform="translate(0 -4)">'
+        + `<clipPath id="${body}"><path d="M22 150c2-30 20-54 50-54s48 24 50 54z"/></clipPath><clipPath id="${head}"><path d="M72 38c18 0 34 8 37 24 2 12-5 24-17 31-6 4-14 6-20 6s-14-2-20-6c-12-7-19-19-17-31 3-16 19-24 37-24z"/></clipPath>`
+        + '<path d="M22 150c2-30 20-54 50-54s48 24 50 54z" fill="#3a322f"/>'
+        + `<g clip-path="url(#${body})"><path d="M22 150c2-18 12-32 26-40 6 12 4 28-2 40z" fill="#d58a3f"/><path d="M90 108c12 4 22 16 26 30-10-2-22-12-26-30z" fill="#dfa35d"/></g>`
+        + '<path d="M39 60 34 26c-.4-3 2.4-4.4 4.6-2.6L64 42z" fill="#3a322f"/><path d="M42 52 39.5 32 55 43.5z" fill="#6b4f48"/>'
+        + '<path d="M105 60l5-34c.4-3-2.4-4.4-4.6-2.6L80 42z" fill="#d58a3f"/><path d="M102 52l2.5-20L89 43.5z" fill="#eec29b"/>'
+        + '<path d="M72 38c18 0 34 8 37 24 2 12-5 24-17 31-6 4-14 6-20 6s-14-2-20-6c-12-7-19-19-17-31 3-16 19-24 37-24z" fill="#3a322f"/>'
+        + `<g clip-path="url(#${head})"><path d="M28 34h38c4 10-4 16-2 24 2 8-4 14-10 20-6 6-14 8-26 6z" fill="#d58a3f"/><path d="M41 52c4-3 9 0 8 5-3 4-9 1-8-5z" fill="#3a322f"/>`
+        + '<path d="M84 36c8 4 16 8 22 16-6 2-14 0-20-6-3-4-4-8-2-10z" fill="#d58a3f"/>'
+        + '<path d="M60.5 80.5c3.5-3.5 9.5-3.5 11.5 0v8.5c-2 2.5-6 3.5-9.5 2-3.5-2-4.5-7-2-10.5z" fill="#dd9a50"/><path d="M83.5 80.5c-3.5-3.5-9.5-3.5-11.5 0v8.5c2 2.5 6 3.5 9.5 2 3.5-2 4.5-7 2-10.5z" fill="#443a36"/></g>'
+        + '<path d="M49.5 66.5c2.5-6.5 11.5-7.5 15.5-1.5-2.5 6.5-11.5 7-15.5 1.5z" fill="#c2b653" stroke="#2f2521" stroke-width=".6"/><path d="M94.5 66.5c-2.5-6.5-11.5-7.5-15.5-1.5 2.5 6.5 11.5 7 15.5 1.5z" fill="#c2b653" stroke="#2f2521" stroke-width=".6"/>'
+        + '<ellipse cx="57.3" cy="65.8" rx="2.6" ry="4.5" fill="#1b1816"/><ellipse cx="86.7" cy="65.8" rx="2.6" ry="4.5" fill="#1b1816"/><circle cx="55.9" cy="64" r="1" fill="#fff"/><circle cx="85.3" cy="64" r="1" fill="#fff"/>'
+        + '<path d="M68.8 77.6h6.4L72 81.6z" fill="#b8736b" stroke="#b8736b" stroke-width="1.2" stroke-linejoin="round"/>'
+        + '<path d="M72 82.4v3.6M72 86c-1.2 1.8-3 2.2-4.6 1.4M72 86c1.2 1.8 3 2.2 4.6 1.4" fill="none" stroke="#4a352e" stroke-width="1.1" stroke-linecap="round"/>'
+        + hair('M61 84 38 80.5M61 86.5 37 89M62 89 42 96.5M83 84l23-3.5M83 86.5l24 2.5M82 89l20 7.5', '#f4f0e9') + '</g>';
+    },
+    /* Ginger mixed-breed dog: body with a cream chest, blue collar and tag, drop ears, head, cream muzzle, face. */
+    dog: () => backdrop + '<g transform="translate(0 -6)">'
+      + '<path d="M22 156c2-30 20-52 50-52s48 22 50 52z" fill="#c27238"/><path d="M60 156c-2-24 3-42 12-42s14 18 12 42z" fill="#edcfa8"/>'
+      + '<path d="M49 106c9 8 37 8 46 0l2 6.5c-10 8.5-40 8.5-50 0z" fill="#3f7fb3"/><circle cx="72" cy="121.5" r="3.4" fill="#efc050"/>'
+      + '<path d="M53 33c-9-5-21-1-24 11-3 11 2 23 9 27 5-6 6-15 10-23 2-5 4-10 5-15z" fill="#a55c28"/><path d="M91 33c9-5 21-1 24 11 3 11-2 23-9 27-5-6-6-15-10-23-2-5-4-10-5-15z" fill="#a55c28"/>'
+      + '<path d="M72 30c18 0 30 12 30 28 0 10-4 18-9 26-3 12-11 22-21 22s-18-10-21-22c-5-8-9-16-9-26 0-16 12-28 30-28z" fill="#cc7b3c"/>'
+      + '<path d="M72 69c8.5 0 15 7.5 15 18s-6.5 17-15 17-15-6.5-15-17 6.5-18 15-18z" fill="#edcfa8"/>'
+      + '<path d="M65 75.5c0-3 14-3 14 0 0 4-3.5 7.5-7 7.5s-7-3.5-7-7.5z" fill="#2a2422"/><ellipse cx="69.5" cy="75.3" rx="2.2" ry="1.1" fill="#554b47"/>'
+      + '<path d="M72 83v5.5M64.5 91.5c2.6 2 5.6 1.2 7.5-3M79.5 91.5c-2.6 2-5.6 1.2-7.5-3" fill="none" stroke="#9a7557" stroke-width="1.3" stroke-linecap="round"/>'
+      + '<ellipse cx="59" cy="59" rx="3.6" ry="4" fill="#2a1f19"/><ellipse cx="85" cy="59" rx="3.6" ry="4" fill="#2a1f19"/><circle cx="57.9" cy="57.7" r="1" fill="#fff"/><circle cx="83.9" cy="57.7" r="1" fill="#fff"/></g>'
+  };
+  const portrait = kind => PORTRAITS[kind]
+    ? `<svg class="kxp-portrait" viewBox="0 0 144 124" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false">${PORTRAITS[kind]()}</svg>`
+    : '';
+  window.KxpIcons = { svg, names: Object.keys(SHAPES), portrait, portraits: Object.keys(PORTRAITS) };
 })();

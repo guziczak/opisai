@@ -36,9 +36,9 @@
   /* Fistaszek is 1 year 9 months old on the visit date, as the sample history says. */
   const BORN = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 21); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`; })();
   const PATIENTS = [
-    { id: 1, owner: 'Marta Wiśniewska', address: 'ul. Przykładowa 1, Wrocław', phone: 'tel. 000 000 000', name: 'Fistaszek', species: 'szczur, odmiana hodowlana (fancy rat)', sex: 'samiec', colour: 'kapturowa, czarno-biała', born: BORN, weight: '0.420', chip: '000012345' },
-    { id: 2, owner: 'Katarzyna Zielińska', address: 'ul. Przykładowa 2, Wrocław', phone: 'tel. 000 000 000', name: 'Mela', species: 'kot europejski krótkowłosy', sex: 'samica', colour: 'szylkretowa', born: '2021-07-15', weight: '4.100', chip: '000012346' },
-    { id: 3, owner: 'Piotr Malinowski', address: 'ul. Przykładowa 3, Wrocław', phone: 'tel. 000 000 000', name: 'Bruno', species: 'pies, mieszaniec', sex: 'samiec', colour: 'rudy', born: '2023-02-03', weight: '18.500', chip: '000012347' }
+    { id: 1, owner: 'Marta Wiśniewska', address: 'ul. Przykładowa 1, Wrocław', phone: 'tel. 000 000 000', name: 'Fistaszek', species: 'szczur, odmiana hodowlana (fancy rat)', sex: 'samiec', colour: 'kapturowa, czarno-biała', born: BORN, weight: '0.420', chip: '000012345', portrait: 'rat' },
+    { id: 2, owner: 'Katarzyna Zielińska', address: 'ul. Przykładowa 2, Wrocław', phone: 'tel. 000 000 000', name: 'Mela', species: 'kot europejski krótkowłosy', sex: 'samica', colour: 'szylkretowa', born: '2021-07-15', weight: '4.100', chip: '000012346', portrait: 'cat' },
+    { id: 3, owner: 'Piotr Malinowski', address: 'ul. Przykładowa 3, Wrocław', phone: 'tel. 000 000 000', name: 'Bruno', species: 'pies, mieszaniec', sex: 'samiec', colour: 'rudy', born: '2023-02-03', weight: '18.500', chip: '000012347', portrait: 'dog' }
   ];
   const SEED_VISITS = [
     { id: 'V-140', patient: 1, occurred: '2026-08-12 16:40', type: 'Profilaktyka', number: '140/2026', doctor: DOCTOR, weight: '0.45', temperature: '', fields: { wywiad: 'Kontrola okresowa. Apetyt dobry, aktywny, bez kichania.', badanie: 'Stan ogólny dobry, sierść gładka, oddech spokojny, bez wydzieliny z nozdrzy. Masa 450 g.', diagnoza: 'Zdrowy, bez zmian chorobowych.' } },
@@ -76,6 +76,8 @@
   let editorSession = 0;
   const esc = text => window.Shell ? Shell.escape(String(text ?? '')) : String(text ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const kx = (name, size = 24, extra = '') => window.KxpIcons ? KxpIcons.svg(name, size, extra) : '';
+  /* The photo slot: the demo's own drawing of the patient's species stands in for the photo from the animal's card. */
+  const photoSlot = p => { const art = window.KxpIcons?.portrait?.(p.portrait) || ''; return `<button class="kxp-photo${art ? ' has-portrait' : ''}" data-kxp="photo" title="Zdjęcie zwierzęcia">${art || kx('camera', 56)}<span>zdjęcie niedostępne</span></button>`; };
   const persist = () => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {} };
   const patientOf = id => PATIENTS.find(p => p.id === id) || PATIENTS[0];
   const writable = () => state.mode === 'new' || state.mode === 'edit';
@@ -172,7 +174,7 @@
           <div class="kxp-data kxp-strong">${esc(p.name)}</div><div class="kxp-data kxp-strong">${esc(p.species)}</div>
           <div class="kxp-text">Płeć: ${esc(p.sex)}  Maść: ${esc(p.colour)}</div><div class="kxp-text">Wiek: ${esc(ageText(monthsBetween(p.born, m.date)))} (${esc(displayDate(p.born))})</div><div class="kxp-text kxp-strong">Waga: ${esc(p.weight)} kg</div>
           <button class="kxp-info" data-kxp="patient-list" title="Informacje o zwierzęciu">${kx('info', 21)}</button></section>
-        <button class="kxp-photo" data-kxp="photo" title="Zdjęcie zwierzęcia">${kx('camera', 56)}<span>zdjęcie niedostępne</span></button>
+        ${photoSlot(p)}
         <nav class="kxp-side" aria-label="Etapy">${SIDE.map(([id, label, ico]) => ro && (id === 'start' || id === 'next') ? '' : `<button class="kxp-side-item${(ro ? id === 'visit' : id === 'start') ? ' is-selected' : ''}" data-side="${id}"><span>${esc(label)}</span>${kx(ico, 22)}</button>`).join('')}</nav>
         ${ro ? savedViewHTML() : `
         <div class="kxp-pager" role="tablist" aria-label="Przebieg wizyty">${STEPS.map(([label, ico, w], i) => `<button class="kxp-step${i === 0 && editorVisible() ? ' is-selected' : ''}" style="width:${w}px" data-step="${i}" role="tab" aria-selected="${i === 0 && editorVisible()}">${kx(ico, 23)}<span>${esc(label)}</span></button>`).join('')}</div>

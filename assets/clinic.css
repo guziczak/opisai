@@ -69,6 +69,8 @@
 .kxp-photo{left:913px;top:6px;width:145px;height:145px;border:1px solid #9dbde0;border-radius:3px;background:#e3ecf4;box-shadow:0 1px 2px rgba(24,60,96,.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#455c70;font-size:11px;padding:0;overflow:hidden;transition:border-color .12s}
 .kxp-photo:hover{border-color:#3f77aa}
 .kxp-app .kxp-photo:focus-visible{outline-offset:1px}
+.kxp-portrait{position:absolute;left:0;top:0;width:100%;height:calc(100% - 21px);display:block}
+.kxp-photo.has-portrait>span{position:absolute;left:0;right:0;bottom:0;height:21px;line-height:20px;background:#f5f8fb;border-top:1px solid #c7d8ea;color:#3d4e5c}
 
 /* Left case bar, step pager, visit history (TRichView). */
 .kxp-side{left:6px;top:158px;width:104px;display:flex;flex-direction:column;gap:1px}
