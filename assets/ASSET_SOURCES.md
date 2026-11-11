@@ -24,6 +24,7 @@ All SVGs are embedded locally by `Icons.svg(name, size, extraClass)`. No third-p
 - Klinika XP is a product of BRI. The mock-up is an independent reconstruction for showing the OpisAI workflow, not a BRI product, and contains no artwork of the publisher.
 - All patients, owners, visits and notes are fictional. Six catalog visits of the cat and the dog take their notes from the invented test cases 1–50 of `kxp_mock.c`, one case per visit; the mock's other cases and its start-up patient data are not used.
 - Titles carry a `[DEMO]` prefix, as the mock's carry `[MOCK]`.
+- Layout, sizes, labels and the blue identity are the mock's. The rendering was lightly refined for this demonstration on 2026-11-11 with the demo's own choices: captions of at least 11 px, text contrast of at least 4.5:1, deeper header bars and input edges, hover and keyboard-focus states.
 
 ## Klinika XP mock-up icons
 

@@ -48,7 +48,7 @@ Wszystkie funkcje dotyczą pulpitu demonstracyjnego. Przeglądarka nie zmienia k
 
 ## Klinika XP (makieta)
 
-Układ, etykiety i zachowanie okna pochodzą z `kxp_mock.c` 2.4.1 z repozytorium zasobów OpisAI, odtworzonego ze zdjęć prawdziwej Kliniki XP. To niezależna rekonstrukcja do pokazania pracy z OpisAI, a nie produkt BRI ani kompletna Klinika XP. Nie zawiera grafik wydawcy: ikony to własne rysunki SVG tej demonstracji, które zachowują nazwy i motywy z mocka.
+Układ, etykiety i zachowanie okna pochodzą z `kxp_mock.c` 2.4.1 z repozytorium zasobów OpisAI, odtworzonego ze zdjęć prawdziwej Kliniki XP. To niezależna rekonstrukcja do pokazania pracy z OpisAI, a nie produkt BRI ani kompletna Klinika XP. Nie zawiera grafik wydawcy: ikony to własne rysunki SVG tej demonstracji, które zachowują nazwy i motywy z mocka. Wygląd okna jest lekko odświeżony (czytelniejsze podpisy, kontrast, stany najechania i fokusu) przy zachowaniu układu, wymiarów i etykiet.
 
 - Okno „Przebieg wizyty – Zwierzę domowe”: menu, pasek narzędzi (Zapisz wizytę, Na razie zatrzymaj, Anuluj), ramki NOWA WIZYTA / WŁAŚCICIEL / ZWIERZĘ, miejsce na zdjęcie, etapy wizyty 1–9 i historia wizyt pacjenta.
 - Podokno opisu z trzema sekcjami i ich narzędziami (Mowa, Zredaguj, Typowe… OK, ANULUJ). Narzędzia Kliniki (także etapy 2–7) nie są odtworzone i mówią o tym po kliknięciu; działają OK i ANULUJ. Tytuł podokna ma dopisek z imieniem pacjenta i numerem wizyty, jak w mocku. Wysokość pól zmienia się przeciągnięciem separatora.
