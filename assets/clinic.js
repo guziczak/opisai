@@ -194,7 +194,7 @@
         <div class="kxp-history-icons">${['clipboard', 'syringe', 'docs'].map(ico => `<button data-kxp="list" title="Historia / wybór wizyty">${kx(ico, 22)}</button>`).join('')}</div>
         <div class="kxp-history" tabindex="0" aria-label="Historia wizyt">${historyLines(patientVisits())}</div>`}
       </div></div>
-      <footer class="kxp-status" role="status"><button class="kxp-next" data-kxp="next">${kx('next', 13)}Dalej</button><span class="kxp-cost">Szacunkowy koszt:<b>0,00 zł</b></span><span class="kxp-doctor">${kx('person', 18)}${esc(m.doctor || DOCTOR)}</span><span class="kxp-mode" data-kxp-status>${esc(statusText || modeStatus())}</span></footer>`;
+      <footer class="kxp-status" role="status"><button class="kxp-next" data-kxp="next">${kx('next', 13)}Dalej</button><span class="kxp-cost">Szacunkowy koszt:<b>0,00 zł</b></span><span class="kxp-doctor">${kx('person', 18)}<span>${esc(m.doctor || DOCTOR)}</span></span><span class="kxp-mode" data-kxp-status>${esc(statusText || modeStatus())}</span></footer>`;
     mainWindow?.setTitle(ro ? REVIEW_TITLE : MAIN_TITLE);
   }
   function setStatus(text) { statusText = text || ''; const el = mainRoot?.querySelector('[data-kxp-status]'); if (el) el.textContent = statusText || modeStatus(); }

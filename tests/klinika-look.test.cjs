@@ -56,3 +56,16 @@ test('emphasis in the Klinika windows is semibold: no bold element is left at th
   for (const [holder, count] of [['kxp-h-date', 1], ['kxp-h-label', 2], ['kxp-history-head', 1], ['kxp-cost', 1]])
     assert.equal((clinicJs.match(new RegExp(`class="${holder}">[^<]*(?:\\$\\{[^}]*\\}[^<]*)*<b>`, 'g')) || []).length, count, `<b> inside .${holder}`);
 });
+
+// The doctor's name is typed by the visitor ("Dane wizyty…", F4). A name longer than its 250 px chip ran on past the
+// chip, white on the pale bar and across the status message.
+test('status bar: the doctor\'s name is a box of its own that ends in an ellipsis inside the chip', () => {
+  assert.match(clinicJs, /<span class="kxp-doctor">\$\{kx\('person', 18\)\}<span>\$\{esc\(m\.doctor \|\| DOCTOR\)\}<\/span><\/span>/);
+  const name = /^\.kxp-doctor span\{([^}]*)\}$/m.exec(clinicCss);
+  assert.ok(name, 'a rule for the name inside the chip');
+  assert.match(name[1], /(?:^|;)overflow:hidden(?:;|$)/);
+  assert.match(name[1], /(?:^|;)text-overflow:ellipsis(?:;|$)/);
+  // the pixel that keeps the overhang of the last letter is taken back by the margin, so the chip's minimum width stays
+  assert.match(name[1], /(?:^|;)padding-right:1px;margin-right:-1px(?:;|$)/);
+  assert.match(clinicCss, /^\.kxp-status\{[^}]*white-space:nowrap/m, 'the bar is one line');
+});
