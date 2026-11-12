@@ -158,7 +158,11 @@ test('status bar: the doctor\'s name is a box of its own that ends in an ellipsi
   assert.match(clinicJs, /<span class="kxp-doctor">\$\{kx\('person', 18\)\}<span>\$\{esc\(m\.doctor \|\| DOCTOR\)\}<\/span><\/span>/);
   const name = /^\.kxp-doctor span\{([^}]*)\}$/m.exec(clinicCss);
   assert.ok(name, 'a rule for the name inside the chip');
-  assert.match(name[1], /(?:^|;)overflow:hidden(?:;|$)/);
+  // The box clips without becoming a scroll container. A scroll container (overflow:hidden) is placed on whole device
+  // pixels, and at display scales such as 150 % or 175 % that moved the default name by one pixel against the label of
+  // the chip beside it. hidden stays in front for browsers without overflow:clip. A clipping box that does not scroll
+  // keeps its content width as a flex item, so it needs min-width:0 to shrink to the chip.
+  assert.match(name[1], /(?:^|;)min-width:0;overflow:hidden;overflow:clip(?:;|$)/);
   assert.match(name[1], /(?:^|;)text-overflow:ellipsis(?:;|$)/);
   // the pixel that keeps the overhang of the last letter is taken back by the margin, so the chip's minimum width stays
   assert.match(name[1], /(?:^|;)padding-right:1px;margin-right:-1px(?:;|$)/);

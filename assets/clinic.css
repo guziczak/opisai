@@ -107,7 +107,8 @@
 /* Status bar. "Dalej" takes what is left, at most 280 px, so in a narrower window it gives way first: the two chips
    keep their 245 and 250 px and the message stays whole. Only below that do the three shrink and the message end in "…".
    A long doctor's name ends in "…" inside its chip; its box is one pixel wider than the text, so the overhang of the
-   last letter is not cut off. */
+   last letter is not cut off. The box clips without scrolling (overflow:clip; hidden is for browsers without it): a
+   scrolling box is set on whole device pixels, which drew the name up to a pixel off at display scales like 150 %. */
 .kxp-status{flex:none;height:26px;display:flex;align-items:stretch;gap:10px;background:#f3f6f9;border-top:1px solid #b8c8d6;font-size:11px;overflow:hidden;white-space:nowrap}
 .kxp-next{flex:1 1 0;max-width:280px;display:flex;align-items:center;gap:6px;padding:0 10px 0 8px;border:0;background:none;color:#14457f!important;font-size:11px;justify-content:flex-start;transition:background-color .12s}
 .kxp-next:hover{background:#e2edf8}
@@ -116,7 +117,7 @@
 .kxp-cost b{margin-left:auto;font-size:14px;font-weight:600}
 .kxp-doctor{width:250px;box-sizing:border-box}
 .kxp-doctor .kxp-icon{filter:brightness(0) invert(1)}
-.kxp-doctor span{overflow:hidden;text-overflow:ellipsis;padding-right:1px;margin-right:-1px}
+.kxp-doctor span{min-width:0;overflow:hidden;overflow:clip;text-overflow:ellipsis;padding-right:1px;margin-right:-1px}
 .kxp-mode{margin-left:auto;padding-right:10px;align-self:center;color:#4d6275;font-size:11px;overflow:hidden;text-overflow:ellipsis}
 
 /* Description sub-window "Rejestracja wizyty: Wywiad - Badanie - Diagnoza" (TFormRejWizyty). */
