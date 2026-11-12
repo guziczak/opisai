@@ -109,7 +109,7 @@
     if(id==='display')return openDisplay();
     if(id==='privacy-details')return openHelp('privacy');
     if(id==='fullscreen')return fullscreen();
-    if(id==='reset')return Shell.confirm({title:'Przywróć dane demonstracji',icon:'settings',message:'Usunąć zapisane w tej przeglądarce wizyty demonstracyjne, historię OpisAI, notatki i ustawienia? Strona uruchomi się ponownie z przykładową wizytą.',confirmLabel:'Przywróć',onConfirm:()=>{Object.keys(localStorage).filter(k=>k.startsWith('opisai.demo.')||k==='opisai-demo-settings-v12').forEach(k=>localStorage.removeItem(k));location.reload();}});
+    if(id==='reset')return Shell.confirm({title:'Przywróć dane demonstracji',icon:'settings',message:'Usunąć zapisane w tej przeglądarce wizyty demonstracyjne, historię OpisAI, notatki i ustawienia? Strona uruchomi się ponownie z przykładową wizytą.',confirmLabel:'Przywróć',onConfirm:()=>{try{Object.keys(localStorage).filter(k=>k.startsWith('opisai.demo.')||k==='opisai-demo-settings-v12').forEach(k=>localStorage.removeItem(k));}catch{}location.reload();}}); // storage the browser blocks holds nothing: the reload alone restores the sample
   }
   /* "Rozpocznij", "Wypróbuj dyktowanie" and "Uruchom przykład" start the bubble's dictation. Its panel is stacked with the
    * Klinika sub-window, as the rc32 overlay is, so an open visit comes forward first instead of staying under this window. */

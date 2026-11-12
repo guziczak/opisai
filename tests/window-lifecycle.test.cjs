@@ -1,14 +1,15 @@
 'use strict';
 
 // Run the real Shell without desktop startup. This small DOM fixture checks
-// lifecycle events, the matching animation rules and the keys of open menus,
-// not browser rendering.
+// lifecycle events, the matching animation rules, the keys of open menus and
+// the reset in Ustawienia, not browser rendering.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const test = require('node:test');
 const shellSource = fs.readFileSync(path.join(__dirname, '../assets/shell.js'), 'utf8');
+const desktopSource = fs.readFileSync(path.join(__dirname, '../assets/desktop-apps.js'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '../assets/windows.css'), 'utf8');
 const animationRules = [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
   .flatMap((match, order) => match[1].trim().split(',').map(selector => ({ selector: selector.trim(), body: match[2], order })))
@@ -107,8 +108,10 @@ class Element extends Target {
   hasPointerCapture(id) { return this.captures.has(id); }
   releasePointerCapture(id) { if (this.captures.delete(id)) this.dispatchEvent({ type: 'lostpointercapture', pointerId: id }); }
 }
-function fixture() {
-  const doc = new Target(), win = new Target(), timers = new Map(); let serial = 0;
+// `storage` is what reading window.localStorage gives; a function stands for a browser that refuses the access.
+// `desktopApps` also loads assets/desktop-apps.js and starts it (Ustawienia), still without the desktop startup of the shell.
+function fixture({ storage = { getItem: () => null, setItem() {} }, desktopApps = false } = {}) {
+  const doc = new Target(), win = new Target(), timers = new Map(); let serial = 0, reloads = 0;
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body); doc.activeElement = doc.body;
   doc.createElement = tag => new Element(tag, doc);
   doc.querySelectorAll = selector => doc.documentElement.querySelectorAll(selector);
@@ -116,14 +119,19 @@ function fixture() {
   for (const id of ['desktop', 'windows', 'snap-preview', 'shell-popups']) {
     const element = doc.createElement('div'); element.id = id; element.hidden = id === 'snap-preview'; doc.body.append(element);
   }
-  vm.runInNewContext(shellSource, { window: win, document: doc, Node: Element,
-    innerWidth: 1200, innerHeight: 800, localStorage: { getItem: () => null, setItem() {} },
+  const context = vm.createContext(Object.defineProperty({ window: win, document: doc, Node: Element,
+    innerWidth: 1200, innerHeight: 800, Icons: { svg: () => '' }, location: { reload() { reloads++; } },
     CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
     setTimeout: callback => { timers.set(++serial, callback); return serial; }, clearTimeout: id => timers.delete(id)
-  }, { filename: 'assets/shell.js' });
+  }, 'localStorage', { get: typeof storage === 'function' ? storage : () => storage }));
+  vm.runInContext(shellSource, context, { filename: 'assets/shell.js' });
+  if (desktopApps) {
+    context.Shell = win.Shell; vm.runInContext(desktopSource, context, { filename: 'assets/desktop-apps.js' });
+    [...doc.listeners.get('DOMContentLoaded')].at(-1)(); // its own init; the shell's needs the whole desktop
+  }
   const frame = win.Shell.createWindow({ id: 'clinic', title: 'Klinika XP', x: 100, y: 100, width: 500, height: 350 });
   return { win, doc, frame, shell: win.Shell, title: frame.el.querySelector('.titlebar'),
-    preview: doc.querySelector('#snap-preview'),
+    preview: doc.querySelector('#snap-preview'), reloads: () => reloads,
     flushTimers() { const pending = [...timers.values()]; timers.clear(); pending.forEach(callback => callback()); }
   };
 }
@@ -291,4 +299,18 @@ test('a chosen command returns the keyboard to where it was, unless the command 
 
   control.focus(); choose([{ label: 'Zamknij', onClick() { control.remove(); } }], 0);
   assert.equal(f.doc.activeElement, f.doc.body, 'An opener that is gone is not focused');
+});
+
+test('"Przywróć ustawienia" clears the demo keys and reloads, also when the browser blocks storage', () => {
+  for (const blocked of [false, true]) {
+    const kept = { 'opisai.demo.visit.v3': '{}', 'opisai.demo.files.v1': '{}', 'opisai-demo-settings-v12': '{}', 'another-page': 'keep' };
+    Object.defineProperties(kept, { getItem: { value: key => kept[key] ?? null }, setItem: { value(key, value) { kept[key] = String(value); } }, removeItem: { value(key) { delete kept[key]; } } });
+    const f = fixture({ desktopApps: true, storage: blocked ? () => { throw new Error('SecurityError: access is denied for this document') } : kept });
+    f.shell.openSettings('privacy'); click(f.doc.querySelector('[data-action="reset"]'));
+    const confirm = f.doc.querySelector('[data-confirm]');
+    assert(confirm, 'The reset asks first'); assert.equal(f.reloads(), 0);
+    click(confirm);
+    assert.equal(f.reloads(), 1, blocked ? 'Nothing is stored, so the reload alone brings the sample back' : 'The page restarts');
+    if (!blocked) assert.deepEqual(Object.keys(kept), ['another-page'], 'Only the keys of this demonstration are removed');
+  }
 });
