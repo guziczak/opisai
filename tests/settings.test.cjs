@@ -4,7 +4,8 @@
 // documentation-workflow.test.cjs) and facts read from the real OpisAI 0.12.0rc32 modules
 // (tests/fixtures/rc32-settings.json: domain/providers.py, domain/app_info.py, creds_ui_for,
 // document_defaults.default_sections and the SHA-256 of LICENSE.txt). Behaviour: ConfigDialog
-// _set_dirty / _on_tab_changed / _on_accept / reject, _filter_nav, _update_provider_ui, ui/about.py.
+// _set_dirty / _mark_dirty / _on_tab_changed / _on_accept / reject, _filter_nav, _update_provider_ui,
+// _reset_gemini_btn, the controller's _open_config / _open_about, ui/about.py.
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
