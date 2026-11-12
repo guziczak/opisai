@@ -1,8 +1,9 @@
 /* Klinika XP mock-up. Layout, sizes and labels follow kxp_mock.c 2.4.1 (base 1190x735: blue module menu,
    toolbar, three cards and the photo slot, case bar, steps 1–9, visit history, status bar). The rendering is the
    demo's own light polish: 11 px for the program's captions, 12 px for data and 13 px for the memo fields, text
-   contrast of at least 4.5:1, control edges of at least 3:1 and a visible keyboard focus ring. Klinika keeps its
-   own light skin in both desktop themes, as a Delphi application does. */
+   contrast of at least 4.5:1 (disabled buttons excepted), edges of fields and dialog buttons of at least 3:1 and
+   a visible keyboard focus ring. Klinika keeps its own light skin in both desktop themes, as a Delphi application
+   does. */
 .kxp-window .window-content,.kxp-editor-window .window-content,.kxp-list-window .window-content{overflow:hidden;background:#f7f8fa}
 .kxp-app,.kxp-editor-root,.kxp-list,.clinic-dialog{--kx-focus:#0b5fad;--kx-edge:#7189a0;--kx-bar:#4577a3;--muted:#5d6975;color-scheme:light}
 .kxp-app,.kxp-editor-root,.kxp-list{height:100%;display:flex;flex-direction:column;background:#f7f8fa;color:#18232c;font:12px/1.35 "Segoe UI",Selawik,Tahoma,sans-serif;user-select:none}

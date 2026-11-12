@@ -1,6 +1,7 @@
 /* Klinika XP mock-up icons and patient illustrations: original SVG drawn for this demonstration.
    The 47 names and motifs are those of the mock's icon set (calendar, scales, thermometer, case bags…);
-   every icon is redrawn on a 32-unit grid with one palette, flat fills and rounded 2-unit strokes.
+   every icon is redrawn on a 32-unit grid with flat fills in one range of muted colours and rounded strokes,
+   mostly 2 units wide.
    The three portraits stand in for the patient photo. No third-party artwork, not BRI artwork. */
 (() => {
   'use strict';

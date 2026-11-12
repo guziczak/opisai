@@ -24,13 +24,13 @@ All SVGs are embedded locally by `Icons.svg(name, size, extraClass)`. No third-p
 - Klinika XP is a product of BRI. The mock-up is an independent reconstruction for showing the OpisAI workflow, not a BRI product, and contains no artwork of the publisher.
 - All patients, owners, visits and notes are fictional. Six catalog visits take their notes from invented test cases of the mock, one case per visit.
 - Titles carry a `[DEMO]` prefix, as the mock's carry `[MOCK]`.
-- Layout, sizes, labels and the blue identity are the mock's. The rendering was lightly refined for this demonstration on 2026-11-11 with the demo's own choices: captions of at least 11 px, text contrast of at least 4.5:1, deeper header bars and input edges, hover and keyboard-focus states.
+- Layout, labels and the blue identity are the mock's, and so are the sizes: the blocks of the visit window and of the description sub-window are within two pixels of it, except the ID in the ZWIERZĘ header, which became an 18 px chip. The rendering was lightly refined for this demonstration on 2026-11-11 with the demo's own choices: captions of at least 11 px, text contrast of at least 4.5:1 (disabled buttons excepted), deeper header bars and input edges, hover and keyboard-focus states.
 
 ## Klinika XP mock-up icons and patient illustrations
 
-`clinic-icons.js` holds 47 icons and three patient illustrations. All of them are original SVG drawings made for this demonstration on 2026-11-11.
+`clinic-icons.js` holds 47 icons and three patient illustrations. All of them are original SVG drawings made for this demonstration on 2026-11-11; the rat and the cat were corrected on 2026-11-12.
 
-- Icons: the 47 names and their motifs are those of the icon set of the test mock `kxp_mock.c` 2.4.1 (calendar, clock, scales, thermometer, microphone, tubes, case bags…), so every icon keeps its place and meaning. The drawings are new: a 32-unit grid, one palette, flat fills and rounded 2-unit strokes. They replace the 1:1 conversion of the mock's `ui_icon()` primitives used until then.
+- Icons: the 47 names and their motifs are those of the icon set of the test mock `kxp_mock.c` 2.4.1 (calendar, clock, scales, thermometer, microphone, tubes, case bags…), so every icon keeps its place and meaning. The drawings are new: a 32-unit grid, flat fills in one range of muted colours, and rounded strokes, mostly 2 units wide. They replace the 1:1 conversion of the mock's `ui_icon()` primitives used until then.
 - Patient illustrations: one flat portrait per species of the demo's three fictional patients (a hooded black-and-white fancy rat, a tortoiseshell cat, a ginger mixed-breed dog). They stand in for the photo of the animal's card, above the mock's caption "zdjęcie niedostępne". They are drawings built from basic shapes, not photographs, and depict no real animal.
 - Neither is artwork of the Klinika XP publisher, and no third-party icon set, font, bitmap, photograph or external request is used. The AI-generated photo embedded in `kxp_mock.c` is not used.
 - Everything is inline SVG returned by `KxpIcons.svg(name, size, extraClass)` and `KxpIcons.portrait(kind)`.
