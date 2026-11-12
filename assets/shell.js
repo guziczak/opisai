@@ -68,17 +68,19 @@
     else if(target.id===currentDesktopId)focusTopWindow(active?.id);else renderTaskbar();
     return true;
   }
+  /* The keyboard inside a window: the control that had it last, else the window itself. */
+  function focusInside(win){
+    const previous=win.lastFocusedElement;
+    if(previous?.isConnected&&win.el.contains(previous)&&!previous.disabled&&previous.getClientRects().length)previous.focus({preventScroll:true});
+    else win.el.focus({preventScroll:true});
+  }
   function focus(win){
     if(!win || !win.visible)return;
     for(const w of windows.values())w.el.classList.toggle('is-inactive',w!==win);
     active=win;desktopById().lastActiveId=win.id;win.el.style.zIndex=String(++z);
     // Owned windows (options.owner) stay above their owner, as Win32 owned windows do.
     const raiseOwned=owner=>{for(const w of windows.values())if(w!==owner&&w.options.owner===owner.id&&w.visible){w.el.style.zIndex=String(++z);raiseOwned(w);}};raiseOwned(win);
-    if(!win.el.contains(document.activeElement)){
-      const previous=win.lastFocusedElement;
-      if(previous?.isConnected&&win.el.contains(previous)&&!previous.disabled&&previous.getClientRects().length)previous.focus({preventScroll:true});
-      else win.el.focus({preventScroll:true});
-    }
+    if(!win.el.contains(document.activeElement))focusInside(win);
     win.options.onFocus?.();renderTaskbar();
     window.dispatchEvent(new CustomEvent('shell:focus',{detail:{id:win.id}}));
   }
@@ -172,8 +174,10 @@
   function closePopups(){closeMenu();clearHover();if(popup){popup.remove();popup=null;}$$('.tray-button.open').forEach(e=>e.classList.remove('open'));}
   /* A closed menu or flyout hands the keyboard back to the element that had it before (menuFocus, lastFocus), unless another
    * element holds it: the field that never lost it because the menu was used with the mouse, one that onClose chose, or the
-   * window that the chosen command opened. Otherwise the focus would stay on the body, out of reach of the next key. */
-  function refocus(el){const now=document.activeElement;if((!now||now===document.body)&&el?.isConnected)el.focus({preventScroll:true});}
+   * window that the chosen command opened. When that element is gone or cannot take it (a toolbar the command redrew, the
+   * desktop's menu, which opens with nothing focused), the active window gets the keyboard, as when it is activated.
+   * Otherwise the focus would stay on the body, out of reach of the next key. */
+  function refocus(el){const lost=()=>!document.activeElement||document.activeElement===document.body;if(lost()&&el?.isConnected)el.focus({preventScroll:true});if(lost()&&active?.visible)focusInside(active);}
   /* Keys of an open menu or flyout, taken in the capture phase, before the window underneath: a menu opened with the mouse leaves
    * the focus in that window, where Esc would cancel a dialog or the visit being edited. Esc closes one layer (the submenu that
    * has the keyboard, else the menu, else the flyout) and goes no further; Ctrl+Esc stays the Start shortcut. Held down, that

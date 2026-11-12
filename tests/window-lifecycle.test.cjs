@@ -297,8 +297,29 @@ test('a chosen command returns the keyboard to where it was, unless the command 
   choose([{ label: 'Konfiguracja...', onClick() { opened = f.shell.createWindow({ id: 'settings', title: 'Konfiguracja' }); } }], 0);
   assert.equal(f.doc.activeElement, opened.el, 'A window opened by the command keeps the focus');
 
-  control.focus(); choose([{ label: 'Zamknij', onClick() { control.remove(); } }], 0);
-  assert.equal(f.doc.activeElement, f.doc.body, 'An opener that is gone is not focused');
+  control.focus(); choose([{ label: 'Usuń', onClick() { control.remove(); } }], 0);
+  assert.equal(f.doc.activeElement, opened.el, 'An opener that is gone is not focused: the active window has the keyboard');
+});
+
+test('with nothing to return to, the keyboard goes to the active window', () => {
+  const f = fixture(), { control, seen } = escapable(f), items = [{ label: 'Odśwież', onClick() {} }];
+  const blur = () => { f.doc.activeElement = f.doc.body; }; // a right click on the desktop: nothing has the focus
+  f.frame.el.dispatchEvent({ type: 'focusin', target: control }); // the window remembers its control, as it does in a browser
+
+  blur(); f.shell.menu(items, 10, 10); press(f, f.doc.body, 'Escape');
+  assert.equal(menus(f), 0); assert.equal(f.doc.activeElement, control, 'Esc in the desktop\'s menu: the control that had the keyboard last');
+  assert.equal(seen.escapes, 0);
+  blur(); click(f.shell.menu(items, 10, 10).querySelector('button'));
+  assert.equal(f.doc.activeElement, control, 'A command of that menu: the same');
+
+  // A command that redraws the toolbar it was chosen from: the button that opened the menu is gone.
+  const tool = f.doc.createElement('button'); f.frame.content.append(tool); tool.focus(); f.frame.el.dispatchEvent({ type: 'focusin', target: tool });
+  const item = f.shell.menu([{ label: 'Sortuj według', onClick() { tool.remove(); } }], 10, 10).querySelector('button'); item.focus(); click(item, { detail: 0 });
+  assert.equal(f.doc.activeElement, f.frame.el, 'The control is gone too: the window itself, where its shortcuts work');
+
+  // No window is shown: the focus is left alone.
+  f.frame.minimize(); f.flushTimers(); blur(); f.shell.menu(items, 10, 10); press(f, f.doc.body, 'Escape');
+  assert.equal(menus(f), 0); assert.equal(f.doc.activeElement, f.doc.body);
 });
 
 test('"Przywróć ustawienia" clears the demo keys and reloads, also when the browser blocks storage', () => {
