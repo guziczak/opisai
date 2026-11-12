@@ -103,8 +103,10 @@
 .kxp-edit-strip:hover{background:#d1e7d2;border-color:#3f7f53}
 .kxp-edit-strip span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;color:#234d2f}
 .kxp-saved{left:185px;top:193px}
+/* Status bar. "Dalej" takes what is left, at most 280 px, so in a narrower window it gives way first: the two chips
+   keep their 245 and 250 px and the message stays whole. Only below that do the three shrink and the message end in "…". */
 .kxp-status{flex:none;height:26px;display:flex;align-items:stretch;gap:10px;background:#f3f6f9;border-top:1px solid #b8c8d6;font-size:11px;overflow:hidden;white-space:nowrap}
-.kxp-next{display:flex;align-items:center;gap:6px;padding:0 10px 0 8px;border:0;background:none;color:#14457f!important;font-size:11px;width:280px;justify-content:flex-start;transition:background-color .12s}
+.kxp-next{flex:1 1 0;max-width:280px;display:flex;align-items:center;gap:6px;padding:0 10px 0 8px;border:0;background:none;color:#14457f!important;font-size:11px;justify-content:flex-start;transition:background-color .12s}
 .kxp-next:hover{background:#e2edf8}
 .kxp-cost,.kxp-doctor{display:flex;align-items:center;gap:8px;padding:0 12px;margin:2px 0 0;border-radius:3px 3px 0 0;background:var(--kx-bar);color:#fff}
 .kxp-cost{width:245px;box-sizing:border-box}

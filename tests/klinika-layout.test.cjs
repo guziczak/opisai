@@ -24,6 +24,23 @@ test('the Klinika form scrolls only below the mock\'s minimum of 1190x510 (606 m
   assert.ok(158 + 6 * 57 <= parseInt(canvas['min-height'], 10));
 });
 
+// A flex item with a zero basis and a growth factor is sized last: it gets only the room the other items leave, and
+// with no room left it stays at its content width while they shrink. Measured in a browser: the message after saving
+// is whole from a 1079 px wide window (it needed 1298 px while "Dalej" kept a fixed width and all four gave way at once).
+test('in a narrow status bar "Dalej" gives way before the two chips and the message', () => {
+  const clinic = css('clinic.css'), next = rule(clinic, '.kxp-next'), mode = rule(clinic, '.kxp-mode');
+  assert.equal(next.flex, '1 1 0');
+  assert.equal(next['max-width'], '280px');
+  assert.equal(next.width, undefined, 'no fixed width, or "Dalej" would shrink only together with the rest');
+  assert.equal(rule(clinic, '.kxp-cost').width, '245px');
+  assert.equal(rule(clinic, '.kxp-doctor').width, '250px');
+  for (const selector of ['.kxp-cost,.kxp-doctor', '.kxp-cost', '.kxp-doctor', '.kxp-mode'])
+    for (const property of ['flex', 'flex-grow', 'flex-shrink', 'flex-basis']) assert.equal(rule(clinic, selector)[property], undefined, `${selector} keeps the default ${property}`);
+  assert.equal(mode.overflow, 'hidden');
+  assert.equal(mode['text-overflow'], 'ellipsis', 'a message that still does not fit ends in an ellipsis');
+  assert.equal(mode['margin-left'], 'auto', 'the message stays at the right edge');
+});
+
 test('no scroll area of the desktop rubber-bands or chains its scrolling to the page', () => {
   const windows = css('windows.css');
   assert.match(windows, /^\*\{[^}]*overscroll-behavior:none[^}]*\}/m, 'the reset rule turns overscroll effects off for every element');
