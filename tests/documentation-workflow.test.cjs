@@ -234,11 +234,11 @@ test('compose: whole visit reads the sub-window first, then sources in the confi
 test('compose opens at its top: the selected tile gets the keyboard without scrolling the stacked sources away', () => {
   let f = fixture(); f.compose();
   const tile = f.root('opisai-compose').querySelectorAll('[data-tile]').find(t => t.classList.contains('selected'));
-  assert.equal(f.doc.activeElement, tile, 'the keyboard starts on the chosen variant');
-  assert.notEqual(f.doc.scrolledTo, tile, 'focus({preventScroll: true}): in a narrow window the tiles lie below the sources');
+  assert(f.doc.activeElement === tile, 'the keyboard starts on the chosen variant');
+  assert(f.doc.scrolledTo !== tile, 'focus({preventScroll: true}): in a narrow window the tiles lie below the sources');
   f = fixture({fields: {...SAMPLE, badanie: ''}}); f.compose();
-  assert.equal(f.doc.activeElement, f.q('opisai-compose', '[data-source="badanie"]'), 'an empty first source is filled in first');
-  assert.notEqual(f.doc.scrolledTo, f.doc.activeElement);
+  assert(f.doc.activeElement === f.q('opisai-compose', '[data-source="badanie"]'), 'an empty first source is filled in first');
+  assert(f.doc.scrolledTo !== f.doc.activeElement);
 });
 
 test('compose: other sources or scope clear the consent visibly; the writing style alone keeps it (ApprovalState)', () => {
@@ -491,6 +491,27 @@ test('history: the copy is the epikryza (field texts without labels); every requ
   assert.ok(active.isConnected); assert.equal(active.dataset.entry, written.id);
   f.click('opisai-history', '[data-action="copy-history"]');
   assert.equal(f.clipboard.at(-1), `${f.clinic.fields.badanie}\n\n${f.clinic.fields.wywiad}`, 'exactly what was written, without headings');
+});
+
+test('a child window never outlives its parent: the prompt-and-answer view goes with the review, the delete question with Historia', () => {
+  const exchange = f => { f.click('opisai-review', '[data-tab="details"]'); f.click('opisai-review', '[data-action="exchange"]'); assert.equal(f.win('opisai-exchange')?.title, 'OpisAI — polecenie i odpowiedź AI'); };
+  let f = fixture(); f.compose(); f.generate(); exchange(f);
+  f.click('opisai-review', '[data-action="reject"]');
+  assert(!f.win('opisai-exchange'), 'ReviewPage._complete closes it with "Odrzuć"'); assert.equal(f.phase, 'idle');
+  f.compose(); assert.ok(f.win('opisai-compose'), 'so the next click on the bubble starts the next description');
+  f = fixture(); f.compose(); f.generate(); exchange(f);
+  f.win('opisai-review').close(); f.advance(0); assert(!f.win('opisai-exchange'), 'with the × of the review');
+  f = fixture(); f.compose(); f.generate(); exchange(f);
+  f.click('opisai-review', '[data-tab="badanie"]'); f.approve(); assert(!f.win('opisai-exchange'), 'and with the approved write');
+  f.click('opisai-message', '[data-action="mb-close"]');
+  f.api.history(); f.click('opisai-history', '[data-action="delete-history"]');
+  assert.equal(f.q('opisai-history-delete', '.oa-mb-text').textContent, 'Usunąć ten dokument z historii OpisAI?');
+  f.win('opisai-history').close(); f.advance(0);
+  assert(!f.win('opisai-history-delete'), 'the question closes with its list'); assert.equal(f.api.state.history.length, 1, 'unanswered: nothing is deleted');
+  f.api.history(); f.click('opisai-history', '[data-action="delete-history"]'); f.api.history(); // the list opened again from Start
+  assert(!f.win('opisai-history-delete'), 'a rebuilt list has no question about the old one');
+  f.click('opisai-history', '[data-action="delete-history"]'); f.click('opisai-history-delete', '[data-action="mb-yes"]');
+  assert.equal(f.api.state.history.length, 0); assert.equal(f.root('opisai-history').querySelectorAll('[data-entry]').length, 0, 'answered in its list, the entry goes');
 });
 
 test('undo: a conflicting write is the last receipt; undo asks to clarify it instead of reverting an older write', () => {

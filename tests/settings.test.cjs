@@ -465,6 +465,19 @@ test('Odczyt pola: both read methods on and locked, the field diagnostics, no sp
   assert.match(f.text('opisai-settings-message'), /Nie znaleziono podokna opisu wizyty\. Otwórz wizytę w Klinice i spróbuj ponownie\./);
 });
 
+test('windows opened from Konfiguracja close with it (modal dialogs in rc32); Historia is independent and stays', () => {
+  const f = fixture(); f.api.settings('sections');
+  f.page().querySelector('[data-vitals]').click(); assert.ok(f.windows.get('opisai-vitals'));
+  f.api.settings('privacy'); f.page().querySelector('[data-cfg="matrix"]').click(); assert.ok(f.windows.get('opisai-matrix'));
+  f.api.settings('fields'); f.page().querySelector('[data-cfg="diagnose"]').click(); f.advance(0); assert.ok(f.windows.get('opisai-settings-message'));
+  f.api.settings('history'); f.page().querySelector('[data-cfg="open-history"]').click(); assert.ok(f.windows.get('opisai-history'));
+  f.click('opisai-settings', '[data-action="close-settings"]');
+  assert.deepEqual([...f.windows.keys()], ['opisai-history'], 'VitalParamsConfigDialog, AiActMatrixDialog and the diagnostics message go; _open_history has no parent');
+  f.api.settings('privacy'); f.page().querySelector('[data-cfg="matrix"]').click();
+  f.windows.get('opisai-matrix').close(); f.windows.get('opisai-settings').close(); // a child closed first is not closed twice
+  assert.deepEqual([...f.windows.keys()], ['opisai-history']);
+});
+
 test('Historia: the rc32 group with its limits, no "Wyczyść historię" and no undo; the switch stops new records', () => {
   const f = fixture(); f.api.settings('history');
   const page = f.page();

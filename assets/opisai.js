@@ -84,7 +84,7 @@
     else {win=Shell.createWindow({id,title,icon:'opisai',width,height,minWidth:Math.min(width,500),minHeight:Math.min(height,360),className:'oa-host oa-theme-'+themeName(),content:html,resizable:true,maximizable:true,taskbar:true,onClose:()=>onClose?.()});windows.set(id,win);}
     applyTheme(win); if(win?.el)win.el.dataset.oaWindow=id; holdPosition(); return win; // a work view stops the idle bounce where it is
   }
-  function closeWin(id) { windows.get(id)?.close(); }
+  function closeWin(id) { const win = windows.get(id); if (win?.el?.isConnected) win.close(); } // the map keeps closed windows: only an open one closes
   window.addEventListener?.('shell:theme',()=>{if(preferences.theme==='auto'||themePreview==='auto')refreshThemes();}); // "Automatyczny" follows a change of the desktop's colour mode
   function getFields() { return clone(window.Clinic?.getFields?.() || {wywiad:'',badanie:'',diagnoza:''}); }
   function validOption(options) {return options && typeof options==='object' && !('target' in options && options.target instanceof Element)?options:{};}
@@ -567,6 +567,7 @@
   }
   function completeReview(result, outcome, ws, closing = false) { // one outcome; the host closes after it
     if (result.outcome) return false; result.outcome = outcome;
+    closeWin('opisai-exchange'); // ReviewPage._complete: the prompt-and-answer view never outlives its review
     if (state.review === result) state.review = null; if (!closing) finishWorkspace(ws); else { ws.finished = true; if (workspace === ws) workspace = null; }
     state.active = null; return true;
   }
@@ -1148,6 +1149,7 @@
   const offButton=(label,title,kind='')=>`<button type="button" class="oa-btn ${kind}" disabled title="${esc(title+IN_APP)}"><span>${label}</span></button>`;
   const lockedSwitch=(label,title,on)=>`<label class="oa-switch-row oa-cfg-locked" title="${esc(title)}"><input type="checkbox" ${on?'checked':''} disabled><div>${label}</div></label>`;
   const cfgHint=html=>`<p class="oa-cfg-hint">${html}</p>`; // _style_hint
+  const SETTINGS_CHILDREN=['opisai-vitals','opisai-matrix','opisai-settings-message']; // rc32 runs them modally over the dialog (exec), so they never outlive it: here they close with it
   let settingsToast=null,storageNotice=false;
   const demoOnly=text=>{settingsToast?.remove?.();settingsToast=toast(text);}; // each replaces the last
   const HW_LLM={auto:'Automatycznie (najlepszy dostępny)',nvidia_external:'Karta NVIDIA RTX — zewnętrzna (np. AORUS AI BOX)',nvidia_internal:'Karta NVIDIA RTX — wewnętrzna',integrated:'Karta wbudowana (AMD Radeon / Intel)'}; // hardware.LLM_CHOICES
@@ -1156,7 +1158,7 @@
     if(open?.el?.isConnected){open.show();if(named)open.oaPage(initial);return;} // _open_config: an open dialog is only presented, unsaved changes included; a named page is chosen as in its list
     let page=named?initial:'connection',draft=clone(preferences);themePreview=null; // a new window starts from the saved settings
     const html=`<div class="oa-app oa-cfg"><div class="oa-settings-layout"><aside class="oa-settings-nav"><input class="oa-settings-search" type="search" placeholder="Szukaj ustawienia…" aria-label="Szukaj ustawienia"><nav aria-label="Sekcje konfiguracji">${settingsNav.map(([label,id,ic])=>id?`<button type="button" class="oa-nav-item" data-page="${id}">${icon(ic,16)}<span>${label}</span></button>`:`<div class="oa-nav-group">${label}</div>`).join('')}</nav></aside><section class="oa-settings-page" data-settings-page></section></div><footer class="oa-footer oa-cfg-foot"><span class="oa-cfg-folder"><small>Konfig:</small>${button('Otwórz folder','config-folder','','','title="Folder z plikiem konfiguracji OpisAI (opisai.sqlite3)"')}</span><span class="oa-pg-gap"></span><span class="sr-only" role="status" data-cfg-status></span>${button('Zapisz','save-settings','primary','','disabled title="Zapisz zmiany z TEJ karty (nie zamyka okna). Aktywny tylko gdy sa niezapisane zmiany; przelaczenie karty je odrzuca."')}${button('Zamknij','close-settings','','','title="Zamknij okno konfiguracji. Niezapisane zmiany z bieżącej karty zostaną odrzucone."')}</footer></div>`;
-    const win=makeWindow('opisai-settings',`OpisAI ${VERSION} — konfiguracja`,880,700,html,()=>{themePreview=null;});const root=win.content;escapeCloses(win);
+    const win=makeWindow('opisai-settings',`OpisAI ${VERSION} — konfiguracja`,880,700,html,()=>{themePreview=null;SETTINGS_CHILDREN.forEach(closeWin);});const root=win.content;escapeCloses(win);
     const saveButton=$('[data-action="save-settings"]',root),status=$('[data-cfg-status]',root);
     const dirty=()=>(PAGE_KEYS[page]||[]).some(key=>JSON.stringify(draft[key])!==JSON.stringify(preferences[key]));
     const refreshSave=()=>{saveButton.disabled=!dirty();};
@@ -1404,7 +1406,8 @@
   function history() {
     let filter = '', selectedId = null, page = 'result';
     const html = `<div class="oa-app oa-hist"><input type="search" class="oa-hist-search" placeholder="Szukaj w źródłach, propozycji lub wyniku…" aria-label="Szukaj w historii dokumentów"><div class="oa-hist-split"><div class="oa-hist-list" role="listbox" tabindex="0" aria-label="Dokumenty w historii" data-list></div><div class="oa-hist-doc"><p class="oa-hist-summary" data-summary></p><div class="oa-tabs" role="tablist" aria-label="Zapisany dokument" data-doc-tabs></div><textarea readonly class="oa-rv-doc" data-doc-text aria-label="Zapisany dokument"></textarea></div></div><footer class="oa-footer">${button('Kopiuj wynik', 'copy-history', '', '', 'disabled')}${button('Usuń wpis', 'delete-history', '', '', 'disabled')}<span class="oa-pg-gap"></span>${button('Odśwież', 'refresh')}${button('Zamknij', 'close')}</footer></div>`;
-    const win = makeWindow('opisai-history', 'OpisAI — Historia dokumentów', 1100, 740, html, () => { historyRefresh = null; }), root = win.content; escapeCloses(win);
+    closeWin('opisai-history-delete'); // MessageBox.question is modal in rc32: the question belongs to the list it was asked in
+    const win = makeWindow('opisai-history', 'OpisAI — Historia dokumentów', 1100, 740, html, () => { historyRefresh = null; closeWin('opisai-history-delete'); }), root = win.content; escapeCloses(win);
     const visible = () => state.history.filter(e => !filter || [historyStamp(e.ts), ...e.sources.map(s => s.text), ...e.proposal.map(f => f.text), ...(e.approved || e.reviewed).map(f => f.text)].join('\n').toLowerCase().includes(filter));
     function draw() { keepFocus(root, render); }
     function render() {

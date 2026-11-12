@@ -421,15 +421,15 @@ test('an action replaced while it has the keyboard hands it on: to the same acti
   dictateChip.focus(); f.wrap.dispatchEvent({ type: 'focusin', target: dictateChip }); f.advance(50);
   dictateChip.dispatchEvent({ type: 'click' }); // Enter on "Dyktuj": the recording starts, the actions become "Zakończ" and "Pokaż"
   assert.deepEqual(f.chips(), ['finish', 'show']); assert.equal(dictateChip.isConnected, false);
-  assert.equal(f.doc.activeElement, f.orb, 'the keyboard stays in the bubble instead of falling to the page');
+  assert(f.doc.activeElement === f.orb, 'the keyboard stays in the bubble instead of falling to the page');
   f.advance(500); assert.equal(Number(f.wrap.querySelector('.oa-orb-actions').style.opacity), 1, 'so the new actions stay visible');
   const show = f.wrap.querySelector('[data-orb-action="show"]'); show.focus();
   f.api.state.recording = null; f.api.setPhase('review'); // "Pokaż" is an action of the next state too
   assert.deepEqual(f.chips(), ['show']); assert.equal(show.isConnected, false);
-  assert.equal(f.doc.activeElement, f.wrap.querySelector('[data-orb-action="show"]'), 'the same action keeps the keyboard');
-  f.api.setPhase('done'); assert.deepEqual(f.chips(), []); assert.equal(f.doc.activeElement, f.orb, 'no actions left: the disc');
+  assert(f.doc.activeElement === f.wrap.querySelector('[data-orb-action="show"]'), 'the same action keeps the keyboard');
+  f.api.setPhase('done'); assert.deepEqual(f.chips(), []); assert(f.doc.activeElement === f.orb, 'no actions left: the disc');
   const outside = f.doc.createElement('button'); f.doc.body.append(outside); outside.focus();
-  f.api.setPhase('idle'); assert.deepEqual(f.chips(), ['describe', 'dictate']); assert.equal(f.doc.activeElement, outside, 'a focus elsewhere is never taken');
+  f.api.setPhase('idle'); assert.deepEqual(f.chips(), ['describe', 'dictate']); assert(f.doc.activeElement === outside, 'a focus elsewhere is never taken');
 });
 
 test('reduced motion: REC shows the five still bars at once, not the cross', () => {
