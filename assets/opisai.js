@@ -42,9 +42,9 @@
   }
   const modelLabel=(p=preferences)=>{const s=providerSpec(p);return s.locked?s.locked.replace(/^\(|\)$/g,''):modelFor(s,p.model);}; // model_label (bubble and tray tooltips)
   function connectionLabel(p=preferences){const s=providerSpec(p);return [s.label,TRANSPORT_LABELS[s.transport],s.locked?'model '+modelLabel(p):modelFor(s,p.model)].join(' · ');} // connection_label
-  const normalizeConnection=p=>{ // the demo's earlier labels map onto rc32 variants; anything unknown returns to the default
+  const normalizeConnection=p=>{ // the demo's earlier labels map onto rc32 variants and their models (modelFor names the API model); anything unknown returns to the default
     const old={ChatGPT:['chatgpt','browser','profile'],Claude:['claude','browser','profile'],Gemini:['gemini',p.transport==='API'?'api':'browser',p.transport==='API'?'api_key':'profile'],Lokalny:['local','local','local']}[p.provider];
-    if(old){[p.provider,p.transport,p.auth]=old;p.model={'Claude Opus':'claude-opus-4-7','Gemini Pro':'pro','Gemini Flash':'flash'}[p.model]||'';}
+    if(old){[p.provider,p.transport,p.auth]=old;p.model={'Claude Opus':'claude-opus-4-7','Gemini Pro':'Gemini 3.1 Pro','Gemini Flash':'Gemini 3.5 Flash','Qwen · model lokalny':'qwen3:14b'}[p.model]||'';}
     if(!PROVIDERS.some(s=>s.id===p.provider))Object.assign(p,{provider:defaults.provider,transport:defaults.transport,auth:defaults.auth});
     connectCascade(p);
   };

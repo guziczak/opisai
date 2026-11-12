@@ -260,12 +260,17 @@ test('saved settings of removed options migrate safely and leave the stored JSON
   const old = {provider: 'Gemini', transport: 'API', model: 'Gemini Pro', theme: 'blue', fontSize: 16, animations: false, livePreview: false, retention: '30 dni', language: 'Polski', sentenceLines: true,
     clinicalSections: ['A', 'B', 'C'], panelRows: {bcs: true}, panel: false, rich: true, diagnosis: true, customPrompt: 'x', idleBounce: false};
   const f = fixture({prefs: old}), p = f.api.preferences();
-  assert.deepEqual([p.provider, p.transport, p.auth, p.model, p.theme, p.livePreview, p.idleBounce], ['gemini', 'api', 'api_key', 'gemini-3.5-flash', 'light', false, false]);
+  assert.deepEqual([p.provider, p.transport, p.auth, p.model, p.theme, p.livePreview, p.idleBounce], ['gemini', 'api', 'api_key', 'gemini-3.1-pro-preview', 'light', false, false], 'the model stays the one that was chosen');
   for (const key of ['fontSize', 'animations', 'retention', 'language', 'sentenceLines', 'clinicalSections', 'panelRows', 'panel', 'rich', 'diagnosis', 'customPrompt']) assert(!(key in p), key);
   f.api.settings('bubble'); f.set('[data-setting="idleBounce"]', true); f.click('opisai-settings', '[data-action="save-settings"]');
   const saved = f.saved(); for (const key of ['fontSize', 'animations', 'clinicalSections', 'panelRows', 'customPrompt']) assert(!(key in saved), 'stored: ' + key);
   const map = prefs => { const q = fixture({prefs}).api.preferences(); return [q.provider, q.transport, q.auth, q.model]; };
   assert.deepEqual(map({provider: 'Lokalny', transport: 'Lokalnie (offline)', model: 'Własny model'}), ['local', 'local', 'local', 'gemma4:12b']);
+  /* Every connection the earlier settings could store keeps its model: "Pro" and "Flash" by transport, Qwen, Opus; a model left to the service takes the variant's first. */
+  for (const [provider, transport, model, now] of [['Gemini', 'API', 'Gemini Flash', 'gemini / api / api_key / gemini-3.5-flash'], ['Gemini', 'API', 'Wybrany w przeglądarce', 'gemini / api / api_key / gemini-3.5-flash'],
+    ['Gemini', 'Przeglądarka', 'Gemini Pro', 'gemini / browser / profile / Gemini 3.1 Pro'], ['Gemini', 'Przeglądarka', 'Gemini Flash', 'gemini / browser / profile / Gemini 3.5 Flash'], ['Gemini', 'Przeglądarka', 'Wybrany w przeglądarce', 'gemini / browser / profile / Gemini 3.1 Pro'],
+    ['Lokalny', 'Lokalnie (offline)', 'Qwen · model lokalny', 'local / local / local / qwen3:14b'], ['Claude', 'Przeglądarka', 'Claude Sonnet', 'claude / browser / profile / claude-sonnet-4-6'], ['Claude', 'Przeglądarka', 'Wybrany w przeglądarce', 'claude / browser / profile / claude-sonnet-4-6']])
+    assert.equal(map({provider, transport, model}).join(' / '), now, [provider, transport, model].join(' · '));
   assert.deepEqual(map({provider: 'Claude', transport: 'Przeglądarka', model: 'Claude Opus'}), ['claude', 'browser', 'profile', 'claude-opus-4-7']);
   assert.deepEqual(map({provider: 'ChatGPT', model: 'Wybrany w ChatGPT'}), ['chatgpt', 'browser', 'profile', '']);
   assert.deepEqual(map({provider: 'gemini', transport: 'browser', auth: 'anonymous', model: 'Gemini 3.1 Pro'}), ['gemini', 'browser', 'anonymous', 'Gemini 3.5 Flash'], 'a model belongs to its variant');
