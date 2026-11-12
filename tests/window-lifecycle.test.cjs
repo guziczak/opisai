@@ -272,11 +272,31 @@ test('Esc closes one layer at a time and hands the keyboard back', () => {
   assert(!start.isConnected); assert.equal(f.doc.activeElement, control); assert.equal(seen.escapes, 0);
 });
 
-test('Ctrl+Esc is left to the Start shortcut', () => {
-  const f = fixture(), { control, seen } = escapable(f);
+test('Esc with Shift, Alt or the Windows key still belongs to the open menu', () => {
+  for (const chord of [{ shiftKey: true }, { altKey: true }, { metaKey: true }]) {
+    const f = fixture(), { control, seen } = escapable(f);
+    f.shell.menu([{ label: 'Kopiuj', onClick() {} }], 10, 10);
+    const event = press(f, control, 'Escape', chord);
+    assert.equal(menus(f), 0, JSON.stringify(chord)); assert(event.defaultPrevented); assert.equal(seen.escapes, 0);
+    press(f, control, 'Escape', chord); assert.equal(seen.escapes, 1, 'With nothing open the chord goes to the window, as before');
+  }
+});
+
+test('Ctrl+Esc opens Start once per press, and the window with the keyboard never sees it', () => {
+  const f = fixture(), { control, seen } = escapable(f), start = () => f.doc.querySelector('#start-menu');
   f.shell.menu([{ label: 'Kopiuj', onClick() {} }], 10, 10);
   const event = press(f, control, 'Escape', { ctrlKey: true });
-  assert.equal(event.defaultPrevented, false); assert.equal(seen.escapes, 1); assert.equal(menus(f), 1);
+  assert(event.defaultPrevented); assert.equal(seen.escapes, 0, 'The shortcut of the desktop is not an Esc for the window');
+  assert.equal(menus(f), 0); assert(start(), 'Start replaces the menu');
+  press(f, control, 'Escape', { ctrlKey: true, repeat: true }); press(f, control, 'Escape', { ctrlKey: true, repeat: true });
+  assert(start(), 'Held down, the shortcut does not close and reopen Start'); assert.equal(seen.escapes, 0);
+  press(f, control, 'Escape', { ctrlKey: true });
+  assert(!start(), 'Pressed again, it closes Start'); assert.equal(seen.escapes, 0); assert.equal(f.doc.activeElement, control);
+
+  // The lock screen has an Esc of its own; the shortcut opens nothing over it.
+  f.shell.power('lock'); const curtain = f.doc.querySelector('.screen-curtain');
+  press(f, curtain.querySelector('button'), 'Escape', { ctrlKey: true });
+  assert(!start()); assert(!curtain.isConnected, 'There the chord is the Esc of that screen');
 });
 
 test('a chosen command returns the keyboard to where it was, unless the command took it', () => {
