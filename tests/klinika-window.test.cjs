@@ -429,3 +429,21 @@ test('photo slot: a drawing of the patient\'s species above the caption, and a d
   const bare = fixture().q('clinic', '.kxp-photo');
   assert.deepEqual([bare.classList.contains('has-portrait'), bare.querySelector('svg'), bare.querySelector('span').textContent, bare.getAttribute('title')], [false, null, 'zdjęcie niedostępne', 'Zdjęcie zwierzęcia']);
 });
+
+/* ------------------------------------------------------------------ the icons Klinika asks for */
+test('every icon that the Klinika windows ask for while they are used is one of the set', () => {
+  const f = fixture({icons: true}), set = f.win.KxpIcons, draw = set.svg, asked = new Map();
+  set.svg = (name, ...rest) => { const markup = draw(name, ...rest); asked.set(name, (asked.get(name) || 0) + 1); assert.ok(markup, `icon "${name}" exists`); return markup; };
+  f.click(f.q('clinic', '[data-kxp="hold"]'));                       // the main window alone: toolbar, cards, case bar, steps, history, status bar
+  f.shell.windows.get('clinic').focus(); f.key('F2');                // the same sub-window again
+  f.click(f.q('clinic-editor', '[data-tool="ok"]'));                 // saved: the review with its edit strip
+  f.click(f.q('clinic', '.kxp-menu[data-menu="13"]')); f.click(f.q('clinic-about', '[data-dialog-close]'));   // "O makiecie"
+  f.openList(); f.click(f.row('V-158').children[0]); f.key('Enter'); // the list, then another patient's review
+  f.click(f.q('clinic', '[data-kxp="edit"]'));                       // a new sub-window: section titles and tools
+  f.advance(100); f.key('Escape'); f.click(f.q('clinic', '[data-kxp="close-view"]')); // Esc in the focused field: back to the review; then the history
+  const names = [...asked.keys()];
+  assert.ok(names.length >= 38, `the walk asks for the icons of every part (${names.length} names)`);
+  for (const name of names) assert.ok(set.names.includes(name), name);
+  for (const part of [['star', 'print', 'bolt', 'check', 'pause', 'folder', 'pen'], ['calendar', 'clock', 'scales', 'therm', 'notes', 'person', 'dog', 'camera', 'clipboard', 'info'], ['caseStart', 'caseVisit', 'caseTreat', 'caseBill', 'monitors', 'caseNext'],
+    ['bookCheck', 'syringe', 'search', 'tubes', 'window', 'docs', 'next', 'close'], ['chat', 'diag', 'mic', 'ai', 'pain', 'more', 'book']]) for (const name of part) assert.ok(asked.has(name), `${name} was asked for`);
+});
