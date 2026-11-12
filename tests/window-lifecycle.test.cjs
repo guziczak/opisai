@@ -382,6 +382,18 @@ test('the lock screen keeps its own keys and gives the keyboard back', () => {
   assert(!f.doc.querySelector('.screen-curtain')); assert.equal(f.doc.activeElement, control, 'Woken with the mouse: the same');
 });
 
+test('the power menu opens at its button from the keyboard, with the first item focused', () => {
+  const f = fixture(); f.shell.showStart(); const power = f.doc.querySelector('#start-power');
+  Object.assign(power.style, { left: '900px', top: '700px', width: '40px', height: '40px' }); power.focus();
+  click(power, { detail: 0, clientX: 0, clientY: 0 }); // Enter or Space: the click has no pointer position
+  let menu = f.doc.querySelector('.shell-menu');
+  assert.deepEqual([menu.style.left, menu.style.top], ['700px', '540px'], 'Placed from the middle of the button, as a click there would place it');
+  assert.equal(f.doc.activeElement, menu.querySelector('button'), 'The arrow keys work at once');
+  press(f, f.doc.activeElement, 'Escape'); assert.equal(f.doc.activeElement, power);
+  click(power, { clientX: 600, clientY: 600 }); menu = f.doc.querySelector('.shell-menu');
+  assert.deepEqual([menu.style.left, menu.style.top], ['380px', '420px']); assert.equal(f.doc.activeElement, power, 'With the mouse the menu follows the pointer and takes no focus');
+});
+
 test('"Przywróć ustawienia" clears the demo keys and reloads, also when the browser blocks storage', () => {
   for (const blocked of [false, true]) {
     const kept = { 'opisai.demo.visit.v3': '{}', 'opisai.demo.files.v1': '{}', 'opisai-demo-settings-v12': '{}', 'another-page': 'keep' };
