@@ -100,15 +100,14 @@
   const backdrop = '<rect width="144" height="144" fill="#e3ecf4"/><circle cx="72" cy="66" r="54" fill="#eef4f9"/>';
   const hair = (d, colour) => `<path d="${d}" fill="none" stroke="${colour}" stroke-width="1.1" stroke-linecap="round"/>`;
   const PORTRAITS = {
-    /* Hooded fancy rat, black and white: tail, white body, the hood over the shoulders, forelegs and paws, ears, head, face. */
+    /* Hooded fancy rat, black and white: tail, off-white body, the hood over the shoulders, paws under it, ears, head, face. */
     rat: () => backdrop + '<g transform="translate(0 -8)">'
       + '<path d="M104 126c10 3 20-2 23-12 2-7 2-14 0-20" fill="none" stroke="#d6a8a2" stroke-width="4.2" stroke-linecap="round"/>'
-      + '<path d="M32 160c-4-32 8-54 26-62h28c18 8 30 30 26 62z" fill="#f6f4f0"/>'
-      + '<path d="M50 111c0-10 9-17 22-17s22 7 22 17c-4 6-12 8.5-22 8.5s-18-2.5-22-8.5z" fill="#303136"/>'
-      + '<path d="M58 109c0 5 3 9.5 6.5 12M86 109c0 5-3 9.5-6.5 12" fill="none" stroke="#f6f4f0" stroke-width="7" stroke-linecap="round"/>'
-      + '<ellipse cx="64.5" cy="121.5" rx="4.6" ry="3.6" fill="#e6b3ac"/><ellipse cx="79.5" cy="121.5" rx="4.6" ry="3.6" fill="#e6b3ac"/>'
-      + '<ellipse cx="41" cy="47" rx="14.5" ry="16" fill="#d8aaa4" transform="rotate(-20 41 47)"/><ellipse cx="42.5" cy="48.5" rx="9" ry="10.5" fill="#c39089" transform="rotate(-20 42.5 48.5)"/>'
-      + '<ellipse cx="103" cy="47" rx="14.5" ry="16" fill="#d8aaa4" transform="rotate(20 103 47)"/><ellipse cx="101.5" cy="48.5" rx="9" ry="10.5" fill="#c39089" transform="rotate(20 101.5 48.5)"/>'
+      + '<path d="M32 160c-4-32 8-54 26-62h28c18 8 30 30 26 62z" fill="#ece7df"/>'
+      + '<ellipse cx="72" cy="106" rx="23" ry="13.5" fill="#303136"/>'
+      + '<ellipse cx="65.5" cy="118.5" rx="4.8" ry="3.4" fill="#e6b3ac"/><ellipse cx="78.5" cy="118.5" rx="4.8" ry="3.4" fill="#e6b3ac"/>'
+      + '<ellipse cx="45" cy="46" rx="10.5" ry="12.5" fill="#d8aaa4" transform="rotate(-24 45 46)"/><ellipse cx="46" cy="47.2" rx="6.3" ry="8" fill="#c39089" transform="rotate(-24 46 47.2)"/>'
+      + '<ellipse cx="99" cy="46" rx="10.5" ry="12.5" fill="#d8aaa4" transform="rotate(24 99 46)"/><ellipse cx="98" cy="47.2" rx="6.3" ry="8" fill="#c39089" transform="rotate(24 98 47.2)"/>'
       + '<path d="M72 35c18 0 30 11 30 25 0 11-8 21-15 29-4 6-9 10-15 10s-11-4-15-10c-7-8-15-18-15-29 0-14 12-25 30-25z" fill="#303136"/>'
       + '<ellipse cx="72" cy="86.5" rx="11.5" ry="10.5" fill="#393b40"/>'
       + '<path d="M68.4 82.6c0-1.8 7.2-1.8 7.2 0 0 2.6-1.6 4.6-3.6 4.6s-3.6-2-3.6-4.6z" fill="#e39aa1"/>'
