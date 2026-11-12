@@ -365,6 +365,23 @@ test('a command of a flyout leaves the keyboard with the active window; its Ente
   assert.equal(f.doc.activeElement, f.doc.querySelector('#all-apps')); assert(start());
 });
 
+test('the lock screen keeps its own keys and gives the keyboard back', () => {
+  const f = fixture(), { control, seen } = escapable(f); let enters = 0;
+  control.addEventListener('keydown', event => { if (event.key === 'Enter') enters++; });
+  f.frame.el.dispatchEvent({ type: 'focusin', target: control });
+  for (const key of ['Escape', 'Enter']) {
+    f.shell.power('lock'); const curtain = f.doc.querySelector('.screen-curtain'), button = curtain.querySelector('button');
+    assert.equal(f.doc.activeElement, button);
+    const event = press(f, button, key);
+    assert(!curtain.isConnected); assert(event.stopped, 'The key that wakes the desktop is not passed on: Esc would close a dialog behind the screen');
+    assert.equal(f.doc.activeElement, control, 'The window that was active has the keyboard again');
+    press(f, control, key, { repeat: true });
+  }
+  assert.equal(seen.escapes, 0); assert.equal(enters, 0, 'Still held, the waking key does nothing in that window');
+  f.shell.power('sleep'); click(f.doc.querySelector('.screen-curtain button'));
+  assert(!f.doc.querySelector('.screen-curtain')); assert.equal(f.doc.activeElement, control, 'Woken with the mouse: the same');
+});
+
 test('"Przywróć ustawienia" clears the demo keys and reloads, also when the browser blocks storage', () => {
   for (const blocked of [false, true]) {
     const kept = { 'opisai.demo.visit.v3': '{}', 'opisai.demo.files.v1': '{}', 'opisai-demo-settings-v12': '{}', 'another-page': 'keep' };
