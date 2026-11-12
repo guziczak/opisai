@@ -342,6 +342,29 @@ test('with nothing to return to, the keyboard goes to the active window', () => 
   assert.equal(menus(f), 0); assert.equal(f.doc.activeElement, f.doc.body);
 });
 
+test('a command of a flyout leaves the keyboard with the active window; its Enter, still held, does nothing more', () => {
+  const f = fixture(), { control } = escapable(f); let enters = 0, opened = null;
+  control.addEventListener('keydown', event => { if (event.key === 'Enter') enters++; });
+  f.frame.el.dispatchEvent({ type: 'focusin', target: control });
+  f.shell.registerApp({ id: 'opisai', title: 'OpisAI', icon: 'opisai', open() {} }); // raises its bubble: no window opens
+  f.shell.registerApp({ id: 'help', title: 'Przewodnik', icon: 'help', open() { opened = f.shell.createWindow({ id: 'help', title: 'Przewodnik' }); } });
+  const start = () => f.doc.querySelector('#start-menu'), tile = id => f.doc.querySelector(`#start-menu .start-pinned [data-open="${id}"]`);
+
+  f.shell.showStart(); tile('opisai').focus(); click(tile('opisai'), { detail: 0 }); // Enter on the tile
+  assert(!start()); assert.equal(f.doc.activeElement, control, 'The focus cannot stay on the body: the window that was active has it');
+  const repeat = press(f, control, 'Enter', { repeat: true });
+  assert(repeat.defaultPrevented); assert.equal(enters, 0, 'The Enter that chose the tile does not reach the window');
+  press(f, control, 'Enter'); assert.equal(enters, 1);
+
+  f.shell.showStart(); tile('help').focus(); click(tile('help'));
+  assert(!start()); assert.equal(f.doc.activeElement, opened.el, 'A window opened by the command keeps the keyboard');
+
+  // "Wszystkie" and "Wstecz" redraw the list inside Start: the keyboard stays in Start, on the button that leads back.
+  f.shell.showStart(); const all = f.doc.querySelector('#all-apps'); all.focus(); click(all, { detail: 0 });
+  assert.equal(f.doc.activeElement, f.doc.querySelector('#back-pinned')); click(f.doc.activeElement, { detail: 0 });
+  assert.equal(f.doc.activeElement, f.doc.querySelector('#all-apps')); assert(start());
+});
+
 test('"Przywróć ustawienia" clears the demo keys and reloads, also when the browser blocks storage', () => {
   for (const blocked of [false, true]) {
     const kept = { 'opisai.demo.visit.v3': '{}', 'opisai.demo.files.v1': '{}', 'opisai-demo-settings-v12': '{}', 'another-page': 'keep' };
