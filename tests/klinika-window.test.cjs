@@ -378,6 +378,23 @@ test('a whole saved state is taken as it is: a draft, a saved visit in review, a
   assert.deepEqual([typed.ctx().mode, typed.q('clinic', '[data-meta="date"]').value, typed.clinic.getFields().diagnoza], ['new', '12/13', 'Nieżyt górnych dróg oddechowych.']);
 });
 
+// The ZWIERZĘ card gives the animal's age on the day of the visit. With a visit date that is not a date (half typed, a
+// month 13, a word) the card read „Wiek: NaN miesięcy” as soon as the window was drawn again, and after a reload.
+test('the age in the ZWIERZĘ card stays an age while the visit date is not a date', () => {
+  const f = fixture(), card = g => g.q('clinic', '.kxp-animal').textContent, age = g => /Wiek: ([^(]*)\(/.exec(card(g))[1].trim();
+  const type = text => { const date = f.q('clinic', '[data-meta="date"]'); date.value = text; f.fire(date, 'change'); f.click(f.q('clinic', '[data-kxp="hold"]')); }; // „Na razie zatrzymaj” draws the window again
+  assert.equal(age(f), '1 rok i 9 miesięcy', 'the example: 21 months on the day of the visit, today');
+  for (const text of ['12/13', '31/13/2026', 'jutro', '']) {
+    type(text);
+    assert.equal(age(f), '1 rok i 9 miesięcy', `visit date "${text}": the age of today`);
+    assert.equal(age(fixture({saved: f.saved()})), '1 rok i 9 miesięcy', `visit date "${text}", after a reload`);
+  }
+  // A date that is one still counts from that day: half a year after the birth the animal was six months old.
+  const [, day, month, year] = /\((\d{2})\/(\d{2})\/(\d{4})\)/.exec(card(f)), later = new Date(+year, +month - 1 + 6, +day);
+  type(`${String(later.getDate()).padStart(2, '0')}/${String(later.getMonth() + 1).padStart(2, '0')}/${later.getFullYear()}`);
+  assert.equal(age(f), '6 miesięcy');
+});
+
 /* ------------------------------------------------------------------ a save that the browser refuses */
 const NOTICE = ['Klinika XP', 'Nie udało się zapisać w przeglądarce', 'Zmiany w wizytach działają do odświeżenia strony.'];
 

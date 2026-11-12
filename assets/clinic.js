@@ -101,7 +101,8 @@
   const announce = (field, source) => emit('clinic:change', { field, fields: getFields(), source: source || 'manual' });
   const toast = text => window.Shell?.toast(text);
   function plural(n, one, few, many) { const t = n % 100, u = n % 10; return n === 1 ? one : (u >= 2 && u <= 4 && (t < 12 || t > 14)) ? few : many; }
-  function monthsBetween(from, to) { const a = new Date(from + 'T12:00:00'), b = new Date((to || today()) + 'T12:00:00'); let m = (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth(); if (b.getDate() < a.getDate()) m -= 1; return Math.max(0, m); }
+  /* Age on the day of the visit; while that date is empty or still being typed, the age of today. */
+  function monthsBetween(from, to) { const a = new Date(from + 'T12:00:00'), day = new Date(to + 'T12:00:00'), b = Number.isNaN(+day) ? new Date(today() + 'T12:00:00') : day; let m = (b.getFullYear() - a.getFullYear()) * 12 + b.getMonth() - a.getMonth(); if (b.getDate() < a.getDate()) m -= 1; return Math.max(0, m); }
   function ageText(months) { const y = Math.floor(months / 12), m = months % 12, parts = []; if (y) parts.push(`${y} ${plural(y, 'rok', 'lata', 'lat')}`); if (m || !y) parts.push(`${m} ${plural(m, 'miesiąc', 'miesiące', 'miesięcy')}`); return parts.join(' i '); }
   function noteManualEdit(key, before, after) {
     const u = fieldUndo[key], now = Date.now();
