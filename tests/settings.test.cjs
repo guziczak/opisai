@@ -365,6 +365,24 @@ test('Połączenie i model: Serwis → Transport → Autoryzacja → Model with 
   assert.equal(f.q('opisai-compose', '[data-ack-text]').textContent, 'Sprawdzone: wysyłam do Claude tylko te pola, bez danych osobowych właściciela i personelu.');
 });
 
+test('Połączenie i model, Gemini over the API: the key variant fetches a key, the OAuth variant prepares OAuth and names no key (_reset_gemini_btn)', () => {
+  const f = fixture({prefs: {provider: 'gemini', transport: 'api', auth: 'api_key', model: 'gemini-3.5-flash'}}); f.api.settings();
+  const buttons = () => f.page().querySelectorAll('[data-cfg]'), group = () => f.page().querySelector('fieldset');
+  assert.equal(group().querySelector('legend').textContent, rc32.creds_titles.api_key);
+  assert.deepEqual(buttons().map(b => b.textContent), ['🔑 Pobierz klucz Gemini API']); assert.match(buttons()[0].title, /tworzy klucz ograniczony do Gemini\./);
+  const key = f.page().querySelector('input[type="password"]'); assert.equal(key.disabled, true);
+  assert.equal(key.title, 'W demonstracji klucze i tokeny nie są potrzebne ani zapisywane.', 'the field is not needed here at all: no "— w aplikacji" tail');
+  buttons()[0].click(); assert.match(f.toasts.at(-1), /^W demonstracji nic nie jest pobierane ani logowane\. .* przygotowuje klucz Gemini\.$/);
+  f.set('[data-setting="auth"]', 'gcloud_oauth');
+  assert.equal(group().querySelector('legend').textContent, rc32.creds_titles.gcloud_oauth); assert.equal(f.page().querySelectorAll('input[type="password"]').length, 0, 'creds_ui_for: no key field');
+  assert.deepEqual(buttons().map(b => b.textContent), ['Przygotuj Gemini OAuth']);
+  assert.equal(buttons()[0].title, 'Pierwszy klik pobiera portable gcloud do ./gcloud, przez Google Console przygotowuje client_secret.json i loguje OAuth Gemini. Bez klucza API.');
+  assert.match(group().textContent, /Łączy się z Gemini przez logowanie Google, bez klucza API w polu\./);
+  buttons()[0].click(); assert.match(f.toasts.at(-1), /^W demonstracji nic nie jest pobierane ani logowane\. .* loguje OAuth Gemini — bez klucza API\.$/);
+  assert(!/Pobierz klucz|klucz Gemini|tworzy klucz/.test(group().textContent + buttons()[0].title + f.toasts.at(-1)), 'nothing under "Gemini OAuth" promises an API key');
+  assert.deepEqual(f.options('[data-setting="model"]')[0], 'gemini-3.1-pro-preview');
+});
+
 test('Sekcje opisu: rc32 default sections and subsections in two tables; Konfiguruj shows the panel rows; no prompt text', () => {
   const f = fixture(); f.api.settings('sections');
   const page = f.page(), master = page.querySelectorAll('[data-section]');
