@@ -41,3 +41,18 @@ test('visit list details: only the two cards that begin with a heading style the
   assert.match(clinicJs, /'\[data-list-animal\]'\)\.textContent = p \? `ZWIERZĘ\\n/);
   assert.match(clinicJs, /'\[data-list-summary\]'\)\.textContent = sel \? KEYS\.filter\(k => sel\.fields\[k\]\)\.map\(k => `\$\{LABELS\[k\]\}: /, 'the summary has no heading line');
 });
+
+// The bundled Selawik has a regular and a semibold face, and the windows use 600 for every emphasis. A <b> left at the
+// browser's 700 looks the same with Selawik, but becomes Bold next to Semibold where the real Segoe UI is installed:
+// the dates and field labels of the visit history were heavier than the heading above them.
+test('emphasis in the Klinika windows is semibold: no bold element is left at the browser default of 700', () => {
+  for (const m of clinicCss.matchAll(/font-weight:\s*([^;}]+)/g)) assert.ok(['400', '600'].includes(m[1]), `font-weight ${m[1]}`);
+  assert.doesNotMatch(clinicCss, /font:[^;}]*\b(?:bold|[5-9]00)\b/, 'no weight hidden in a font shorthand');
+  const semibold = selector => assert.match(clinicCss, new RegExp(`(?:^|,)${selector.replace(/\./g, '\\.')}(?:,[^{]*)?\\{[^}]*font-weight:600`, 'm'), `${selector} is semibold`);
+  // every element of the markup that a browser renders bold by default: six <b>, the dialog headings, the table head
+  assert.deepEqual([...clinicJs.matchAll(/<b(?: class="([\w-]+)")?>/g)].map(m => m[1] || 'b').sort(), ['b', 'b', 'b', 'b', 'b', 'kxp-nr-value']);
+  assert.doesNotMatch(clinicJs, /<strong|<h[13-6]/);
+  for (const selector of ['.kxp-nr-value', '.kxp-history-head b', '.kxp-cost b', '.kxp-h-date b', '.kxp-h-label b', '.clinic-dialog-body h2', '.clinic-data-table th']) semibold(selector);
+  for (const [holder, count] of [['kxp-h-date', 1], ['kxp-h-label', 2], ['kxp-history-head', 1], ['kxp-cost', 1]])
+    assert.equal((clinicJs.match(new RegExp(`class="${holder}">[^<]*(?:\\$\\{[^}]*\\}[^<]*)*<b>`, 'g')) || []).length, count, `<b> inside .${holder}`);
+});

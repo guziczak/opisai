@@ -94,6 +94,7 @@
 .kxp-h-date{display:flex;align-items:center;gap:7px;height:26px;padding-left:5px;background:#e1ecf9;border-radius:2px;font-size:12px;color:#12283c;margin-bottom:6px;transition:background-color .12s}
 .kxp-h-visit:hover .kxp-h-date{background:#d2e3f6}
 .kxp-h-label{display:flex;align-items:center;gap:5px;padding-left:12px;margin-top:4px;font-size:12px}
+.kxp-h-date b,.kxp-h-label b{font-weight:600}
 .kxp-h-text{padding:2px 0 3px 37px;font-size:12px;color:#2c3843;white-space:pre-wrap}
 .kxp-h-person{display:flex;align-items:center;gap:5px;padding:3px 0 0 12px;color:#4d6275;font-size:12px}
 .kxp-h-empty{color:#5a6673;padding:10px 12px}
