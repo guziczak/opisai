@@ -488,7 +488,7 @@
 .oa-cfg-indent{margin:-4px 0 12px 160px}
 .oa-cfg-note{margin-top:16px}
 .oa-app .oa-cfg-windows{margin:4px 0 0 160px}
-@container (max-width:740px){.oa-settings-page .oa-btn{white-space:normal}.oa-settings-page .oa-number{flex-wrap:wrap}.oa-cfg-indent,.oa-app .oa-cfg-windows{margin-left:0}} /* a narrow window: a caption, or a value with its unit, wraps instead of leaving the page; stacked form rows have no label column to clear */
+@container (max-width:740px){.oa-settings-page .oa-btn{white-space:normal}.oa-settings-page .oa-number{flex-wrap:wrap}.oa-settings-page .oa-cfg-hint{overflow-wrap:break-word}.oa-cfg-indent,.oa-app .oa-cfg-windows{margin-left:0}} /* a narrow window: a caption, or a value with its unit, wraps instead of leaving the page, and a file name longer than the line of its note breaks; stacked form rows have no label column to clear */
 .oa-cfg-hash{width:100%;margin-bottom:10px;font:12px Consolas,monospace!important;color:var(--oa-muted)!important}
 .oa-cfg-table{overflow:auto;border:1px solid var(--oa-line);border-radius:7px;background:var(--oa-field)}
 .oa-cfg-table .oa-options-table th{position:sticky;top:0;z-index:1}
