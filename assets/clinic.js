@@ -25,7 +25,7 @@
   const SIDE = [['start', 'Początek', 'caseStart'], ['visit', 'Przebieg wizyty', 'caseVisit'], ['treatment', 'Leczenie', 'caseTreat'], ['billing', 'Rozliczenie', 'caseBill'], ['media', 'Multimedia', 'monitors'], ['next', 'Następna…', 'caseNext']];
   const STEPS = [['1. Badanie', 'therm', 91], ['2. Szybka diagnoza', 'bookCheck', 130], ['3. Profilaktyka', 'syringe', 112], ['4. Obserwacja', 'search', 104], ['5. Diagnostyka', 'tubes', 104], ['6. Bad. dodatkowe', 'window', 130], ['7. Kont. leczenia', 'docs', 133], ['8. Dalej', 'next', 89], ['9. Anuluj', 'close', 89]];
   const SECTION_ICONS = { wywiad: 'chat', badanie: 'therm', diagnoza: 'diag' };
-  /* Section toolbars of the description sub-window, as in kxp_mock.c editor_specs (photo 1645). */
+  /* Section toolbars of the description sub-window, as in kxp_mock.c editor_specs. */
   const SECTION_TOOLS = {
     wywiad: [['Mowa', 'mic'], ['Zredaguj', 'ai'], ['Typowe', 'search'], ['Dodatkowe', 'window'], ['OK', 'check', 'ok'], ['ANULUJ', 'close', 'cancel']],
     badanie: [['Mowa', 'mic'], ['Typowe', 'search'], ['Poziom bólu', 'pain'], ['Objawy', 'dog'], ['Więcej', 'more', 'menu']],
