@@ -11,6 +11,9 @@ const vm = require('node:vm');
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const icons = (() => { const window = {}; vm.runInNewContext(read('assets/clinic-icons.js'), { window }); return window.KxpIcons; })();
 const clinicJs = read('assets/clinic.js'), clinicCss = read('assets/clinic.css').replace(/\/\*[\s\S]*?\*\//g, '');
+// The declarations of the rule that starts a line with this selector (the stylesheet keeps one rule per line).
+const declarations = selector => { const line = clinicCss.split('\n').find(l => l.startsWith(selector + '{')); assert.ok(line, `rule ${selector} exists`);
+  return Object.fromEntries(line.slice(selector.length + 1, line.indexOf('}')).split(';').filter(Boolean).map(d => [d.slice(0, d.indexOf(':')).trim(), d.slice(d.indexOf(':') + 1).trim()])); };
 // A minimal well-formedness check: every tag is closed in order, attributes are quoted, nothing but tags is left.
 const TAG = /<(\/?)([A-Za-z][\w-]*)((?:\s+[\w:-]+="[^"<]*")*)\s*(\/?)>/g;
 const wellFormed = svg => { const stack = []; for (const m of svg.matchAll(TAG)) { if (m[1]) { if (stack.pop() !== m[2]) return false; } else if (!m[4]) stack.push(m[2]); } return !stack.length && svg.replace(TAG, '').trim() === ''; };
@@ -89,4 +92,21 @@ test('forced colours: an outline for fields and list rows, their own colours for
   assert.ok(forced.includes(`${whitened.join(',')}{filter:none}`), 'the filter is off for both');
   assert.ok(forced.includes('.kxp-list-table tr.is-selected td{forced-color-adjust:none;background:SelectedItem;color:SelectedItemText}'));
   assert.ok(forced.includes('.kxp-list-table tr.is-selected:focus-visible{outline-color:SelectedItemText}'), 'the ring of the selected row is not drawn in the colour of its fill');
+});
+
+// The description fields were the only controls whose keyboard focus could not be told from their resting state: the
+// border changed by 1.22:1 and a 30 % inner line by 1.61:1. They take the 2 px edge of the other fields. The second
+// pixel is an inset shadow, because OpisAI's spelling lines and dictation panel measure the field's box, border,
+// padding and font, and none of those may move.
+test('description fields: keyboard focus is a 2 px edge that leaves the box of the field alone', () => {
+  const focus = declarations('.kxp-section .kxp-memo:focus-visible');
+  assert.deepEqual(focus, { 'border-color': 'var(--kx-focus)', 'box-shadow': 'inset 0 0 0 1px var(--kx-focus)' });
+  assert.equal(declarations('.kxp-input:focus-visible')['box-shadow'], focus['box-shadow'], 'the same edge as the fields of the visit card');
+  const memo = declarations('.kxp-memo');
+  assert.equal(memo.border, '1px solid #7e92a5');
+  assert.equal(memo.padding, '5px 7px');
+  assert.equal(memo.margin, '0 10px');
+  assert.equal(memo.font, '13px/1.5 "Segoe UI",Selawik,Tahoma,sans-serif');
+  // the frame of a field that OpisAI points at comes later in the file and so wins over the focus edge
+  assert.ok(clinicCss.indexOf('\n.kxp-section.is-target .kxp-memo{') > clinicCss.indexOf('\n.kxp-section .kxp-memo:focus-visible{'));
 });
