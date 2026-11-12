@@ -10,6 +10,7 @@ const vm = require('node:vm');
 
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const icons = (() => { const window = {}; vm.runInNewContext(read('assets/clinic-icons.js'), { window }); return window.KxpIcons; })();
+const clinicJs = read('assets/clinic.js'), clinicCss = read('assets/clinic.css').replace(/\/\*[\s\S]*?\*\//g, '');
 // A minimal well-formedness check: every tag is closed in order, attributes are quoted, nothing but tags is left.
 const TAG = /<(\/?)([A-Za-z][\w-]*)((?:\s+[\w:-]+="[^"<]*")*)\s*(\/?)>/g;
 const wellFormed = svg => { const stack = []; for (const m of svg.matchAll(TAG)) { if (m[1]) { if (stack.pop() !== m[2]) return false; } else if (!m[4]) stack.push(m[2]); } return !stack.length && svg.replace(TAG, '').trim() === ''; };
@@ -28,4 +29,15 @@ test('patient illustrations: three kinds, decorative, shapes only, without ids o
     assert.equal(icons.portrait(kind), svg, `${kind}: the same drawing on every call`);
   }
   for (const unknown of ['hamster', 'Cat', '', undefined, null]) assert.equal(icons.portrait(unknown), '');
+});
+
+// The owner and animal cards of the list's details pane begin with a heading line ("WŁAŚCICIEL", "ZWIERZĘ"). The
+// summary below them begins with the visit's own text, which took the heading style up to the point where it wrapped.
+test('visit list details: only the two cards that begin with a heading style their first line', () => {
+  assert.match(clinicCss, /^\.kxp-list-details pre:not\(\.kxp-list-summary\)::first-line\{font-weight:600;color:#1d3f66\}$/m);
+  assert.doesNotMatch(clinicCss, /\.kxp-list-details pre::first-line/, 'no first-line rule for every block of the pane');
+  assert.match(clinicJs, /<pre data-list-owner><\/pre><pre data-list-animal><\/pre><pre class="kxp-list-summary" data-list-summary><\/pre>/);
+  assert.match(clinicJs, /'\[data-list-owner\]'\)\.textContent = p \? `WŁAŚCICIEL\\n/);
+  assert.match(clinicJs, /'\[data-list-animal\]'\)\.textContent = p \? `ZWIERZĘ\\n/);
+  assert.match(clinicJs, /'\[data-list-summary\]'\)\.textContent = sel \? KEYS\.filter\(k => sel\.fields\[k\]\)\.map\(k => `\$\{LABELS\[k\]\}: /, 'the summary has no heading line');
 });
