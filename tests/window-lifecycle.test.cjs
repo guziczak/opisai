@@ -1,7 +1,8 @@
 'use strict';
 
 // Run the real Shell without desktop startup. This small DOM fixture checks
-// lifecycle events and the matching animation rules, not browser rendering.
+// lifecycle events, the matching animation rules and the keys of open menus,
+// not browser rendering.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -78,7 +79,11 @@ class Element extends Target {
   getAttribute(name) { return name === 'class' ? this.className : this.attributes.get(name) ?? null; }
   append(...children) { for (const child of children) { child.remove(); child.parentNode = this; this.children.push(child); } }
   replaceChildren(...children) { for (const child of this.children) child.parentNode = null; this.children = []; this.append(...children); }
-  remove() { if (this.parentNode) this.parentNode.children.splice(this.parentNode.children.indexOf(this), 1); this.parentNode = null; }
+  remove() {
+    // A removed element cannot keep the focus: browsers hand it to the body.
+    if (this.contains(this.ownerDocument.activeElement)) this.ownerDocument.activeElement = this.ownerDocument.body;
+    if (this.parentNode) this.parentNode.children.splice(this.parentNode.children.indexOf(this), 1); this.parentNode = null;
+  }
   contains(node) { return node === this || this.children.some(child => child.contains(node)); }
   focus() { this.ownerDocument.activeElement = this; }
   getClientRects() { return this.isConnected && !this.hidden && this.style.display !== 'none' ? [this.getBoundingClientRect()] : []; }
@@ -129,6 +134,24 @@ function pointer(target, type, x, y, extra = {}) {
   if ((type === 'pointerup' || type === 'pointercancel') && target.hasPointerCapture(event.pointerId)) target.releasePointerCapture(event.pointerId);
 }
 function settle(frame, type = 'animationend') { frame.el.dispatchEvent({ type, animationName: 'window-open' }); }
+// A key press as the page routes it: the document's capturing listeners first (the fixture runs no desktop startup, so
+// these are the shell's menu keys alone); a key they do not stop reaches its target and then each ancestor.
+function press(f, target, key, extra = {}) {
+  const event = { type: 'keydown', key, target, defaultPrevented: false, stopped: false, ...extra };
+  event.preventDefault = () => { event.defaultPrevented = true; };
+  event.stopPropagation = event.stopImmediatePropagation = () => { event.stopped = true; };
+  f.doc.dispatchEvent(event);
+  for (let node = target; node && !event.stopped; node = node.parentNode) node.dispatchEvent(event);
+  return event;
+}
+const click = (target, extra = {}) => target.dispatchEvent({ type: 'click', detail: 1, ...extra });
+const menus = f => f.doc.querySelectorAll('.shell-menu').length;
+// A window that closes on Esc, as an OpisAI dialog or the Klinika sub-window does, with a focused control inside.
+function escapable(f, tag = 'textarea') {
+  const control = f.doc.createElement(tag), seen = { escapes: 0 }; f.frame.content.append(control); control.focus();
+  f.frame.el.addEventListener('keydown', event => { if (event.key === 'Escape') seen.escapes++; });
+  return { control, seen };
+}
 function bounds(frame) { return ['left', 'top', 'width', 'height'].map(name => frame.el.style[name]); }
 function assertReleased(f, target) {
   assert.equal(target.hasPointerCapture(7), false);
@@ -205,4 +228,45 @@ test('a different pointer cannot move or end the active gesture; interrupted res
   pointer(handle, 'pointermove', 620, 470); const resized = bounds(f.frame); pointer(handle, 'pointercancel', 620, 470);
   assert.equal(resizes, 1); assert(!f.frame.el.classList.contains('resizing')); assertReleased(f, handle);
   pointer(handle, 'pointermove', 800, 700); assert.deepEqual(bounds(f.frame), resized);
+});
+
+test('Esc belongs to an open menu alone: the window underneath does not get the key', () => {
+  const f = fixture(), { control, seen } = escapable(f); let closes = 0;
+  f.shell.menu([{ label: 'Kopiuj', onClick() {} }], 10, 10, { onClose() { closes++; } }); // opened with the mouse: the focus stays in the window
+  assert.equal(menus(f), 1); assert.equal(f.doc.activeElement, control);
+  const event = press(f, control, 'Escape');
+  assert.equal(menus(f), 0); assert.equal(closes, 1); assert(event.defaultPrevented);
+  assert.equal(seen.escapes, 0, 'The key that closed the menu cannot also cancel the window');
+  assert.equal(f.doc.activeElement, control);
+  press(f, control, 'Escape', { repeat: true }); assert.equal(seen.escapes, 0, 'Still held, the key does nothing more');
+  press(f, control, 'Escape'); assert.equal(seen.escapes, 1, 'Pressed again with nothing open, Esc reaches the window as before');
+});
+
+test('Esc closes one layer at a time and hands the keyboard back', () => {
+  const f = fixture(), { control, seen } = escapable(f, 'button');
+  const menu = f.shell.menu([{ label: 'Pisownia', children: [{ label: 'Podkreślaj', onClick() {} }] }, { label: 'Zamknij', onClick() {} }], 10, 10);
+  const owner = menu.querySelector('button'); owner.focus();
+  click(owner, { detail: 0 }); // Enter on an item with children: the submenu opens and takes the keyboard
+  assert.equal(menus(f), 2); assert.notEqual(f.doc.activeElement, owner); assert.equal(owner.getAttribute('aria-expanded'), 'true');
+  press(f, f.doc.activeElement, 'Escape');
+  assert.equal(menus(f), 1); assert.equal(f.doc.activeElement, owner, 'Esc in a submenu returns to its item'); assert.equal(owner.getAttribute('aria-expanded'), 'false');
+  press(f, owner, 'Escape');
+  assert.equal(menus(f), 0); assert.equal(f.doc.activeElement, control, 'Esc in the menu returns to the element that had the keyboard');
+  assert.equal(seen.escapes, 0);
+
+  // A menu over a flyout: the menu goes first, then the flyout; each returns the focus to its own opener.
+  f.shell.showStart(); const start = f.doc.querySelector('#start-menu'), power = f.doc.querySelector('#start-power'); assert(start.isConnected);
+  power.focus(); click(power, { clientX: 600, clientY: 600 }); assert.equal(menus(f), 1);
+  f.doc.querySelector('.shell-menu button').focus();
+  press(f, f.doc.activeElement, 'Escape');
+  assert.equal(menus(f), 0); assert(start.isConnected, 'The flyout under the menu stays'); assert.equal(f.doc.activeElement, power);
+  press(f, power, 'Escape');
+  assert(!start.isConnected); assert.equal(f.doc.activeElement, control); assert.equal(seen.escapes, 0);
+});
+
+test('Ctrl+Esc is left to the Start shortcut', () => {
+  const f = fixture(), { control, seen } = escapable(f);
+  f.shell.menu([{ label: 'Kopiuj', onClick() {} }], 10, 10);
+  const event = press(f, control, 'Escape', { ctrlKey: true });
+  assert.equal(event.defaultPrevented, false); assert.equal(seen.escapes, 1); assert.equal(menus(f), 1);
 });
