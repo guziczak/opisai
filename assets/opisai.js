@@ -2067,8 +2067,10 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
   function renderOrbActions(){
     const box=orb.el&&$('.oa-orb-actions',orb.el);if(!box)return;const list=ORB_ACTIONS[stateKey()]||[],key=list.map(a=>a[0]).join();
     if(box.dataset.key===key)return;box.dataset.key=key;
+    const held=box.contains(document.activeElement)?document.activeElement.dataset.orbAction:''; // the action with the keyboard is about to be replaced
     box.innerHTML=list.map(([action,label])=>`<button type="button" data-orb-action="${action}">${label}</button>`).join('');
     $$('[data-orb-action]',box).forEach(el=>el.addEventListener('click',event=>{event.stopPropagation();orb.chips=false;orbKick();orbAction(el.dataset.orbAction);}));
+    if(held)($(`[data-orb-action="${held}"]`,box)||$('.oa-orb',orb.el))?.focus({preventScroll:true}); // the keyboard stays in the bubble: the same action again ("Pokaż"), otherwise the disc
   }
   function showMenu(x,y,options={}){ // the bubble's right click shows the tray menu (_on_bubble_right_click)
     if(state.closed){launch();return;}
