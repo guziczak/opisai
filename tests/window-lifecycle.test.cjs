@@ -270,3 +270,25 @@ test('Ctrl+Esc is left to the Start shortcut', () => {
   const event = press(f, control, 'Escape', { ctrlKey: true });
   assert.equal(event.defaultPrevented, false); assert.equal(seen.escapes, 1); assert.equal(menus(f), 1);
 });
+
+test('a chosen command returns the keyboard to where it was, unless the command took it', () => {
+  const f = fixture(), { control } = escapable(f, 'button'); let ran = 0, enters = 0, opened = null;
+  control.addEventListener('keydown', event => { if (event.key === 'Enter') enters++; });
+  const choose = (items, detail) => { const item = f.shell.menu(items, 10, 10).querySelector('button'); item.focus(); click(item, { detail }); };
+
+  choose([{ label: 'Wybierz okno główne...', onClick() { ran++; } }], 0); // Enter on a command that only shows a notice
+  assert.equal(ran, 1); assert.equal(menus(f), 0);
+  assert.equal(f.doc.activeElement, control, 'The focus cannot stay on the body, out of reach of the keyboard');
+  const repeat = press(f, control, 'Enter', { repeat: true });
+  assert(repeat.defaultPrevented); assert.equal(enters, 0, 'The Enter that chose the command, still held, does not press the opener');
+  press(f, control, 'Enter'); press(f, control, 'Enter', { repeat: true }); assert.equal(enters, 2, 'A new press and its repeats work as usual');
+
+  choose([{ label: 'Kopiuj', onClick() { ran++; } }], 1); // a click: no key is held
+  assert.equal(f.doc.activeElement, control); press(f, control, 'Enter', { repeat: true }); assert.equal(enters, 3);
+
+  choose([{ label: 'Konfiguracja...', onClick() { opened = f.shell.createWindow({ id: 'settings', title: 'Konfiguracja' }); } }], 0);
+  assert.equal(f.doc.activeElement, opened.el, 'A window opened by the command keeps the focus');
+
+  control.focus(); choose([{ label: 'Zamknij', onClick() { control.remove(); } }], 0);
+  assert.equal(f.doc.activeElement, f.doc.body, 'An opener that is gone is not focused');
+});

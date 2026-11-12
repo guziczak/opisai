@@ -171,12 +171,13 @@
   function closeMenu(){closeSubmenu();const was=menuEl;menuEl?.remove();menuEl=null;menuFocus=null;const done=menuClose;menuClose=null;if(was)done?.();}
   function closePopups(){closeMenu();clearHover();if(popup){popup.remove();popup=null;}$$('.tray-button.open').forEach(e=>e.classList.remove('open'));}
   /* A closed menu or flyout hands the keyboard back to the element that had it before (menuFocus, lastFocus), unless another
-   * element holds it: the field that never lost it because the menu was used with the mouse, or one that onClose chose. */
+   * element holds it: the field that never lost it because the menu was used with the mouse, one that onClose chose, or the
+   * window that the chosen command opened. Otherwise the focus would stay on the body, out of reach of the next key. */
   function refocus(el){const now=document.activeElement;if((!now||now===document.body)&&el?.isConnected)el.focus({preventScroll:true});}
   /* Keys of an open menu or flyout, taken in the capture phase, before the window underneath: a menu opened with the mouse leaves
    * the focus in that window, where Esc would cancel a dialog or the visit being edited. Esc closes one layer (the submenu that
-   * has the keyboard, else the menu, else the flyout) and goes no further; Ctrl+Esc stays the Start shortcut. Held down, the
-   * key does nothing more: its repeats would reach whatever has the focus now. */
+   * has the keyboard, else the menu, else the flyout) and goes no further; Ctrl+Esc stays the Start shortcut. Held down, that
+   * Esc or the Enter that chose a command does nothing more: its repeats would reach whatever has the focus now. */
   function popupKeys(e){
     if(e.repeat&&e.key===heldKey){e.preventDefault();e.stopImmediatePropagation();return;}
     heldKey='';if(e.key!=='Escape'||e.ctrlKey||e.altKey||e.metaKey||!(menuEl||popup))return;
@@ -196,7 +197,7 @@
       const b=document.createElement('button');b.type='button';b.setAttribute('role',it.checked!==undefined?'menuitemcheckbox':'menuitem');if(it.checked!==undefined)b.setAttribute('aria-checked',String(it.checked));if(it.children){b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');}if(it.title)b.title=it.title;b.disabled=!!it.disabled;
       b.innerHTML=`<span class="menu-icon">${it.iconHtml||icon(it.checked?'check':it.icon||'blank',16)}</span><span class="menu-label">${esc(it.label)}</span>${it.shortcut?`<span class="menu-shortcut">${esc(it.shortcut)}</span>`:''}${it.children?icon('chevronRight',12):''}`;if(it.checked)b.classList.add('menu-checked');
       const open=focus=>{closeSubmenu();const sub=menuList(typeof it.children==='function'?it.children():it.children,o,b);$('#shell-popups').append(sub);subMenuEl=sub;b.setAttribute('aria-expanded','true');const r=b.getBoundingClientRect(),w=sub.getBoundingClientRect().width;positionPopup(sub,r.right+w>innerWidth?r.left-w+4:r.right-4,r.top-5);sub.onpointerenter=()=>clearTimeout(el.hoverTimer);if(focus)sub.querySelector('button:not(:disabled)')?.focus();};
-      b.onclick=e=>{e.stopPropagation();if(it.children){open(e.detail===0);return;}closeMenu();it.onClick?.();};
+      b.onclick=e=>{e.stopPropagation();if(it.children){open(e.detail===0);return;}const back=menuFocus;if(e.detail===0)heldKey='Enter';closeMenu();it.onClick?.();refocus(back);};
       b.onpointerenter=()=>{clearTimeout(el.hoverTimer);if(owner)return;el.hoverTimer=setTimeout(()=>{if(it.children){if(b.getAttribute('aria-expanded')!=='true')open(false);}else closeSubmenu();},it.children?150:250);};
       if(it.children)b.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();e.stopPropagation();open(true);}});
       el.append(b);}
