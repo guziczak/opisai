@@ -344,7 +344,7 @@
   function aboutMock() { dialog('about', 'O makiecie Kliniki XP', 470, 332, `<div class="kxp-about">${kx('caseVisit', 40)}<div><h2>Makieta Kliniki XP</h2><p>Niezależna rekonstrukcja układu okna wizyty do pokazania pracy z OpisAI. Nie jest produktem BRI ani kompletną Kliniką XP.</p><p>Odwzorowane: przebieg wizyty, osobne podokno opisu (F2), nowa wizyta (F4), przegląd zapisanej wizyty i lista wizyt (Ctrl+L). Dane są fikcyjne i zostają w tej przeglądarce.</p><p>Prawdziwe pole opisu Kliniki rysuje własne cienkie czerwone zygzaki pisowni (słownik programu); makieta ich nie rysuje. Gładkie linie pod słowami to warstwa OpisAI.</p></div></div>`); }
 
   /* ---------------------------------------------------------------- visit list (Ctrl+L) */
-  let listFilter = { owner: '', animal: '', text: '' }, listSelected = null;
+  let listFilter = { owner: '', animal: '', text: '' }, listSelected = null, strayClick = false;
   const fold = text => String(text || '').toLocaleLowerCase('pl');
   function listRows() {
     return state.visits.filter(v => { const p = patientOf(v.patient); return fold(p.owner).includes(fold(listFilter.owner)) && fold(p.name + ' ' + p.species).includes(fold(listFilter.animal)) && (!listFilter.text || fold([v.number, v.type, v.doctor, ...KEYS.map(k => v.fields[k])].join(' ')).includes(fold(listFilter.text))); }).sort((a, b) => b.occurred.localeCompare(a.occurred));
@@ -367,8 +367,9 @@
     listRoot.querySelectorAll('[data-list-action]').forEach(b => { b.disabled = !sel && b.dataset.listAction !== 'new'; });
   }
   /* The list is owned by the main window and stays above it. Once a visit chosen in it is shown, the list is put away,
-     or the visit would open behind it; Ctrl+L brings the list back as it was. A declined question leaves it in place. */
-  function openFromList(id, edit = false) { activateVisit(id, edit, () => listWindow?.minimize()); }
+     or the visit would open behind it; Ctrl+L brings the list back as it was. A declined question leaves it in place.
+     The rest of a double click on a button of the list then falls on the main window, which must not take it. */
+  function openFromList(id, edit = false) { activateVisit(id, edit, () => { listWindow?.minimize(); strayClick = true; }); }
   function openList(patientFilter) {
     if (patientFilter) { const p = patientOf(patientFilter); listFilter = { owner: '', animal: p.name, text: '' }; }
     if (listWindow && listRoot && document.contains(listRoot)) { listWindow.show(); listWindow.focus(); if (patientFilter) { listRoot.querySelector('[name=animal]').value = listFilter.animal; renderList(); } return; }
@@ -450,6 +451,7 @@
   }
   function bindMain() {
     mainRoot.addEventListener('click', event => {
+      if (strayClick && event.detail > 1) return; strayClick = false; // what is left of the multi-click that put the visit list away
       const menu = event.target.closest('[data-menu]');
       if (menu) { const i = Number(menu.dataset.menu), r = menu.getBoundingClientRect(); if (i === 4) openList(); else if (i === 13) aboutMock(); else if ([0, 1, 5].includes(i)) visitMenu(r.left, r.bottom); else notReproduced(MENUS[i]); return; }
       const side = event.target.closest('[data-side]'); if (side) { sideCommand(side.dataset.side); return; }

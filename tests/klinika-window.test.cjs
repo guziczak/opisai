@@ -335,7 +335,7 @@ test('a whole saved state is taken as it is: a draft, a saved visit in review, a
   assert.equal(draft.ctx().mode, 'saved');
   const review = fixture({saved: draft.saved()}), c = review.ctx();
   assert.deepEqual([c.mode, c.editorOpen, c.mainTitle], ['saved', false, REVIEW_TITLE]); assert.match(c.visitNumber, /^160\/\d{4}$/);
-  assert.match(review.q('clinic', '.kxp-saved').textContent, /Diagnoza:Nieżyt górnych dróg oddechowych\./);
+  assert.match(review.q('clinic', '.kxp-saved').textContent, /Diagnoza:\s*Nieżyt górnych dróg oddechowych\./);
   review.openList(); assert.equal(review.rows().length, 11); assert.equal(review.rows()[0], 'V-160');
   review.shell.windows.get('clinic').focus(); review.key('F2');
   assert.equal(review.clinic.setFields({wywiad: 'Kicha od tygodnia.'}).ok, true);
@@ -383,4 +383,22 @@ test('working storage: changes are stored and nothing is said', () => {
   f.openList(); f.click(f.row('V-071').children[0]); f.key('Enter'); f.shell.windows.get('clinic').focus(); f.key('F2');
   assert.deepEqual(f.notices(), []);
   assert.deepEqual([f.saved().mode, f.saved().visits.length, f.saved().current.id], ['edit', 11, 'V-071']);
+});
+
+test('visit list: the rest of a double click on a button of the list does not act on the main window below', () => {
+  const f = fixture(); f.key('s', {ctrlKey: true}); // the example saved: nothing is unsaved
+  f.openList(); f.click(f.row('V-104').children[0]);
+  f.click(f.q('clinic-list', '[data-list-action="review"]'), 1);
+  assert.deepEqual([f.ctx().mode, f.ctx().visitNumber, f.window('clinic-list').visible], ['saved', '104/2026', false]);
+  // The list is away, and the second click of the same double click reaches what lay under the button: here the review's edit strip.
+  f.click(f.q('clinic', '.kxp-edit-strip'), 2);
+  assert.deepEqual([f.ctx().mode, f.ctx().editorOpen], ['saved', false], 'the visit stays in the read-only review');
+  f.click(f.q('clinic', '.kxp-edit-strip'), 3);
+  assert.deepEqual([f.ctx().mode, f.ctx().editorOpen], ['saved', false], 'also after the third click of a triple click');
+  f.click(f.q('clinic', '.kxp-edit-strip'), 1);
+  assert.deepEqual([f.ctx().mode, f.ctx().editorOpen], ['edit', true], 'a click of its own goes on to the edit');
+  // A double click that starts in the main window is not affected.
+  f.advance(100); f.key('Escape'); f.click(f.q('clinic', '[data-kxp="close-view"]')); // Esc in the focused field: back to the review, then „Zamknij”
+  f.click(f.q('clinic', '[data-visit="V-158"]'), 1); f.click(f.q('clinic', '[data-visit="V-158"]'), 2);
+  assert.deepEqual([f.ctx().mode, f.ctx().visitNumber], ['saved', '158/2026']);
 });
