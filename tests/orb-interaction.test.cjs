@@ -19,7 +19,7 @@ const controllerSource = source.replace(startup, `
   finishDictation=()=>{__actions.push({type:'finish'});state.recording=null;setPhase('idle');};
   review=()=>__actions.push({type:'review'});
   settings=page=>__actions.push({type:'settings',page:typeof page==='string'?page:null});
-  Object.assign(__orbHarness,{mount:createOrb,setPhase,state,orb,preferences,launch,showBubble,closeApp,
+  Object.assign(__orbHarness,{mount:createOrb,setPhase,state,orb,preferences,launch,showBubble,closeApp,clearOfOrb,
     open(id){return makeWindow(id,'Okno',400,300,'<div></div>');}});
   return;
 ${startup}`);
@@ -539,6 +539,48 @@ test('position: rc32 default corner, remembered position and rescue of a lost bu
   const lost = fixture({ reduced: true }), [x, y] = lost.center();
   lost.pointer('pointerdown', x, y); lost.advance(200); lost.pointer('pointermove', -300, -300); lost.pointer('pointerup', -300, -300);
   lost.advance(300); assert.deepEqual(lost.center(), [1200 - 20 - 50, 752 - 20 - 50], 'a fully off-screen bubble returns to the bottom-right corner');
+});
+
+// A view of OpisAI with a box on the screen and one control in it; setBounds() records what the view is given.
+function viewAt(f, [x, y, w, h], [cx, cy], { min = [400, 300], drawn = [x, y, w, h], control = {}, size = [90, 90] } = {}) {
+  const view = f.api.open('opisai-compose'), button = f.doc.createElement('button'); view.bounds = [];
+  Object.assign(view.el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); view.el.rect = { left: drawn[0], top: drawn[1], width: drawn[2], height: drawn[3] };
+  Object.assign(view.options, { minWidth: min[0], minHeight: min[1] }); view.setBounds = bounds => view.bounds.push(bounds);
+  for (const [name, value] of Object.entries(control)) button.setAttribute(name, value);
+  button.rect = { left: cx - size[0] / 2, top: cy - size[1] / 2, width: size[0], height: size[1] }; view.el.append(button); f.over(button); view.button = button;
+  return view;
+}
+test('a view that opens with a control under the bubble makes room beside it; the bubble never moves', () => {
+  const f = fixture(), [x, y] = f.center(); assert.deepEqual([x, y], [1030, 552]); // work area 1200 × 752; the bubble with its growth and a 16 px gap keeps 950…1110 × 472…632
+  let view = viewAt(f, [200, 100, 900, 600], [x + 30, y - 20]);
+  assert.equal(f.api.clearOfOrb(view), true); assert.deepEqual(plain(view.bounds), [{ x: 50, y: 100, width: 900, height: 600 }], 'place_around_orb: the whole view first, at the nearest place beside the bubble');
+  view.close(); view = viewAt(f, [12, 12, 1176, 728], [x, y + 49]);
+  assert.equal(f.api.clearOfOrb(view), true); assert.deepEqual(plain(view.bounds), [{ x: 12, y: 12, width: 938, height: 728 }], 'no such place: the side that keeps most of the view, never below its minimum');
+  view.close(); view = viewAt(f, [12, 12, 1176, 728], [x, y], { min: [1100, 700] });
+  assert.equal(f.api.clearOfOrb(view), false); assert.deepEqual(view.bounds, [], 'no room for a usable view: it stays under the bubble, which the user can drag away (rc32)');
+  assert.deepEqual(f.center(), [x, y], 'the bubble is the user\'s: it never moves');
+});
+
+test('a view stays where it opened unless a control it shows is under the bubble', () => {
+  const f = fixture(), [x, y] = f.center(), box = [200, 100, 900, 600], stays = (view, why) => { assert.equal(f.api.clearOfOrb(view), false, why); assert.deepEqual(view.bounds, [], why); view.close(); };
+  stays(viewAt(f, box, [x + 38, y + 38]), 'the middle of the control is 54 px from the centre of the 100 px disc: a click there reaches it');
+  stays(viewAt(f, box, [x - 300, y]), 'the bubble lies over an empty part of the view');
+  stays(viewAt(f, box, [x, y], { size: [700, 84] }), 'a text area the bubble merely stands on: its middle, but a seventh of it');
+  stays(viewAt(f, box, [x + 20, y], { size: [310, 40] }), 'a long field: less than a third of it');
+  let view = viewAt(f, box, [x + 20, y], { size: [290, 40] }); assert.equal(f.api.clearOfOrb(view), true, 'a short field: its middle and more than a third of it'); view.close();
+  view = viewAt(f, box, [x, y]); f.over(f.doc.createElement('section')); stays(view, 'the control is scrolled out of view or behind another window');
+  view = viewAt(f, box, [x, y]); f.over(); stays(view, 'nothing of the view is drawn there');
+  stays(viewAt(f, box, [x, y], { control: { 'aria-disabled': 'true' } }), 'a tile that is not offered');
+  view = viewAt(f, box, [x, y]); view.button.disabled = true; stays(view, 'a disabled button');
+  view = viewAt(f, box, [x, y]); view.maximized = true; stays(view, 'a maximized view has no other place');
+  view = viewAt(f, box, [x, y]); f.api.orb.soaked = true; stays(view, 'a bubble soaked into a field covers nothing'); f.api.orb.soaked = false;
+  view = viewAt(f, box, [x, y]); assert.equal(f.api.clearOfOrb(view), true, 'the same view with the control under the bubble'); view.close();
+  view = viewAt(f, box, [x + 36, y + 36]); assert.equal(f.api.clearOfOrb(view), true, '51 px: the browser still gives that click to the round button'); view.close();
+  // The opening animation draws the window at 98 % and 8 px lower; the control is judged where it will stand.
+  const drawn = [200 + 9, 100 + 6 + 8, 900 * .98, 600 * .98], at = (cx, cy) => [drawn[0] + (cx - 200) * .98, drawn[1] + (cy - 100) * .98];
+  assert(Math.hypot(at(x + 55, y)[0] - x, at(x + 55, y)[1] - y) < 50, 'drawn under the bubble during the animation');
+  stays(viewAt(f, box, at(x + 55, y), { drawn }), 'but 55 px from its centre once the window stands');
+  view = viewAt(f, box, at(x + 40, y), { drawn }); assert.equal(f.api.clearOfOrb(view), true); assert.deepEqual(plain(view.bounds), [{ x: 50, y: 100, width: 900, height: 600 }]);
 });
 
 test('"Zamknij" plays the exit and hides the bubble until OpisAI is started again', () => {

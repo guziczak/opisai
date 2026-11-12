@@ -203,7 +203,7 @@
       op.finished = true; op.dictation = null; win.close(); generate(op);
     });
     // The window opens at its top: with stacked columns the selected tile lies below the sources, and focusing it must not scroll them away.
-    refresh(); setTimeout(() => (op.texts[scope.sources[0]] ? $$('[data-tile]', root).find(t => t.classList.contains('selected')) : $('[data-source]', root))?.focus({preventScroll: true}), 0);
+    refresh(); clearOfOrb(win); setTimeout(() => (op.texts[scope.sources[0]] ? $$('[data-tile]', root).find(t => t.classList.contains('selected')) : $('[data-source]', root))?.focus({preventScroll: true}), 0);
   }
   function composeClosed(op) { // Anuluj or ×: nothing was sent; a dictation summary comes back
     if (op.finished) return; op.finished = true; state.resume = null;
@@ -346,17 +346,18 @@
     const estimate = 150 + 22 * (lines(text) + Math.ceil(String(text).length / 90) + (informative ? 2 : 0)) + (extra ? 160 : 0);
     const win = makeWindow(id, title, width, Math.min(640, estimate), html, () => { if (!box.done) { box.done = true; onClose?.(null); } });
     if (win.options) win.options.minHeight = Math.min(win.options.minHeight ?? 200, 180);
-    const root = win.content, box = {win, content: root, done: false, close: () => win.close(), fit: () => requestAnimationFrame(() => { // CompactDialog._fit_content: the natural height of the content
+    const root = win.content, box = {win, content: root, done: false, close: () => win.close(), fit: opening => requestAnimationFrame(() => { // CompactDialog._fit_content: the natural height of the content
       const inner = $('.oa-mb', root), body = $('.oa-mb-body', root); if (!inner || !body || !win.el?.isConnected || win.maximized) return;
       const chrome = win.el.offsetHeight - root.clientHeight; inner.style.height = 'auto'; inner.style.flex = body.style.flex = 'none';
       const natural = inner.offsetHeight; inner.style.height = inner.style.flex = body.style.flex = '';
       win.setBounds?.({height: Math.min(innerHeight - 60, chrome + natural)});
+      if (opening) clearOfOrb(win); // its buttons have their place now
     })};
     for (const b of buttons) bind(root, 'mb-' + b.action, () => { box.done = true; win.close(); b.onClick?.(); onClose?.(b.action); });
     bind(root, 'toggle-details', () => { const d = $('[data-details]', root), open = d.hidden; d.hidden = !open; const t = $('[data-action="toggle-details"]', root); t.textContent = open ? 'Ukryj szczegóły' : 'Pokaż szczegóły'; t.setAttribute('aria-label', open ? 'Zwiń szczegóły techniczne' : 'Rozwiń szczegóły techniczne'); box.fit(); });
     bind(root, 'copy-details', () => copyText(details, $('[data-action="copy-details"]', root)));
     root.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); win.close(); } });
-    box.fit(); setTimeout(() => $(`[data-action="mb-${(buttons.find(b => b.default) || buttons.at(-1)).action}"]`, root)?.focus(), 0);
+    box.fit(true); setTimeout(() => $(`[data-action="mb-${(buttons.find(b => b.default) || buttons.at(-1)).action}"]`, root)?.focus(), 0);
     return box;
   }
 
@@ -410,7 +411,7 @@
     ws.onClose = () => { rejectReview(result, ws, true); };
     state.active = ws.win;
     if (!result.historyId) recordHistory(result, 'generated');
-    reviewView(result, ws);
+    reviewView(result, ws); clearOfOrb(ws.win); // the page and its controls are new, also in the window that showed the progress
   }
   function reviewHtml(result) {
     const dict = result.mode === 'dictation', g = result.generated, tm = result.transcriptionView;
@@ -937,6 +938,28 @@
   function placeDictationPanel(anchor,work,orbBox,minimum,preferred=280){ // the field's width and bottom edge, at least 320 × 260, growing upward
     const width=Math.max(anchor.w,minimum[0]),height=Math.max(minimum[1],Math.min(anchor.h,preferred));
     return placeAroundOrb({x:anchor.x,y:anchor.y+anchor.h-height,w:width,h:height},work,orbBox,minimum,12);
+  }
+  /* A view that opens with one of its controls under the bubble makes room for it: beside the bubble at its full size,
+   * otherwise fitted next to it down to its minimum size (place_around_orb, as for the dictation preview). rc32 centres
+   * its dialogs under the always-on-top bubble and leaves the bubble to the user; a browser viewport is often too small
+   * for both, and the bubble then lies on a variant tile, on "Porównaj" or on "Gotowe". A control is under the bubble
+   * when the disc hides its middle and a third or more of it: a button, a tile or a short field, not a text area the
+   * bubble merely stands on. The bubble is the user's and never moves; a view with no such control, or with no room
+   * beside the bubble, stays where it opened. */
+  function clearOfOrb(win){
+    const ob=orbRect(),el=win?.el;if(!ob||!el?.isConnected||el.hidden||win.maximized||!win.setBounds)return false;
+    const box=el.getBoundingClientRect(),b={x:parseFloat(el.style.left),y:parseFloat(el.style.top),w:parseFloat(el.style.width),h:parseFloat(el.style.height)};
+    if(!(box.width>0&&box.height>0&&b.w>0&&b.h>0))return false;
+    const cx=ob.x+ob.w/2,cy=ob.y+ob.h/2,kx=b.w/box.width,ky=b.h/box.height,hidden=(from,size,at)=>Math.max(0,Math.min(from+size,at+ORB_R)-Math.max(from,at-ORB_R));
+    const under=c=>{ // measured in the window's final box: the opening animation draws it smaller and lower
+      const r=c.getBoundingClientRect(),w=r.width*kx,h=r.height*ky,x=b.x+(r.left-box.left)*kx,y=b.y+(r.top-box.top)*ky;
+      if(!w||!h||Math.hypot(x+w/2-cx,y+h/2-cy)>=ORB_R+2||3*hidden(x,w,cx)*hidden(y,h,cy)<w*h)return false; // + 2 px: a click is caught up to a pixel past the round edge
+      const stack=document.elementsFromPoint?.(r.left+r.width/2,r.top+r.height/2);return !stack||c.contains(stack.find(e=>!orb.el.contains(e))||null); // not a control scrolled out of view or behind another window
+    };
+    if(!$$('button,input,select,textarea,a[href],[tabindex="0"]',el).some(c=>!c.disabled&&c.getAttribute('aria-disabled')!=='true'&&under(c)))return false;
+    const a=workArea(),gap=16,g=placeAroundOrb(b,{x:a.left,y:a.top,w:a.right-a.left,h:a.bottom-a.top},ob,[win.options?.minWidth??320,win.options?.minHeight??220],gap);
+    if(overlaps(g,{x:ob.x-gap,y:ob.y-gap,w:ob.w+2*gap,h:ob.h+2*gap}))return false; // rc32's fallback: a usable window under the bubble, which the user can drag away
+    win.setBounds({x:g.x,y:g.y,width:g.w,height:g.h});return true;
   }
   function followDictation(rec){ // _follow_tick / _apply_follow_rect: a missing, minimized or reopened target hides, never retargets
     const el=rec?.el;if(!el)return;

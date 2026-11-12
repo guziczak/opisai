@@ -16,7 +16,8 @@ const startup = "  if(document.readyState==='loading')";
 assert.equal(source.split(startup).length, 2, 'The test boundary must precede the single application startup');
 const controllerSource = source.replace(startup, `
   failure=message=>{__failures.push(message);};
-  Object.assign(__api,{prepare,review,undo,history,settings,state,preferences:()=>preferences,setPhase,closeApp,menu:orbMenuItems});
+  Object.assign(__api,{prepare,review,undo,history,settings,state,preferences:()=>preferences,setPhase,closeApp,menu:orbMenuItems,
+    bubbleAt(x,y){orbRect=()=>({x:x-64,y:y-64,w:128,h:128});}}); // the bubble is not mounted here: its box is given
   return;
 ${startup}`);
 
@@ -99,7 +100,7 @@ class Element extends Target {
   focus(options) { this.doc.activeElement = this; if (!options?.preventScroll) this.doc.scrolledTo = this; } // a browser scrolls a focused element into view unless told not to
   blur() {}
   scrollIntoView() {}
-  getBoundingClientRect() { return {top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0}; }
+  getBoundingClientRect() { return this.doc.rects?.(this) || {top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0}; }
 }
 /* Selectors: compound (tag, #id, .class, [attr], [attr="v"], :not(...)) joined by descendant spaces, comma lists. */
 function splitTop(text, separator) {
@@ -148,19 +149,20 @@ const SAMPLE = {
   diagnoza: 'Podejrzenie mykoplazmozy układu oddechowego (MRM); zakażenie dróg oddechowych.'
 };
 const WINDOW_CHANGED = 'Zmieniło się okno, proces programu lub mapowanie pól. Odczytaj pola ponownie.';
-function fixture({fields = SAMPLE, storage: saved = {}} = {}) {
+function fixture({fields = SAMPLE, storage: saved = {}, rects = null} = {}) { // rects(element): the box of a window or a control, for the tests that need a layout
   const doc = new Target(), win = new Target(), timers = new Map(), frames = new Map(), toasts = [], failures = [], api = {}, storage = new Map(Object.entries(saved)), clipboard = [];
   let now = 0, serial = 0;
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body);
   doc.createElement = tag => new Element(tag, doc); doc.createElementNS = (_, tag) => new Element(tag, doc);
   doc.querySelector = selector => doc.documentElement.querySelector(selector); doc.querySelectorAll = selector => doc.documentElement.querySelectorAll(selector);
-  doc.getElementById = id => doc.querySelector('#' + id); doc.hidden = false; doc.readyState = 'complete';
+  doc.getElementById = id => doc.querySelector('#' + id); doc.hidden = false; doc.readyState = 'complete'; doc.rects = rects;
   const windows = new Map();
   const shell = {windows, toast: message => { toasts.push(message); return {remove() {}}; }, menu: () => null, confirm: o => toasts.push(o.message), registerApp() {},
     createWindow(o) {
       if (windows.has(o.id)) { const existing = windows.get(o.id); existing.show(); return existing; }
       const el = doc.createElement('section'); el.setAttribute('data-window', o.id); const content = doc.createElement('div'); content.className = 'window-content'; el.append(content); content.innerHTML = o.content; doc.body.append(el);
-      const w = {id: o.id, el, content, options: o, title: o.title, closed: false, maximized: false, show() {}, focus() {}, minimize() {}, setBounds() {},
+      const box = rects?.(el); if (box) Object.assign(el.style, {left: box.left + 'px', top: box.top + 'px', width: box.width + 'px', height: box.height + 'px'}); // as the shell's setRect
+      const w = {id: o.id, el, content, options: o, title: o.title, closed: false, maximized: false, show() {}, focus() {}, minimize() {}, setBounds(box) { this.bounds = {...this.bounds, ...box}; },
         setTitle(title) { this.title = title; }, setContent(html) { content.innerHTML = html; },
         close() { if (o.onClose?.() === false) return false; this.closed = true; el.remove(); windows.delete(o.id); return true; }};
       windows.set(o.id, w); return w;
@@ -530,6 +532,26 @@ test('OpisAI says it in its own message box: the journal from the bubble menu an
   assert.equal(f.win('opisai-message').title, 'OpisAI — informacja'); assert.equal(f.messageText(), 'Kończę transport. Zamknij aplikację po zwolnieniu bieżącej operacji.');
   assert.deepEqual(f.toasts, []); assert.equal(f.api.state.closed, false); assert.equal(f.q('opisai-review', '[data-heading]').textContent, 'Anuluję generowanie');
   f.advance(2000); assert.equal(f.q('opisai-recovery', 'h2').textContent, 'Anulowano przygotowanie');
+});
+
+test('compose, the review and a message box that open with a control under the bubble make room beside it; other views stay where they opened', () => {
+  // Every window stands at 180,60 and is 1040 × 690 in a 1400 × 852 work area. The bubble is at 1100,500 and keeps 1020…1180 × 420…580.
+  const UNDER = '[data-tile], [data-action="compare"], [data-action="mb-close"]'; // a variant tile, "Porównaj", "Gotowe"
+  const layout = covered => el => el.hasAttribute('data-window') ? {left: 180, top: 60, width: 1040, height: 690} : covered && el.matches(UNDER) ? {left: 1060, top: 470, width: 80, height: 60} : null;
+  const beside = {x: 12, y: 60, width: 1008, height: 690}; // place_around_orb: no room for the whole window, so the side that costs least (32 px of width)
+  let f = fixture({rects: layout(true)}); f.api.bubbleAt(1100, 500);
+  f.compose(); assert.deepEqual(f.win('opisai-compose').bounds, beside, 'a variant tile under the bubble: "Przygotuj opis" opens beside it');
+  f.check('opisai-compose', '#oa-compose-ack'); f.click('opisai-compose', '[data-action="generate"]'); f.advance(500);
+  assert.equal(f.q('opisai-review', '[data-heading]').textContent, 'Powstaje opis wizyty'); assert.equal(f.win('opisai-review').bounds, undefined, 'the progress page has no control there');
+  f.advance(30000); assert.ok(f.q('opisai-review', '#oa-review-ack')); assert.deepEqual(f.win('opisai-review').bounds, beside, '"Porównaj" under the bubble: the review page moves the window that showed the progress');
+  f.approve(); assert.equal(f.win('opisai-message').title, 'OpisAI — wpisano do pól');
+  assert.deepEqual(f.win('opisai-message').bounds, beside, '"Gotowe" under the bubble: the receipt, once it has its height');
+  f = fixture({rects: layout(false)}); f.api.bubbleAt(1100, 500); // the same windows with nothing of theirs under the bubble
+  f.compose(); assert.equal(f.win('opisai-compose').bounds, undefined, 'rc32: a view opens where the desktop puts it');
+  f.generate(); assert.equal(f.win('opisai-review').bounds, undefined);
+  f.approve(); assert.deepEqual(Object.keys(f.win('opisai-message').bounds), ['height'], 'a message box only takes the height of its content');
+  f = fixture({rects: layout(true)}); f.compose(); f.generate(); f.approve(); // no bubble on the screen (closed, or soaked into a field)
+  assert.deepEqual(Object.keys(f.win('opisai-message').bounds), ['height']);
 });
 
 test('undo: a conflicting write is the last receipt; undo asks to clarify it instead of reverting an older write', () => {
