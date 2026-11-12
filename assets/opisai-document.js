@@ -761,7 +761,7 @@
       'WNIOSKI: inference tylko w slotach z allow_inference=true. […]'];
     if (!r.diagnosis) rules.push('Nie zamówiono rozpoznania: bez nowej diagnozy. […]');
     if (p.included.some(s => s.role === 'diagnosis')) rules.push('Źródło role=diagnosis: diagnoza lekarza z zachowaniem jej pewności. […]');
-    if (r.mode === 'rich') rules.push('STYL UŻYTKOWNIKA: styl Bogato z Ustawień; nie zmienia faktów, uprawnień ani kontraktu. […]');
+    if (r.mode === 'rich') rules.push('STYL UŻYTKOWNIKA: styl Bogato z Konfiguracji; nie zmienia faktów, uprawnień ani kontraktu. […]');
     if (r.panel) rules.push('PANEL: wiersze składa aplikacja w slocie is_panel; model ich nie generuje. […]', 'W panel_quotes: dosłowne cytaty ze źródeł dla parametrów panelu. […]', 'W text slotu panelu: bez powtórzeń wierszy source_rows. […]');
     const tasks = [], purposes = [];
     for (const s of p.sections) {

@@ -505,6 +505,16 @@ test('O aplikacji: the rc32 header, pages and copy texts; Kontakt without phone 
   assert.equal(page().querySelector('textarea').value, f.api.LICENSE_TEXTS.deps);
 });
 
+test('"Zasady i źródła" names Konfiguracja as the source of the Bogato style; "Ustawienia" is the desktop application of this page', () => {
+  const f = fixture(); f.api.prepare(); f.advance(1000);
+  const rules = () => f.q('opisai-compose', '[data-rules] textarea').value;
+  assert.match(rules(), /^TRYB WIERNY: /m); assert.doesNotMatch(rules(), /STYL UŻYTKOWNIKA/);
+  f.root('opisai-compose').querySelectorAll('[data-tile]').find(t => JSON.parse(t.dataset.tile).rich && t.getAttribute('aria-disabled') !== 'true').click(); f.advance(0);
+  assert.match(rules(), /^STYL UŻYTKOWNIKA: styl Bogato z Konfiguracji; nie zmienia faktów, uprawnień ani kontraktu\. \[…\]$/m);
+  assert.doesNotMatch(rules(), /Ustawie/);
+  assert.equal(f.win.OpisAIDocument.PANEL_COPY, 'Panel: wartości z pól, a brakujące parametry według Ustawień (np. norma).', 'the caption of the panel tile is the rc32 text (ui/variant_copy.py) and stays');
+});
+
 /* The layout contract of a window smaller than the rc32 dialogs can get (a phone), read from the stylesheet:
  * measured in a browser at 390x844, a text block of O aplikacji lay over the next one and a caption left its button. */
 test('small windows: a tab page of O aplikacji scrolls and its cards hold their text; Konfiguracja wraps captions and stacked rows lose the label indent', () => {
