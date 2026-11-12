@@ -454,3 +454,12 @@ test('the context menu of the dictation preview has the theme in use: "Automatyc
     assert.equal(f.menus.at(-1).options.className, dark ? 'oa-menu oa-theme-dark' : 'oa-menu', `${theme} on a ${desktop} desktop: its menu`);
   }
 });
+
+test('"Zamknij" while dictating says why not in OpisAI\'s own message box (can_quit → _say), never in a confirmation window of the desktop', () => {
+  const f = fixture({ prefs: { transcriber: 'local_whisper' } });
+  f.api.dictate(); f.advance(2600); assert.equal(f.phase, 'recording');
+  f.shown.length = 0; f.api.closeApp(); f.advance(50);
+  assert.equal(f.state.closed, false, 'OpisAI stays'); assert.deepEqual(f.shown, ['opisai-message']); assert.deepEqual(f.confirms, []);
+  assert.equal(f.doc.querySelector('.oa-mb-text').text, 'Zakończ odczyt albo dyktowanie przed zamknięciem.');
+  assert.equal(f.doc.querySelector('.oa-mb').querySelector('h2').text, 'Informacja');
+});

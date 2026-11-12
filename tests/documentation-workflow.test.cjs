@@ -16,7 +16,7 @@ const startup = "  if(document.readyState==='loading')";
 assert.equal(source.split(startup).length, 2, 'The test boundary must precede the single application startup');
 const controllerSource = source.replace(startup, `
   failure=message=>{__failures.push(message);};
-  Object.assign(__api,{prepare,review,undo,history,settings,state,preferences:()=>preferences,setPhase});
+  Object.assign(__api,{prepare,review,undo,history,settings,state,preferences:()=>preferences,setPhase,closeApp,menu:orbMenuItems});
   return;
 ${startup}`);
 
@@ -512,6 +512,24 @@ test('a child window never outlives its parent: the prompt-and-answer view goes 
   assert(!f.win('opisai-history-delete'), 'a rebuilt list has no question about the old one');
   f.click('opisai-history', '[data-action="delete-history"]'); f.click('opisai-history-delete', '[data-action="mb-yes"]');
   assert.equal(f.api.state.history.length, 0); assert.equal(f.root('opisai-history').querySelectorAll('[data-entry]').length, 0, 'answered in its list, the entry goes');
+});
+
+test('OpisAI says it in its own message box: the journal from the bubble menu and from a recovery report, "Zamknij" during generation', () => {
+  let f = fixture();
+  const journal = () => [f.win('opisai-journal')?.title, f.q('opisai-journal', 'h2').textContent, f.q('opisai-journal', '.oa-mb-text').textContent];
+  const empty = ['Dziennik', 'Informacja', 'Brak niezamkniętych lub niepotwierdzonych operacji.']; // QMessageBox.information(bubble, "Dziennik", …)
+  f.api.menu().find(item => item.label === 'Bezpieczny zapis i odzyskiwanie').children().find(item => item.label === 'Sprawdź niepotwierdzone operacje…').onClick(); f.advance(0);
+  assert.deepEqual(journal(), empty); assert.deepEqual(f.toasts, [], 'not the confirmation window of the desktop');
+  assert.equal(f.doc.activeElement?.getAttribute('data-action'), 'mb-close', 'the keyboard is on OK');
+  f.click('opisai-journal', '[data-action="mb-close"]'); assert(!f.win('opisai-journal'));
+  f.compose(); f.generate(); f.clinic.editor = false; f.approve(); // an unconfirmed write: the report offers "Sprawdź dziennik"
+  assert.equal(f.q('opisai-recovery', '[data-action="mb-act"]').textContent, 'Sprawdź dziennik'); f.click('opisai-recovery', '[data-action="mb-act"]');
+  assert.deepEqual(journal(), empty, 'the same window from the report');
+  f = fixture(); f.compose(); f.check('opisai-compose', '#oa-compose-ack'); f.click('opisai-compose', '[data-action="generate"]'); f.advance(500);
+  f.api.closeApp(); f.advance(0); // can_quit: the job is cancelled and _say() explains
+  assert.equal(f.win('opisai-message').title, 'OpisAI — informacja'); assert.equal(f.messageText(), 'Kończę transport. Zamknij aplikację po zwolnieniu bieżącej operacji.');
+  assert.deepEqual(f.toasts, []); assert.equal(f.api.state.closed, false); assert.equal(f.q('opisai-review', '[data-heading]').textContent, 'Anuluję generowanie');
+  f.advance(2000); assert.equal(f.q('opisai-recovery', 'h2').textContent, 'Anulowano przygotowanie');
 });
 
 test('undo: a conflicting write is the last receipt; undo asks to clarify it instead of reverting an older write', () => {

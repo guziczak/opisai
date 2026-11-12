@@ -296,7 +296,7 @@
     const status = writing ? 'Wynik wpisania nie został potwierdzony. Sprawdź pola w Klinice i dziennik operacji. Nie ponawiaj wpisania automatycznie.' : {not_sent: 'Nie wysłano notatki do AI. Pola wizyty pozostają bez zmian.', not_retried: 'Nie wysłano notatki ponownie. Pola wizyty pozostają bez zmian.', received: 'Odebrano odpowiedź serwisu. Pola wizyty pozostają bez zmian. Nie wysłano notatki ponownie.'}[delivery] || 'Pola wizyty pozostają bez zmian. Nie ponawiam wysyłania automatycznie. Poprzednie żądanie mogło dotrzeć do serwisu.';
     const report = rows.map(([k, v]) => `${k}: ${v}`).join('\n');
     const extra = `<div class="oa-mb-report"><div class="oa-mb-report-head"><strong>Raport diagnostyczny</strong>${linkButton('Do zdjęcia', 'photo', 'title="Pokaż pełny raport do zdjęcia; ukryj opis i zachowany tekst."')}${linkButton('Kopiuj raport', 'copy-report', 'aria-label="Kopiuj pełny raport diagnostyczny"')}</div><dl>${rows.map(([k, v, compact]) => `<dt title="${esc(k)}">${esc(compact || k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl></div>${issue.note ? `${linkButton('Pokaż zachowaną notatkę', 'note')}<div class="oa-mb-note" data-note hidden><pre>${esc(issue.note)}</pre>${button('Kopiuj zachowaną notatkę', 'copy-note', 'small')}</div>` : ''}`;
-    const act = () => { if (issue.action === 'review') retryGeneration(); else if (issue.action === 'fresh') { state.resume = null; describe(); } else if (issue.action === 'journal') messageBox({title: 'Dziennik', icon: 'info', text: 'Brak niezamkniętych lub niepotwierdzonych operacji.'}); };
+    const act = () => { if (issue.action === 'review') retryGeneration(); else if (issue.action === 'fresh') { state.resume = null; describe(); } else if (issue.action === 'journal') inspectJournal(); };
     const buttons = [{label: 'Zamknij', action: 'close', default: true}, ...(issue.action ? [{label: issue.actionLabel, action: 'act', primary: true, onClick: act}] : [])];
     const box = messageBox({id: 'opisai-recovery', title: 'OpisAI — ' + (writing ? 'sprawdź wpisanie' : 'następny krok'), icon: 'warning', heading: issue.title, text: issue.explanation + '\n\n' + issue.next, informative: status, extra, buttons, width: 960});
     const root = box.content;
@@ -306,6 +306,8 @@
     bind(root, 'copy-note', () => copyText(issue.note, $('[data-action="copy-note"]', root)));
     return box;
   }
+  /* coordinator.inspect_journal, from the recovery report and from the bubble menu: the demonstration never leaves an unresolved operation. */
+  function inspectJournal() { messageBox({id: 'opisai-journal', title: 'Dziennik', icon: 'info', text: 'Brak niezamkniętych lub niepotwierdzonych operacji.'}); }
   /* _retry_generation: read the visit again; resume the retained note only on the same, unchanged fields. */
   function retryGeneration() {
     const saved = state.resume; if (!saved) { describe(); return; }
@@ -1822,8 +1824,8 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
   /* Bubble.trigger_exit_animation ("Zamknij"): soft collapse with one ripple, about 0.38 s. */
   function closeApp(){
     if(state.closed)return;
-    if(state.recording){finishDictation();Shell.confirm({title:'OpisAI — informacja',icon:'info',message:'Zakończ odczyt albo dyktowanie przed zamknięciem.'});return;}
-    if(state.job){state.job.cancel();Shell.confirm({title:'OpisAI — informacja',icon:'info',message:'Kończę transport. Zamknij aplikację po zwolnieniu bieżącej operacji.'});return;}
+    if(state.recording){finishDictation();messageBox({title:'OpisAI — informacja',icon:'info',text:'Zakończ odczyt albo dyktowanie przed zamknięciem.'});return;} // can_quit → _say: OpisAI's own message box
+    if(state.job){state.job.cancel();messageBox({title:'OpisAI — informacja',icon:'info',text:'Kończę transport. Zamknij aplikację po zwolnieniu bieżącej operacji.'});return;}
     liveWindows().forEach(w=>w.close());state.review=null;state.operation=null;state.active=null;dismissCard(true);markField(null);
     const finish=()=>{state.closed=true;syncTray();orb.exit=null;stopPhysics();if(orb.el)orb.el.classList.add('is-hidden');hideHint();toast('OpisAI zostało zamknięte. W demonstracji bąbelek wróci po kliknięciu ikony OpisAI w zasobniku albo na pulpicie.');};
     cancelGesture();releaseIdleMotion();stopPhysics();hideHint();
@@ -2115,7 +2117,7 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
       {separator:true},
       {label:'Bezpieczny zapis i odzyskiwanie',children:()=>[
         {label:'Cofnij ostatni potwierdzony wpis…',onClick:undo},
-        {label:'Sprawdź niepotwierdzone operacje…',onClick:()=>Shell.confirm({title:'Dziennik',icon:'info',message:'Brak niezamkniętych lub niepotwierdzonych operacji.'})}]}
+        {label:'Sprawdź niepotwierdzone operacje…',onClick:inspectJournal}]}
     ];
   }
   /* MacroController._spelling_target: no spelling lines while OpisAI reads, generates, reviews, writes, dictates or
