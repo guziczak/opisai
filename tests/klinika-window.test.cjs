@@ -305,7 +305,7 @@ const example = (f, label) => {
 
 test('an incomplete saved state starts from the example instead of leaving Klinika empty', () => {
   const incomplete = {
-    // the six states that ended in an exception in the storage fuzz of the final review
+    // states that used to end in an exception while the windows were drawn
     'current.meta missing': s => { delete s.current.meta; },
     'current.meta null': s => { s.current.meta = null; },
     'visits [{}]': s => { s.visits = [{}]; },
@@ -347,6 +347,10 @@ test('a whole saved state is taken as it is: a draft, a saved visit in review, a
   const history = fixture({saved: edit.saved()});
   assert.deepEqual([history.ctx().mode, history.ctx().editorOpen], ['history', false]); assert.match(history.ctx().visitNumber, /^160\/\d{4}$/);
   assert.equal(history.q('clinic', '.kxp-history').querySelectorAll('[data-visit]').length, 3);
+  // What the user typed is not judged: an unfinished date in the visit card is a draft, not a broken state.
+  const date = a.q('clinic', '[data-meta="date"]'); date.value = '12/13'; a.fire(date, 'change');
+  const typed = fixture({saved: a.saved()});
+  assert.deepEqual([typed.ctx().mode, typed.q('clinic', '[data-meta="date"]').value, typed.clinic.getFields().diagnoza], ['new', '12/13', 'Nieżyt górnych dróg oddechowych.']);
 });
 
 /* ------------------------------------------------------------------ a save that the browser refuses */
