@@ -110,3 +110,27 @@ test('description fields: keyboard focus is a 2 px edge that leaves the box of t
   // the frame of a field that OpisAI points at comes later in the file and so wins over the focus edge
   assert.ok(clinicCss.indexOf('\n.kxp-section.is-target .kxp-memo{') > clinicCss.indexOf('\n.kxp-section .kxp-memo:focus-visible{'));
 });
+
+// A name is looked up as an own key of the tables. A truthiness test took whatever the prototype holds: svg('constructor')
+// returned an <svg> around a function's source and portrait('__proto__') threw.
+test('icon and illustration names are own keys only: names from the prototype give nothing', () => {
+  for (const name of ['constructor', 'toString', 'valueOf', 'hasOwnProperty', '__proto__']) {
+    assert.equal(icons.svg(name), '', `svg('${name}')`);
+    assert.equal(icons.portrait(name), '', `portrait('${name}')`);
+  }
+  for (const missing of ['no-such-icon', 'Star', '', undefined, null]) assert.equal(icons.svg(missing), '');
+  assert.ok(icons.svg('star').startsWith('<svg ') && icons.portrait('rat').startsWith('<svg '), 'the real names still draw');
+});
+
+// What the refresh and earlier changes left behind: a class that the section tools carried after both of its rules were
+// gone, a margin that a more specific rule always replaced, and rules that repeated another one or matched nothing.
+test('no leftovers: no class without a rule on the section tools, no shadowed, repeated or unused rule', () => {
+  assert.doesNotMatch(clinicJs, /is-unavailable/);
+  assert.deepEqual([...new Set([...clinicJs.matchAll(/class="kxp-section-tool\$\{[^`]*?\}"/g)].flatMap(m => [...m[0].matchAll(/' ([\w-]+)'/g)].map(c => c[1])))], ['pair-start'], 'the only optional class of a section tool');
+  assert.deepEqual(clinicCss.split('\n').filter(line => line.includes('pair-start')), ['.kxp-section-tools .kxp-section-tool.pair-start{margin-left:24px}']);
+  assert.equal(declarations('.kxp-side').top, '158px');
+  assert.doesNotMatch(clinicCss, /\[data-mode=saved\] \.kxp-side\{/, 'the case bar has one top for every mode');
+  assert.deepEqual(clinicCss.split('\n').filter(line => line.includes('.clinic-empty-cell')).map(line => line.slice(0, line.indexOf('{'))), ['.clinic-data-table .clinic-empty-cell']);
+  assert.doesNotMatch(clinicCss, /\.clinic-form-field\.full/);
+  assert.doesNotMatch(clinicJs, /clinic-form-field [\w-]/, 'the dialog fields have no modifier class');
+});

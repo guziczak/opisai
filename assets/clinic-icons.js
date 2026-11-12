@@ -89,7 +89,7 @@
     monitors: screen(2, 4, 14, 10.5, '#9aa9b6', C.greyD) + screen(16, 7, 14, 10.5, '#9aa9b6', C.greyD) + screen(8, 14, 16, 11.5, '#d3dee7', '#4b5863') + line('M16 25.5v3M12 29h8', '#4b5863', 2),
     bookCheck: openBook('#6b7884', '#b3bcc5') + line('M17.5 23l4 4 8-9.5', '#fff', 6.5) + line('M17.5 23l4 4 8-9.5', C.green, 3.6)
   };
-  const svg = (name, size = 24, extra = '') => SHAPES[name]
+  const svg = (name, size = 24, extra = '') => Object.hasOwn(SHAPES, name)
     ? `<svg class="kxp-icon ${extra}" width="${size}" height="${size}" viewBox="0 0 32 32" aria-hidden="true" focusable="false">${SHAPES[name]}</svg>`
     : '';
 
@@ -142,7 +142,7 @@
       + '<path d="M72 83v5.5M64.5 91.5c2.6 2 5.6 1.2 7.5-3M79.5 91.5c-2.6 2-5.6 1.2-7.5-3" fill="none" stroke="#9a7557" stroke-width="1.3" stroke-linecap="round"/>'
       + '<ellipse cx="59" cy="59" rx="3.6" ry="4" fill="#2a1f19"/><ellipse cx="85" cy="59" rx="3.6" ry="4" fill="#2a1f19"/><circle cx="57.9" cy="57.7" r="1" fill="#fff"/><circle cx="83.9" cy="57.7" r="1" fill="#fff"/></g>'
   };
-  const portrait = kind => PORTRAITS[kind]
+  const portrait = kind => Object.hasOwn(PORTRAITS, kind)
     ? `<svg class="kxp-portrait" viewBox="0 0 144 124" preserveAspectRatio="xMidYMin slice" aria-hidden="true" focusable="false">${PORTRAITS[kind]()}</svg>`
     : '';
   window.KxpIcons = { svg, names: Object.keys(SHAPES), portrait, portraits: Object.keys(PORTRAITS) };
