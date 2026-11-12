@@ -390,7 +390,8 @@ test('O aplikacji: the rc32 header, pages and copy texts; Kontakt without phone 
   assert.match(page().textContent, /Wersja i informacje o wydaniu są spójne\./); assert(page().textContent.includes(rc32.update_status));
   f.click('opisai-about', '[data-about="contact"]');
   assert.deepEqual(page().querySelectorAll('h2').map(h => h.textContent), ['Autor i kontakt', 'GUITS']);
-  assert(!/\+48|Wichrowa|NIP:|REGON:|693/.test(f.root('opisai-about').innerHTML), 'the demonstration omits phone, address, NIP and REGON');
+  /* Shapes only (a phone number, a street, a postal code, the two labels), so that the test names no real value. */
+  assert(!/\+48|\b\d{3}[ -]?\d{3}[ -]?\d{3}\b|\bul\.|\b\d{2}-\d{3}\b|NIP:|REGON:/.test(f.root('opisai-about').innerHTML), 'the demonstration omits phone, address, NIP and REGON');
   assert.match(page().textContent, /Pełne dane kontaktowe .* są w aplikacji/);
   assert.equal(page().querySelector('a.oa-btn').getAttribute('href'), 'mailto:guziczak@proton.me?subject=' + encodeURIComponent('OpisAI — wsparcie'));
   assert.deepEqual(page().querySelector('.oa-inline-controls').children.map(b => b.textContent), ['Napisz e-mail', 'Kopiuj e-mail', 'Kopiuj dane kontaktowe']);
