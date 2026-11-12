@@ -84,7 +84,13 @@
   const kx = (name, size = 24, extra = '') => window.KxpIcons ? KxpIcons.svg(name, size, extra) : '';
   /* The photo slot: the demo's own drawing of the patient's species stands in for the photo from the animal's card. */
   const photoSlot = p => { const art = window.KxpIcons?.portrait?.(p.portrait) || ''; return `<button class="kxp-photo${art ? ' has-portrait' : ''}" data-kxp="photo" title="Zdjęcie zwierzęcia">${art || kx('camera', 56)}<span>zdjęcie niedostępne</span></button>`; };
-  const persist = () => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {} };
+  /* A blocked or full localStorage keeps the visits in this page only. Klinika says so once per page load, at the first
+     change it could not store; the write of the page's own start is not a change. */
+  let started = false, storageWarned = false;
+  const persist = () => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    catch (_) { if (started && !storageWarned) { storageWarned = true; Shell.notify?.({ app: 'Klinika XP', icon: 'clinic', title: 'Nie udało się zapisać w przeglądarce', message: 'Zmiany w wizytach działają do odświeżenia strony.' }); } }
+  };
   const patientOf = id => PATIENTS.find(p => p.id === id) || PATIENTS[0];
   const writable = () => state.mode === 'new' || state.mode === 'edit';
   const editorVisible = () => !!(editorWindow && editorRoot && document.contains(editorRoot) && !state.editorHidden);
@@ -566,6 +572,7 @@
     Shell.registerApp({ id: 'clinic', title: 'Klinika XP', icon: 'clinic', open });
     open();
     if (state.editorOpen && writable()) openEditor();
+    started = true;
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();

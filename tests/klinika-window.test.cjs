@@ -178,7 +178,8 @@ function fixture({saved, storage = 'ok'} = {}) {
     row: id => f.q('clinic-list', `[data-list-row="${id}"]`),
     rows: () => f.window('clinic-list').el.querySelectorAll('[data-list-row]').map(row => row.dataset.listRow),
     selected: () => f.window('clinic-list').el.querySelectorAll('[data-list-row]').filter(row => row.classList.contains('is-selected')).map(row => row.dataset.listRow),
-    summary: () => f.q('clinic-list', '[data-list-summary]').textContent};
+    summary: () => f.q('clinic-list', '[data-list-summary]').textContent,
+    notices: () => doc.querySelectorAll('#notification-toasts .windows-toast').map(toast => [toast.querySelector('.toast-top span').textContent, toast.querySelector('h4').textContent, toast.querySelector('p').textContent])};
   advance(100);
   return f;
 }
@@ -346,4 +347,36 @@ test('a whole saved state is taken as it is: a draft, a saved visit in review, a
   const history = fixture({saved: edit.saved()});
   assert.deepEqual([history.ctx().mode, history.ctx().editorOpen], ['history', false]); assert.match(history.ctx().visitNumber, /^160\/\d{4}$/);
   assert.equal(history.q('clinic', '.kxp-history').querySelectorAll('[data-visit]').length, 3);
+});
+
+/* ------------------------------------------------------------------ a save that the browser refuses */
+const NOTICE = ['Klinika XP', 'Nie udało się zapisać w przeglądarce', 'Zmiany w wizytach działają do odświeżenia strony.'];
+
+test('blocked or full browser storage: Klinika works and says once that the changes last until the page is refreshed', () => {
+  for (const storage of ['full', 'denied']) {
+    const f = fixture({storage}), c = f.ctx();
+    assert.deepEqual([c.mode, c.editorOpen, c.visitNumber], ['new', true, '<NOWY>'], `${storage}: the page starts with the example`);
+    assert.deepEqual(f.notices(), [], `${storage}: nothing is said while the page starts`);
+    assert.equal(f.clinic.setFields({diagnoza: 'Nieżyt górnych dróg oddechowych.'}).ok, true);
+    assert.deepEqual(f.notices(), [NOTICE], `${storage}: the first change that could not be stored`);
+    f.key('s', {ctrlKey: true});
+    assert.equal(f.ctx().mode, 'saved', `${storage}: the visit is saved in this page`);
+    f.openList(); assert.equal(f.rows().length, 11); f.click(f.row('V-071').children[0]); f.key('Enter'); f.shell.windows.get('clinic').focus(); f.key('F2');
+    assert.deepEqual(f.notices(), [NOTICE], `${storage}: said once per page load`);
+    assert.equal(f.store.has(KEY), false);
+  }
+  // Typing is such a change, and so is a save right after the start.
+  const typed = fixture({storage: 'full'}), memo = typed.q('clinic-editor', '[data-clinic-field="badanie"]');
+  memo.textContent = 'T 38,5°C.'; typed.fire(memo, 'input');
+  assert.equal(typed.clinic.getFields().badanie, 'T 38,5°C.'); assert.deepEqual(typed.notices(), [NOTICE]);
+  const saved = fixture({storage: 'full'}); saved.key('s', {ctrlKey: true});
+  assert.equal(saved.ctx().mode, 'saved'); assert.deepEqual(saved.notices(), [NOTICE]);
+});
+
+test('working storage: changes are stored and nothing is said', () => {
+  const f = fixture();
+  assert.equal(f.clinic.setFields({diagnoza: 'Nieżyt górnych dróg oddechowych.'}).ok, true); f.key('s', {ctrlKey: true});
+  f.openList(); f.click(f.row('V-071').children[0]); f.key('Enter'); f.shell.windows.get('clinic').focus(); f.key('F2');
+  assert.deepEqual(f.notices(), []);
+  assert.deepEqual([f.saved().mode, f.saved().visits.length, f.saved().current.id], ['edit', 11, 'V-071']);
 });
