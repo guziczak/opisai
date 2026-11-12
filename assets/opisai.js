@@ -903,7 +903,7 @@
       if(event.key==='Enter'&&rec.chat&&!event.shiftKey&&!event.ctrlKey&&!event.altKey&&!event.metaKey&&!event.target.closest?.('[data-dt="finish"],[data-dt="diagnostics"],input,textarea,select')){event.preventDefault();if(!event.repeat)requestFlush(rec,'panel');}
       else if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase?.()==='a'){event.preventDefault();selectNode(q('[data-dt-text]'));}
     });
-    el.addEventListener('contextmenu',event=>{if(event.target.closest?.('button'))return;event.preventDefault();Shell.menu?.([{label:'Zaznacz wszystko',shortcut:'Ctrl+A',onClick:()=>selectNode(q('[data-dt-text]'))},{label:'Kopiuj dyktowanie',icon:'copy',onClick:()=>copyText(rec.text)}],event.clientX,event.clientY,{className:'oa-menu'+(preferences.theme==='dark'?' oa-theme-dark':'')});});
+    el.addEventListener('contextmenu',event=>{if(event.target.closest?.('button'))return;event.preventDefault();Shell.menu?.([{label:'Zaznacz wszystko',shortcut:'Ctrl+A',onClick:()=>selectNode(q('[data-dt-text]'))},{label:'Kopiuj dyktowanie',icon:'copy',onClick:()=>copyText(rec.text)}],event.clientX,event.clientY,{className:'oa-menu'+(themeName()==='dark'?' oa-theme-dark':'')});}); // the theme in use: "Automatyczny" follows the desktop, like the panel and the bubble's menu
     el.addEventListener('pointerdown',event=>{ // dragging moves it until the next follow tick anchors it to the field again
       if(event.button!==0||event.target.closest?.('button,[data-dt-scroll],[data-dt-base]'))return;
       const r=el.getBoundingClientRect();rec.drag={id:event.pointerId,dx:event.clientX-r.left,dy:event.clientY-r.top};try{el.setPointerCapture(event.pointerId);}catch(_){}

@@ -104,7 +104,7 @@ function bubble(target, event) { event.target = target; for (let node = target; 
 
 function fixture({ prefs = {}, editor = true, active = 'badanie' } = {}) {
   const doc = new Target(), win = new Target(), media = new Target(), frames = new Map(), timers = new Map(), intervals = new Map();
-  const reviews = [], shown = [], toasts = [], confirms = [], opened = [], copied = [], api = {}, storage = new Map(); let now = 0, serial = 0;
+  const reviews = [], shown = [], toasts = [], confirms = [], opened = [], copied = [], menus = [], api = {}, storage = new Map(); let now = 0, serial = 0;
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body);
   doc.createElement = tag => new Element(tag, doc); doc.createElementNS = (_, tag) => new Element(tag, doc);
   doc.querySelector = selector => doc.documentElement.querySelector(selector);
@@ -125,7 +125,7 @@ function fixture({ prefs = {}, editor = true, active = 'badanie' } = {}) {
     focusField: key => { if (!clinic.editor || !fields[key]) return false; fields[key].focus(); return true; } };
   const editorWindow = { id: 'clinic-editor', el: editorEl, get visible() { return clinic.editor; } };
   const shell = {
-    menu: () => ({ querySelector: () => null }), notify() {},
+    menu: (items, x, y, options) => { menus.push({ items, x, y, options }); return { querySelector: () => null }; }, notify() {},
     toast: message => { toasts.push(message); const el = doc.createElement('div'); doc.body.append(el); return el; },
     confirm: o => confirms.push(o.message), windows: new Map([['clinic-editor', editorWindow]]),
     createWindow: options => { const el = doc.createElement('section'); el.innerHTML = `<header class="titlebar"><button data-caption="max" ${options.maximizable === false ? 'disabled' : ''}></button></header>` + options.content; doc.body.append(el); shown.push(options.id);
@@ -153,7 +153,7 @@ function fixture({ prefs = {}, editor = true, active = 'badanie' } = {}) {
     }
   }
   const f = {
-    doc, win, api, clinic, fields, reviews, shown, toasts, confirms, opened, copied, storage, advance, bubble,
+    doc, win, api, clinic, fields, reviews, shown, toasts, confirms, opened, copied, menus, storage, advance, bubble,
     get state() { return api.state; }, get rec() { return api.state.recording; }, get phase() { return api.state.phase; },
     get panel() { return doc.querySelector('.oa-dictation'); },
     q(selector) { return f.panel?.querySelector(selector) || null; },
@@ -441,5 +441,16 @@ test('after "Zamknij" a window asked for from Start, the desktop or the guide st
     f.shown.length = 0; open(f); f.advance(50);
     assert.deepEqual(f.shown, [id]); assert.equal(f.state.closed, false, id + ': OpisAI runs again, as for "Opisz" and "Dyktuj"');
     assert(!wrap.classList.contains('is-hidden'), id + ': the bubble is back'); assert.equal(f.phase, 'idle');
+  }
+});
+
+test('the context menu of the dictation preview has the theme in use: "Automatyczny" follows the desktop, like the panel itself', () => {
+  for (const [theme, desktop, dark] of [['dark', 'light', true], ['auto', 'dark', true], ['auto', 'light', false], ['light', 'dark', false]]) {
+    const f = fixture({ prefs: { transcriber: 'local_whisper', theme } }); f.doc.documentElement.setAttribute('data-theme', desktop);
+    f.api.dictate(); f.advance(2600);
+    assert.equal(f.panel.classList.contains('oa-theme-dark'), dark, `${theme} on a ${desktop} desktop: the panel`);
+    const event = { type: 'contextmenu', target: f.q('[data-dt-scroll]'), clientX: 300, clientY: 400 }; f.panel.dispatchEvent(event);
+    assert.equal(event.defaultPrevented, true); assert.deepEqual([...f.menus.at(-1).items].map(item => item.label), ['Zaznacz wszystko', 'Kopiuj dyktowanie']);
+    assert.equal(f.menus.at(-1).options.className, dark ? 'oa-menu oa-theme-dark' : 'oa-menu', `${theme} on a ${desktop} desktop: its menu`);
   }
 });
