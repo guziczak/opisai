@@ -187,6 +187,7 @@ function fixture({prefs, desktop = 'light', editor = true} = {}) {
     text: id => f.root(id).textContent.replace(/\s+/g, ' '),
     bubble(el, event) { for (let node = el; node; node = node.parentNode) node.dispatchEvent?.(event); f.advance(0); }, // change events bubble to the page's handler
     set(selector, value) { const el = f.page().querySelector(selector); assert.ok(el, selector); if (typeof value === 'boolean') el.checked = value; else el.value = String(value); f.bubble(el, {type: 'change', target: el}); },
+    type(selector, value) { const el = f.page().querySelector(selector); assert.ok(el, selector); el.value = String(value); f.bubble(el, {type: 'input', target: el}); return el; }, // a key press: "change" follows when the edit ends
     rowLabels: () => f.page().querySelectorAll('.oa-form-row').map(r => r.children[0].textContent),
     options: selector => f.page().querySelector(selector).querySelectorAll('option').map(o => o.textContent),
     saved: () => JSON.parse(storage.get('opisai-demo-settings-v12') || '{}'),
@@ -228,6 +229,28 @@ test('Zapisz: active only with changes, stores the current page and keeps the wi
   assert.equal(f.windows.get('opisai-settings'), undefined); assert.equal(f.api.preferences().bounceMax, 0); assert.equal(f.saved().bounceMax, 0);
   f.api.settings('bubble'); f.set('[data-setting="bounceInterval"]', 5); save().click(); f.advance(0);
   assert.equal(f.saved().bounceInterval, 10, 'stored as used: 10–3600 s');
+});
+
+test('Zapisz follows a number or text field while it is typed in, so the first click saves (valueChanged, textChanged → _mark_dirty)', () => {
+  const f = fixture(); f.api.settings('bubble');
+  const save = () => f.q('opisai-settings', '[data-action="save-settings"]'), status = () => f.q('opisai-settings', '[data-cfg-status]').textContent;
+  f.type('[data-setting="bounceInterval"]', 40); assert.equal(save().disabled, false, 'active with the cursor still in the field');
+  f.set('[data-setting="bounceInterval"]', 40); save().click(); f.advance(0); // a click ends the edit ("change"), then presses the button
+  assert.equal(f.saved().bounceInterval, 40); assert.equal(save().disabled, true); assert.equal(status(), 'Zapisano zmiany z tej karty.');
+  f.type('[data-setting="bounceMax"]', 5); assert.equal(f.page().querySelector('[data-bounce-unit]').textContent, 'odbić'); assert.equal(save().disabled, false); assert.equal(status(), '', 'a new edit ends the confirmation');
+  f.type('[data-setting="bounceMax"]', 0); assert.equal(save().disabled, true, 'typed back to the saved value'); assert.equal(f.page().querySelector('[data-bounce-unit]').textContent, 'bez limitu');
+  f.click('opisai-settings', '[data-page="dictation"]'); f.set('[data-setting="transcriber"]', 'local_whisper'); save().click(); f.advance(0);
+  const scope = () => f.page().querySelector('[data-dt-scope]').textContent.split('\n')[0];
+  assert.equal(scope(), 'Zapisano ustawienia dla następnego dyktowania.');
+  f.type('[data-setting="labelDoctor"]', 'Dr'); assert.equal(save().disabled, false); assert.equal(scope(), 'Niezapisane zmiany w konfiguracji — kliknij „Zapisz”, aby je zachować.', 'the note of the page follows the typing too');
+  save().click(); f.advance(0); assert.equal(f.saved().labelDoctor, 'Dr'); assert.equal(f.api.preferences().labelDoctor, 'Dr');
+  f.type('[data-setting="labelDoctor"]', 'Lekarz'); f.type('[data-setting="labelDoctor"]', 'Dr'); assert.equal(save().disabled, true); assert.equal(scope(), 'Ustawienia dla następnego dyktowania.');
+  f.set('[data-setting="transcriber"]', 'chatgpt_browser'); f.set('[data-setting="autoEnter"]', true); save().click(); f.advance(0);
+  const seconds = f.type('[data-setting="autoEnterSeconds"]', 4);
+  assert.equal(save().disabled, true, '4 is outside 5–600 s: what would be stored is still 10'); assert.equal(seconds.value, '4', 'the field is not rewritten under the cursor');
+  f.type('[data-setting="autoEnterSeconds"]', 45); assert.equal(save().disabled, false); assert.equal(scope(), 'Niezapisane zmiany w konfiguracji — kliknij „Zapisz”, aby je zachować.');
+  f.set('[data-setting="autoEnterSeconds"]', 45); save().click(); f.advance(0); assert.equal(f.saved().autoEnterSeconds, 45);
+  f.set('[data-setting="autoEnterSeconds"]', 4); assert.equal(seconds.value, '10', 'the end of the edit shows the value in use'); assert.equal(save().disabled, false);
 });
 
 test('Zapisz stores only its own page: a choice made elsewhere meanwhile is kept', () => {

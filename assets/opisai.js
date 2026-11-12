@@ -1117,15 +1117,17 @@
     };
     scope();
     q('[data-dt-howto]')?.addEventListener('click',event=>{const open=event.currentTarget.getAttribute('aria-expanded')!=='true';event.currentTarget.setAttribute('aria-expanded',String(open));q('[data-dt-strategy-details]').hidden=!open;});
-    root.addEventListener('change',event=>{ // after the shared [data-setting] handler has updated the draft
-      const key=event.target?.dataset?.setting;
-      if(key==='autoEnterSeconds'){const s=Math.round(Number(event.target.value));draft.autoEnterSeconds=s>=5&&s<=600?s:10;event.target.value=draft.autoEnterSeconds;} // whole seconds 5–600, otherwise 10
+    const edited=event=>{ // after the shared [data-setting] handler has updated the draft; "input" is a number or text field being typed in
+      const key=event.target?.dataset?.setting,typing=event.type==='input';
+      if(typing&&event.target?.type!=='number'&&event.target?.type!=='text')return;
+      if(key==='autoEnterSeconds'){const s=Math.round(Number(event.target.value));draft.autoEnterSeconds=s>=5&&s<=600?s:10;if(!typing)event.target.value=draft.autoEnterSeconds;} // whole seconds 5–600, otherwise 10; the field takes the value when the edit ends
       if(key==='autoEnter'){const spin=q('[data-setting="autoEnterSeconds"]');if(spin)spin.disabled=!event.target.checked;}
       if(key==='cardMode'){const copy=DT_STRATEGY[draft.cardMode]||DT_STRATEGY.own;q('[data-dt-strategy-summary]').textContent=copy[1];q('[data-dt-strategy-details]').textContent=copy[2];q('[data-dt-interval]').textContent=copy[3];q('[data-dt-auto-title]').title=copy[4];const spin=q('[data-setting="autoEnterSeconds"]');if(spin){spin.title=copy[4];spin.setAttribute('aria-label',copy[3].replace(':',''));}}
       if(key==='geminiMode')q('[data-dt-gemini-hint]').textContent=draft.geminiMode==='agent'?'Zapisuje mowę rozpoznaną przez model Gemini Live. Korzysta z modelu audio agenta; preferuje język polski.':'Pokazuje tekst podczas mówienia i dopracowuje go po wypowiedzi. Wymaga dostępu do Gemini Transcribe Live; preferuje język polski.';
       if(key==='whisperHardware'||key==='whisperModel'){const h=draft.whisperHardware;q('[data-dt-cpp]').hidden=!(h==='integrated'||h==='cpu');q('[data-dt-nvidia]').hidden=!(h==='nvidia_external'||h==='nvidia_internal');q('[data-dt-cpp-status]').textContent=cppStatus(draft.whisperModel);}
       if(root.isConnected)scope();
-    });
+    };
+    root.addEventListener('change',edited);root.addEventListener('input',edited);
   }
 
   /* Konfiguracja (ConfigDialog): the rc32 pages, search keywords and save rule. One page at a time: "Zapisz" is active
@@ -1185,19 +1187,20 @@
         area.innerHTML=`<fieldset class="oa-group"><legend>AI Act / RODO</legend><p class="oa-cfg-text">Robocza matryca kwalifikacji OpisAI: kwalifikacja AI Act, ryzyka i kontrole oraz checklista wdrożeniowa. Sama edycja otwiera się w osobnym, większym oknie. Źródłem prawdy jest jeden plik XLSX.</p><div class="oa-inline-controls">${cfgButton('Otwórz edycję matrycy...','matrix','Otwiera osobne okno z trzema arkuszami: Kwalifikacja, Ryzyka_i_kontrole, Checklista.')}${cfgButton('Otwórz plik XLSX...','xlsx','Otwiera źródłowy skoroszyt OpisAI_matryca_kwalifikacji_AI_Act.xlsx.')}</div>${cfgHint('XLSX: OpisAI_matryca_kwalifikacji_AI_Act.xlsx (w folderze OpisAI)<br>Status: brak - zostanie utworzony z domyślnej matrycy.')}${cfgHint('To robocza matryca zgodności, nie opinia prawna. Przy zmianie funkcji klinicznych, dostawców AI albo sposobu użycia trzeba ją przejrzeć ponownie.')}</fieldset><div class="oa-cfg-note">${notice('Tryb demonstracyjny: witryna nie wysyła treści wizyty do modeli AI, nie uruchamia mikrofonu i nie zapisuje danych w zewnętrznej Klinice.')}</div>`;
       }
       $$('[data-setting]',area).forEach(el=>{
-        el.addEventListener('change',()=>{
+        const edit=()=>{
           const key=el.dataset.setting;draft[key]=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;
           if(key==='provider'||key==='transport'||key==='auth'){connectCascade(draft);draw();}
           if(key==='transcriber')draw();
           if(key==='theme')preview(draft.theme);
           if(key==='bounceMax'){const unit=$('[data-bounce-unit]',area);if(unit)unit.textContent=Number(el.value)>0?'odbić':'bez limitu';}
           status.textContent='';
-        });
+        };
+        el.addEventListener('change',edit);if(el.type==='number'||el.type==='text')el.addEventListener('input',edit); // typing counts at once: QSpinBox.valueChanged and QLineEdit.textChanged → _mark_dirty
       });
       $$('[data-cfg]',area).forEach(el=>el.addEventListener('click',()=>settingsAction(el.dataset.cfg,draft)));
       refreshSave();
     }
-    $('[data-settings-page]',root).addEventListener('change',refreshSave); // last, after a page's own handlers have normalized the draft
+    for(const type of ['change','input'])$('[data-settings-page]',root).addEventListener(type,refreshSave); // last, after a page's own handlers have normalized the draft
     $$('[data-page]',root).forEach(el=>el.addEventListener('click',()=>{if(el.dataset.page!==page)go(el.dataset.page);}));
     $$('[data-page]',root).forEach(el=>el.addEventListener('keydown',e=>{ // the section list moves with the arrows, as a QListWidget does
       if(e.key!=='ArrowDown'&&e.key!=='ArrowUp')return;e.preventDefault();const items=$$('[data-page]',root).filter(x=>!x.hidden),next=items[items.indexOf(el)+(e.key==='ArrowDown'?1:-1)];if(next){go(next.dataset.page);next.focus();}
