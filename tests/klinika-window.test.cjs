@@ -12,6 +12,7 @@ const test = require('node:test');
 const shellSource = fs.readFileSync(path.join(__dirname, '../assets/shell.js'), 'utf8');
 const clinicSource = fs.readFileSync(path.join(__dirname, '../assets/clinic.js'), 'utf8');
 const REVIEW_TITLE = '[DEMO] Klinika XP — PRZEGLĄD WIZYTY (TYLKO DO ODCZYTU)';
+const KEY = 'opisai.demo.visit.v3';
 
 /* ------------------------------------------------------------------ a small DOM */
 const VOID = /^(?:input|br|img|hr|meta|link|source|area|col|wbr)$/i;
@@ -128,8 +129,14 @@ function matchChain(el, chain, index = chain.length - 1) {
 
 /* ------------------------------------------------------------------ the fixture */
 const FOCUSABLE = /^(?:BUTTON|INPUT|SELECT|TEXTAREA)$/;
-function fixture() {
-  const doc = new Target(), win = new Target(), timers = new Map();
+/* saved: the stored visit state the page starts with. storage: 'ok', 'full' (setItem throws, as on an exceeded quota) or
+   'denied' (reading window.localStorage throws, as in a browser that blocks site data). */
+function fixture({saved, storage = 'ok'} = {}) {
+  const doc = new Target(), win = new Target(), timers = new Map(), store = new Map();
+  if (saved !== undefined) store.set(KEY, typeof saved === 'string' ? saved : JSON.stringify(saved));
+  const failure = (name, message) => Object.assign(new Error(message), {name});
+  const localStorage = {getItem: key => store.get(key) ?? null, removeItem: key => { store.delete(key); },
+    setItem(key, value) { if (storage === 'full') throw failure('QuotaExceededError', 'The quota has been exceeded.'); store.set(key, String(value)); }};
   let now = 0, serial = 0;
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body); doc.activeElement = doc.body;
   doc.createElement = tag => new Element(tag, doc); doc.contains = node => doc.documentElement.contains(node); doc.readyState = 'complete';
@@ -137,11 +144,11 @@ function fixture() {
   for (const id of ['desktop', 'windows', 'snap-preview', 'shell-popups', 'notification-toasts', 'shell-status']) { const el = doc.createElement('div'); el.id = id; doc.body.append(el); }
   win.getSelection = () => ({rangeCount: 0, removeAllRanges() {}, addRange() {}});
   const sandbox = {window: win, document: doc, Node: Element, innerWidth: 1536, innerHeight: 866, navigator: {clipboard: {writeText: async () => {}, readText: async () => ''}},
-    localStorage: {getItem: () => null, setItem() {}, removeItem() {}},
     CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
     FormData: class { constructor(form) { this.pairs = form.querySelectorAll('input,select').map(el => [el.getAttribute('name'), el.value]); } [Symbol.iterator]() { return this.pairs[Symbol.iterator](); } },
     setTimeout: (fn, delay = 0) => { timers.set(++serial, {fn, due: now + delay}); return serial; }, clearTimeout: id => timers.delete(id),
     requestAnimationFrame: fn => sandbox.setTimeout(fn, 16), addEventListener() {}, removeEventListener() {}};
+  Object.defineProperty(sandbox, 'localStorage', {enumerable: true, get() { if (storage === 'denied') throw failure('SecurityError', 'Access is denied for this document.'); return localStorage; }});
   const context = vm.createContext(sandbox);
   vm.runInContext(shellSource, context, {filename: 'assets/shell.js'});
   sandbox.Shell = win.Shell;
@@ -157,7 +164,7 @@ function fixture() {
     return event;
   }
   const focusTarget = el => { for (let node = el; node?.nodeType === 1; node = node.parentNode) if (FOCUSABLE.test(node.tagName) ? !node.disabled : node.hasAttribute('tabindex') || node.tabIndex !== undefined) return node; return doc.body; };
-  const f = {doc, win, advance, fire, shell: win.Shell, clinic: win.Clinic,
+  const f = {doc, win, advance, fire, shell: win.Shell, clinic: win.Clinic, store, saved: () => JSON.parse(store.get(KEY)),
     plain: value => JSON.parse(JSON.stringify(value)),
     ctx: () => f.plain(win.Clinic.getContext()),
     window: id => win.Shell.windows.get(id), open: id => win.Shell.windows.has(id), // elements and windows are compared by identity only: a failed assert would print the whole DOM
@@ -281,4 +288,62 @@ test('visit list: a visit opened elsewhere in Klinika leaves the list where it i
   f.click(f.q('clinic', '[data-visit="V-140"]'), 1); f.click(f.q('clinic', '[data-visit="V-140"]'), 2);
   f.click(f.q('clinic-confirm', '[data-confirm]'));
   assert.deepEqual([f.ctx().mode, f.ctx().visitNumber, f.window('clinic-list').visible], ['saved', '140/2026', true]);
+});
+
+/* ------------------------------------------------------------------ the saved state (opisai.demo.visit.v3) */
+const startState = () => fixture().saved(); // what the page stores when it starts with nothing saved
+const example = (f, label) => {
+  const c = f.ctx();
+  assert.deepEqual([c.mode, c.editorOpen, c.patient, c.visitNumber], ['new', true, 'Fistaszek', '<NOWY>'], label);
+  assert.deepEqual(f.plain(f.clinic.getFields()), f.plain(f.clinic.getDefaultFields()), label);
+  assert.match(f.q('clinic', '.kxp-visit-card').textContent, /NOWA WIZYTA/, `${label}: the main window is drawn`);
+  assert.match(f.q('clinic', '[data-meta="date"]').value, /^\d{2}\/\d{2}\/\d{4}$/, `${label}: with today's date`); assert.equal(f.q('clinic', '[data-meta="time"]').value, '10:15', label);
+  assert.equal(f.q('clinic', '.kxp-history').querySelectorAll('[data-visit]').length, 2, `${label}: with the history of the example`);
+  f.openList(); assert.equal(f.rows().length, 10, `${label}: and the list holds the example's visits`);
+};
+
+test('an incomplete saved state starts from the example instead of leaving Klinika empty', () => {
+  const incomplete = {
+    // the six states that ended in an exception in the storage fuzz of the final review
+    'current.meta missing': s => { delete s.current.meta; },
+    'current.meta null': s => { s.current.meta = null; },
+    'visits [{}]': s => { s.visits = [{}]; },
+    'visit without occurred/fields': s => { s.visits = [{id: 'V-1', patient: 1}]; },
+    'visit.fields null': s => { s.visits[0].fields = null; },
+    'visit.occurred number': s => { s.visits[0].occurred = 20260812; },
+    // the same gaps in the other places that the windows read
+    'current.meta wrong types': s => { s.current.meta = {date: 5, time: null}; },
+    'visits [null]': s => { s.visits = [null]; },
+    'the reviewed visit without its texts': s => { s.mode = 'saved'; s.loaded = {id: 'V-140', patient: 1}; s.current.id = 'V-140'; },
+    'an edit without its saved visit': s => { s.mode = 'edit'; s.loaded = null; s.current.id = 'V-999'; },
+    'unknown mode': s => { s.mode = 'banana'; },
+    'not a state': () => {}
+  };
+  for (const [label, change] of Object.entries(incomplete)) {
+    const state = startState(); change(state);
+    example(fixture({saved: label === 'not a state' ? '[1, 2' : state}), label);
+  }
+});
+
+test('a whole saved state is taken as it is: a draft, a saved visit in review, an edit, the history', () => {
+  const a = fixture();
+  assert.equal(a.clinic.setFields({diagnoza: 'Nieżyt górnych dróg oddechowych.'}).ok, true);
+  const draft = fixture({saved: a.saved()});
+  assert.deepEqual([draft.ctx().mode, draft.ctx().editorOpen, draft.clinic.getFields().diagnoza], ['new', true, 'Nieżyt górnych dróg oddechowych.']);
+  draft.key('s', {ctrlKey: true}); // Ctrl+S in the description sub-window saves the visit
+  assert.equal(draft.ctx().mode, 'saved');
+  const review = fixture({saved: draft.saved()}), c = review.ctx();
+  assert.deepEqual([c.mode, c.editorOpen, c.mainTitle], ['saved', false, REVIEW_TITLE]); assert.match(c.visitNumber, /^160\/\d{4}$/);
+  assert.match(review.q('clinic', '.kxp-saved').textContent, /Diagnoza:Nieżyt górnych dróg oddechowych\./);
+  review.openList(); assert.equal(review.rows().length, 11); assert.equal(review.rows()[0], 'V-160');
+  review.shell.windows.get('clinic').focus(); review.key('F2');
+  assert.equal(review.clinic.setFields({wywiad: 'Kicha od tygodnia.'}).ok, true);
+  const edit = fixture({saved: review.saved()});
+  assert.deepEqual([edit.ctx().mode, edit.ctx().editorOpen, edit.clinic.getFields().wywiad], ['edit', true, 'Kicha od tygodnia.']);
+  edit.key('Escape'); edit.click(edit.q('clinic-confirm', '[data-confirm]')); // ANULUJ: back to the saved visit
+  assert.equal(edit.ctx().mode, 'saved');
+  edit.click(edit.q('clinic', '[data-kxp="close-view"]'));
+  const history = fixture({saved: edit.saved()});
+  assert.deepEqual([history.ctx().mode, history.ctx().editorOpen], ['history', false]); assert.match(history.ctx().visitNumber, /^160\/\d{4}$/);
+  assert.equal(history.q('clinic', '.kxp-history').querySelectorAll('[data-visit]').length, 3);
 });

@@ -59,11 +59,17 @@
   const displayDate = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : (iso || '');
   const newDraft = (patient = 1, { empty = false } = {}) => ({ id: null, patient, meta: { date: today(), time: '10:15', type: 'Badanie', doctor: DOCTOR, number: '', weight: patient === 1 && !empty ? '0.42' : '', temperature: patient === 1 && !empty ? '37.8' : '' }, fields: patient === 1 && !empty ? { ...DEFAULT_FIELDS } : { wywiad: '', badanie: '', diagnoza: '' } });
   const initialState = () => ({ visits: JSON.parse(JSON.stringify(SEED_VISITS)), current: newDraft(1), loaded: null, mode: 'new', editorOpen: true, editorHidden: false, activeField: 'badanie', weights: [17, 72, 11], sequence: 160 });
+  /* A saved state is taken only whole, in the shape this file writes: every visit with its data and three texts, the open
+     visit with its meta, a known mode. A partial one would leave the windows empty, so the page starts from the example. */
+  const texts = (o, keys) => !!o && keys.every(key => typeof o[key] === 'string');
+  const wholeVisit = v => texts(v, ['id', 'occurred', 'type', 'number', 'doctor', 'weight', 'temperature']) && texts(v.fields, KEYS);
+  const wholeState = s => !!s && !!s.current && texts(s.current.fields, KEYS) && texts(s.current.meta, ['date', 'time', 'type', 'doctor', 'number', 'weight', 'temperature'])
+    && Array.isArray(s.visits) && s.visits.every(wholeVisit) && ['new', 'edit', 'saved', 'history'].includes(s.mode) && (s.loaded == null ? s.mode !== 'edit' : wholeVisit(s.loaded));
   function loadState() {
     const base = initialState();
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-      if (!saved || !saved.current || !saved.current.fields || KEYS.some(key => typeof saved.current.fields[key] !== 'string') || !Array.isArray(saved.visits)) return base;
+      if (!wholeState(saved)) return base;
       const { spelling, ignoredWords, ...rest } = saved; // OpisAI's spelling was never Klinika's: older saves drop it
       const doctor = m => (m && m.doctor === 'Anna Nowak' ? { ...m, doctor: DOCTOR } : m); // the demo's earlier seed name, never a user's entry; seed visits added later join a saved list
       return { ...base, ...rest, visits: [...rest.visits.map(doctor), ...base.visits.filter(v => !rest.visits.some(x => x.id === v.id))], current: { ...rest.current, meta: doctor(rest.current.meta) }, weights: Array.isArray(saved.weights) && saved.weights.length === 3 ? saved.weights : base.weights };
