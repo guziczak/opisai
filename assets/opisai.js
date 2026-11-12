@@ -1157,6 +1157,7 @@
   const demoOnly=text=>{settingsToast?.remove?.();settingsToast=toast(text);}; // each replaces the last
   const HW_LLM={auto:'Automatycznie (najlepszy dostępny)',nvidia_external:'Karta NVIDIA RTX — zewnętrzna (np. AORUS AI BOX)',nvidia_internal:'Karta NVIDIA RTX — wewnętrzna',integrated:'Karta wbudowana (AMD Radeon / Intel)'}; // hardware.LLM_CHOICES
   function settings(initial){
+    if(state.closed)launch(); // asked for from Start, the desktop or the guide after "Zamknij": OpisAI starts first, as for describe() and dictate()
     const named=typeof initial==='string'&&settingsNav.some(n=>n[1]===initial),open=windows.get('opisai-settings');
     if(open?.el?.isConnected){open.show();if(named)open.oaPage(initial);return;} // _open_config: an open dialog is only presented, unsaved changes included; a named page is chosen as in its list
     let page=named?initial:'connection',draft=clone(preferences);themePreview=null; // a new window starts from the saved settings
@@ -1407,6 +1408,7 @@
   const historyCopy = entry => (entry.approved || entry.reviewed).map(f => f.text).join('\n\n'); // entry['epikryza']: field texts joined by blank lines, no labels
   const historyStamp = (date, seconds) => { const p = n => String(n).padStart(2, '0'); return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())} ${p(date.getHours())}:${p(date.getMinutes())}${seconds ? ':' + p(date.getSeconds()) : ''}`; };
   function history() {
+    if (state.closed) launch(); // no OpisAI window over a hidden bubble
     let filter = '', selectedId = null, page = 'result';
     const html = `<div class="oa-app oa-hist"><input type="search" class="oa-hist-search" placeholder="Szukaj w źródłach, propozycji lub wyniku…" aria-label="Szukaj w historii dokumentów"><div class="oa-hist-split"><div class="oa-hist-list" role="listbox" tabindex="0" aria-label="Dokumenty w historii" data-list></div><div class="oa-hist-doc"><p class="oa-hist-summary" data-summary></p><div class="oa-tabs" role="tablist" aria-label="Zapisany dokument" data-doc-tabs></div><textarea readonly class="oa-rv-doc" data-doc-text aria-label="Zapisany dokument"></textarea></div></div><footer class="oa-footer">${button('Kopiuj wynik', 'copy-history', '', '', 'disabled')}${button('Usuń wpis', 'delete-history', '', '', 'disabled')}<span class="oa-pg-gap"></span>${button('Odśwież', 'refresh')}${button('Zamknij', 'close')}</footer></div>`;
     closeWin('opisai-history-delete'); // MessageBox.question is modal in rc32: the question belongs to the list it was asked in
@@ -1586,6 +1588,7 @@ Windows jest znakiem towarowym Microsoft Corporation. Pulpit demonstracji jest w
 
 Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
   function about(initial){
+    if(state.closed)launch(); // no OpisAI window over a hidden bubble
     const tabs=[['about','O aplikacji'],['changes','Co nowego'],['contact','Kontakt'],['licenses','Licencje']],named=tabs.some(t=>t[0]===initial),open=windows.get('opisai-about');
     if(open?.el?.isConnected){open.show();if(named)open.oaPage(initial);return;} // _open_about: an open window is only presented; a named tab is chosen as by a click
     let page=named?initial:'about',license='app';

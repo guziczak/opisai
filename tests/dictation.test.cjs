@@ -16,7 +16,7 @@ assert.equal(source.split(startup).length, 2, 'The test boundary must precede th
 const controllerSource = source.replace(startup, `
   review=result=>{__reviews.push(result);state.review=result;setPhase('review');};
   document.addEventListener('keydown',dictationEnterShortcut,true);
-  Object.assign(__api,{mount:createOrb,state,preferences:()=>preferences,dictate,finishDictation,orbAction,settings,about,setPhase,placeDictationPanel,FIELDS,
+  Object.assign(__api,{mount:createOrb,state,preferences:()=>preferences,dictate,finishDictation,orbAction,settings,about,history,closeApp,setPhase,placeDictationPanel,FIELDS,
     open(id){return makeWindow(id,'Okno',400,300,'<div></div>');}});
   return;
 ${startup}`);
@@ -431,4 +431,15 @@ test('O aplikacji → "Kopiuj informacje" names the dictation engines as rc32 do
   assert.equal(f.copied.length, 1);
   assert.match(f.copied[0], /^Dyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce \(próba\)$/m, 'application_info_text: "Dyktowanie: " + transcription_summary()');
   assert(!/chatgpt_browser|local_whisper|gemini\b/.test(f.copied[0]));
+});
+
+test('after "Zamknij" a window asked for from Start, the desktop or the guide starts OpisAI first: none opens over a hidden bubble', () => {
+  for (const [id, open] of [['opisai-settings', f => f.api.settings('connection')], ['opisai-history', f => f.api.history()], ['opisai-about', f => f.api.about()]]) {
+    const f = fixture(), wrap = f.doc.querySelector('.oa-orb-wrap');
+    f.api.closeApp(); f.advance(1000);
+    assert.equal(f.state.closed, true); assert(wrap.classList.contains('is-hidden'), 'the bubble is hidden');
+    f.shown.length = 0; open(f); f.advance(50);
+    assert.deepEqual(f.shown, [id]); assert.equal(f.state.closed, false, id + ': OpisAI runs again, as for "Opisz" and "Dyktuj"');
+    assert(!wrap.classList.contains('is-hidden'), id + ': the bubble is back'); assert.equal(f.phase, 'idle');
+  }
 });
