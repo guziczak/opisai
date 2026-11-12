@@ -361,7 +361,7 @@ test('the spelling lines come back after "Odrzuć" or × on the preview: the ope
 test('spelling busy names OpisAI\'s work as SafeCoordinator.busy does; its notices and reports are not work', () => {
   let host = null; const spelling = { connect(next) { host = next; }, refresh() {}, available: () => true, status: () => '', showIssues() {}, undo() {}, editWords() {} };
   const f = fixture({ spelling });
-  for (const id of ['opisai-compose', 'opisai-review', 'opisai-undo', 'opisai-progress', 'opisai-settings', 'opisai-dictation', 'opisai-discard']) {
+  for (const id of ['opisai-compose', 'opisai-review', 'opisai-undo', 'opisai-progress', 'opisai-settings']) {
     const view = f.api.open(id); assert.equal(host.busy(), true, id); view.close(); assert.equal(host.busy(), false, id + ' closed');
   }
   // _say() message boxes, _show_problem's recovery report (opened after job and _writing are cleared), the exchange view,
@@ -467,17 +467,15 @@ test('state changes are announced in a polite status region; the notice message 
   assert.equal(card.querySelector('.oa-error-body').getAttribute('role'), 'alert');
 });
 
-test('"Anuluj" stops the microphone start or the last-text receipt; "Pokaż" brings the receipt forward', () => {
+test('"Anuluj" stops a microphone start; a click during generation never brings back the closed read window', () => {
   const f = fixture(); f.api.state.recording = { listening: false, tick: 0, canvasFrame: 0 }; f.api.setPhase('processing'); f.advance(20);
   assert.deepEqual(f.chips(), ['show', 'cancel']);
   f.wrap.querySelector('[data-orb-action="cancel"]').dispatchEvent({ type: 'click' });
   assert.equal(f.api.state.recording, null, 'the start is aborted'); assert.equal(f.phase, 'idle'); assert.match(f.toasts.at(-1), /Dyktowanie anulowane/);
-  let delivered = 0;
-  f.api.state.receipt = { deliver() { delivered++; f.api.state.receipt = null; } }; f.api.setPhase('processing'); f.advance(20);
-  f.wrap.querySelector('[data-orb-action="show"]').dispatchEvent({ type: 'click' }); assert.equal(delivered, 1, '"Pokaż" shows the review at once');
-  f.api.state.receipt = { deliver() { delivered++; } }; f.api.setPhase('processing'); f.advance(20);
-  f.wrap.querySelector('[data-orb-action="cancel"]').dispatchEvent({ type: 'click' });
-  assert.equal(f.api.state.receipt, null); assert.equal(f.phase, 'idle'); assert.equal(delivered, 1, 'a cancelled receipt is never reviewed');
+  f.api.open('opisai-progress').close(); // "Odczytuję pola" finished and closed; generation runs in the workspace window
+  f.api.state.job = { cancel() {} }; f.api.setPhase('processing'); f.shown.length = 0;
+  f.click(); f.advance(200);
+  assert.deepEqual(f.shown, [], 'recall looks for the workspace window, never for the read\'s'); assert.deepEqual(f.actions, [], 'and starts no second operation');
 });
 
 test('the drop frame marches like the Qt pen: [6, 5] in 2.4 px pen widths, square caps, about 90 px/s', () => {

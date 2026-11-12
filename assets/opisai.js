@@ -62,7 +62,7 @@
   const normalizeDictation=p=>{p.transcriber={ChatGPT:'chatgpt_browser','Gemini Live':'gemini','Whisper (lokalnie)':'local_whisper'}[p.transcriber]||(['gemini','local_whisper','chatgpt_browser'].includes(p.transcriber)?p.transcriber:defaults.transcriber);p.cardMode={'Nagrywa OpisAI':'own','Dwie karty':'two'}[p.cardMode]||(['own','two'].includes(p.cardMode)?p.cardMode:'own');if(!['transcribe','agent'].includes(p.geminiMode))p.geminiMode='transcribe';const s=Math.round(Number(p.autoEnterSeconds));p.autoEnterSeconds=s>=5&&s<=600?s:10;if(!['auto','nvidia_external','nvidia_internal','integrated','cpu'].includes(p.whisperHardware))p.whisperHardware='auto';if(!['large-v3','large-v3-turbo','medium','small'].includes(p.whisperModel))p.whisperModel='large-v3';};
   normalizeDictation(preferences);
   normalizeConnection(preferences);
-  const state = {phase:'idle',active:null,operation:null,review:null,history:[],lastWrite:null,token:0,recording:null,receipt:null,job:null,orb:null,closed:false,handlingFailure:false,failureSerial:0,activeField:null};
+  const state = {phase:'idle',active:null,operation:null,review:null,history:[],lastWrite:null,token:0,recording:null,job:null,orb:null,closed:false,handlingFailure:false,failureSerial:0,activeField:null};
   const windows = new Map();
   const $ = (sel,root=document) => root.querySelector(sel);
   const $$ = (sel,root=document) => [...root.querySelectorAll(sel)];
@@ -76,8 +76,8 @@
   const stamp = () => new Intl.DateTimeFormat('pl-PL',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
   const toast = message => window.Shell?.toast(message);
   function bind(root, action, callback) { $$(`[data-action="${action}"]`,root).forEach(el => el.addEventListener('click',callback)); }
-  function applyTheme(win,theme=(win?.id==='opisai-settings'&&themePreview)||preferences.theme) { if(!win?.el)return; win.el.classList.remove('oa-theme-light','oa-theme-dark','oa-theme-blue');win.el.classList.add('oa-host','oa-theme-'+themeName(theme)); }
-  function refreshThemes() { windows.forEach(w=>applyTheme(w)); const dt=document.querySelector('.oa-dictation'); if(dt){dt.classList.remove('oa-theme-light','oa-theme-dark','oa-theme-blue');dt.classList.add('oa-theme-'+themeName());} } // a saved or followed theme reaches every OpisAI window
+  function applyTheme(win,theme=(win?.id==='opisai-settings'&&themePreview)||preferences.theme) { if(!win?.el)return; win.el.classList.remove('oa-theme-light','oa-theme-dark');win.el.classList.add('oa-host','oa-theme-'+themeName(theme)); }
+  function refreshThemes() { windows.forEach(w=>applyTheme(w)); const dt=document.querySelector('.oa-dictation'); if(dt){dt.classList.remove('oa-theme-light','oa-theme-dark');dt.classList.add('oa-theme-'+themeName());} } // a saved or followed theme reaches every OpisAI window
   function makeWindow(id,title,width,height,html,onClose) {
     let win=windows.get(id);
     if(win?.el?.isConnected){win.setTitle(title);win.setContent(html);win.show();win.focus();}
@@ -99,7 +99,6 @@
   const DOC_KEYS = ['badanie', 'wywiad', 'diagnoza']; // configured order: exam, history, diagnosis
   const DOC_FIELD = {badanie: 'Badanie kliniczne', wywiad: 'Wywiad', diagnoza: 'Diagnoza'};
   const DOC_SECTION = {badanie: 'Opis badania i ocena', wywiad: 'Opis wywiadu', diagnoza: 'Rozpoznanie robocze'};
-  const DOC_TAB = {badanie: 'Badanie', wywiad: 'Wywiad', diagnoza: 'Rozpoznanie'};
   const VARIANT_KEY = 'opisai.demo.variant.v1'; // config generation_variant: the last approved whole-visit choice
   const WINDOW_CHANGED = 'Zmieniło się okno, proces programu lub mapowanie pól. Odczytaj pola ponownie.';
   const RECEIPT_NOTE = 'To wynik wpisania do kontrolek, nie potwierdzenie zapisu wizyty w bazie Kliniki.';
@@ -694,7 +693,6 @@
     options=validOption(options);
     if(state.closed)launch();
     if(state.recording){finishDictation();return;}
-    if(state.receipt)return;
     if(state.consent){state.consent.cancelled=true;return;} // _dictation_starting: the question stays, the start is cancelled
     if(!options.direct&&settingsOpen())return;
     if(!options.direct&&raiseActive())return; // the open view comes forward and nothing starts
@@ -838,8 +836,8 @@
     if(rec.chat)cutFragment(rec,rec.t);
     setPhase('processing');renderDictation(rec);
   }
-  function dropDictation(){ // SafeCoordinator.cancel: the microphone start, the stop or the last-text receipt; never a review
-    const rec=state.recording;state.recording=null;state.receipt=null;state.active=null;setPhase('idle');
+  function dropDictation(){ // SafeCoordinator.cancel: the microphone start or a stop that still waits for its last text; never a review
+    const rec=state.recording;state.recording=null;state.active=null;setPhase('idle');
     if(!rec)return;
     if(rec.el&&!rec.el.hidden){rec.cancelled=true;renderDictation(rec);setTimeout(()=>disposeDictation(rec),350);}else disposeDictation(rec);
     if(rec.continuation)restoreDictationReview(rec.restore);
@@ -1089,14 +1087,13 @@
    * (_on_transcriber_backend_changed). Controls that need a key, an installation or a recording work in
    * the application; here they are disabled and say so. */
   function dictationSettings(area,draft){
-    const engine=DT_ENGINES[draft.transcriber]?draft.transcriber:'gemini',strategy=DT_STRATEGY[draft.cardMode]||DT_STRATEGY.own,inApp=' — w aplikacji';
+    const engine=DT_ENGINES[draft.transcriber]?draft.transcriber:'gemini',strategy=DT_STRATEGY[draft.cardMode]||DT_STRATEGY.own;
     const options=(map,current)=>Object.entries(map).map(([value,label])=>`<option value="${esc(value)}" ${value===current?'selected':''}>${esc(label)}</option>`).join('');
     const select=(key,map,label,extra='')=>`<select data-setting="${key}" aria-label="${esc(label)}" ${extra}>${options(map,draft[key])}</select>`;
     const toggle=(key,label,title='')=>`<label class="oa-switch-row" ${title?`title="${esc(title)}"`:''}><input type="checkbox" data-setting="${key}" ${draft[key]?'checked':''}><div>${label}</div></label>`;
-    const off=(label,title,kind='')=>`<button type="button" class="oa-btn ${kind}" disabled title="${esc(title+inApp)}"><span>${label}</span></button>`;
     const gemini=`<div class="oa-dt-engine" data-dt-engine="gemini">${formRow('Tryb Gemini:',select('geminiMode',{transcribe:'Dedykowana transkrypcja — zalecana',agent:'Gemini Live — wejście agenta'},'Tryb dyktowania Gemini'))}<p class="oa-form-help" data-dt-gemini-hint>${esc(draft.geminiMode==='agent'?'Zapisuje mowę rozpoznaną przez model Gemini Live. Korzysta z modelu audio agenta; preferuje język polski.':'Pokazuje tekst podczas mówienia i dopracowuje go po wypowiedzi. Wymaga dostępu do Gemini Transcribe Live; preferuje język polski.')}</p>`+
-      formRow('Klucz Gemini:',`<span class="oa-dt-key"><input type="password" placeholder="Wklej klucz API lub skonfiguruj z Google" aria-label="Wspólny klucz API Gemini" title="Ten sam klucz Gemini jest dostępny również w ustawieniach generowania. Zmiany zapisujesz przyciskiem Zapisz w konfiguracji." disabled>${off('Pokaż','Pokaż klucz API Gemini')}</span>`)+
-      `<p class="oa-form-help">Brak klucza Gemini. Wklej go lub skonfiguruj z Google.<br>W demonstracji klucz nie jest potrzebny: dyktowanie odtwarza przykład bez łączenia z Gemini.</p><div class="oa-inline-controls">${off('Skonfiguruj z Google','Zaloguj się do Google i przygotuj klucz API do dyktowania Gemini.')}${off('Sprawdź dyktowanie','Sprawdza połączenie i dostęp do wybranego trybu. Nie używa mikrofonu.','primary')}</div><p class="oa-form-help">Połączenie niesprawdzone. Test nie używa mikrofonu.</p>`+
+      formRow('Klucz Gemini:',`<span class="oa-dt-key"><input type="password" placeholder="Wklej klucz API lub skonfiguruj z Google" aria-label="Wspólny klucz API Gemini" title="Ten sam klucz Gemini jest dostępny również w ustawieniach generowania. Zmiany zapisujesz przyciskiem Zapisz w konfiguracji." disabled>${offButton('Pokaż','Pokaż klucz API Gemini')}</span>`)+
+      `<p class="oa-form-help">Brak klucza Gemini. Wklej go lub skonfiguruj z Google.<br>W demonstracji klucz nie jest potrzebny: dyktowanie odtwarza przykład bez łączenia z Gemini.</p><div class="oa-inline-controls">${offButton('Skonfiguruj z Google','Zaloguj się do Google i przygotuj klucz API do dyktowania Gemini.')}${offButton('Sprawdź dyktowanie','Sprawdza połączenie i dostęp do wybranego trybu. Nie używa mikrofonu.','primary')}</div><p class="oa-form-help">Połączenie niesprawdzone. Test nie używa mikrofonu.</p>`+
       `<label class="oa-switch-row" title="Wyłączenie tej zgody przywraca pytanie przed kolejnym nagraniem. Tekst nadal sprawdzasz przed wpisaniem do Kliniki."><input type="checkbox" data-setting="dictationConsent" ${draft.dictationConsent?'checked':''}><div>Zezwalaj na wysyłanie audio do Gemini bez pytania</div></label></div>`;
     const chatgpt=`<div class="oa-dt-engine" data-dt-engine="chatgpt_browser"><p class="oa-dt-info">Dyktowanie korzysta z zalogowanego ChatGPT w przeglądarce OpisAI. Nagranie trafia do ChatGPT; klucz API nie jest potrzebny. ChatGPT przechowuje nagrania dyktowania na koncie przez 30 dni i nie pozwala ich usunąć — przy wrażliwych wizytach dyktuj lokalnym Whisperem. Dostępność zależy od Twojego konta. Przy pierwszym nagraniu przeglądarka może poprosić o dostęp do mikrofonu. Tekst pojawi się w podglądzie, gdy udostępni go ChatGPT — możliwe, że dopiero po zakończeniu nagrania. Przytrzymaj bąbelek ponownie, aby zakończyć i sprawdzić tekst. Możesz wrócić do poprzedniego silnika w tym samym miejscu.</p>`+
       toggle('chatgptClip','Podpowiadaj ChatGPT język polski','Wstęp i zakończenie: „To jest język polski.” w tym samym strumieniu karty, bez dźwięku w głośnikach i bez zmiany urządzenia. Przed końcową wstawką do rejestratora dociera opóźniona końcówka Twojej mowy. Rozpoznane znane frazy są oddzielane od tekstu; przy niepewności pozostaje wariant do sprawdzenia. Eksperyment — nie gwarantuje polskiego wyniku. Wstawka końcowa wydłuża każde zakończenie o około 2 sekundy. Gdy nagrywa OpisAI, wstęp poprzedza każdy fragment (bez wstawki końcowej) i wydłuża jego przepisanie o około 2 sekundy.')+
@@ -1108,13 +1105,13 @@
     const whisper=`<div class="oa-dt-engine" data-dt-engine="local_whisper">${formRow('Liczy na:',select('whisperHardware',{auto:'Automatycznie (najlepszy dostępny)',nvidia_external:'Karta NVIDIA RTX — zewnętrzna (np. AORUS AI BOX)',nvidia_internal:'Karta NVIDIA RTX — wewnętrzna',integrated:'Karta wbudowana (AMD Radeon / Intel)',cpu:'Procesor'},'Liczy na','title="Automatycznie: najmocniejszy dostępny sprzęt (karta NVIDIA zewnętrzna, potem wewnętrzna, potem wbudowana, na końcu procesor). Wybór konkretnej karty jest ścisły: gdy jej nie ma, OpisAI powie o tym, zamiast po cichu liczyć na czymś innym."'))}`+
       formRow('Model:',select('whisperModel',{'large-v3':'large-v3','large-v3-turbo':'large-v3-turbo',medium:'medium',small:'small'},'Model','title="large-v3 = najlepsza jakość polskiego (zalecane). turbo = szybszy, ciut gorszy. medium/small = lżejsze, słabsze na terminologii."'))+
       `<p class="oa-dt-hint">🖥 W demonstracji sprzęt nie jest wykrywany; lokalny Whisper liczy w aplikacji na tym komputerze.</p>`+
-      `<div data-dt-cpp ${cpp?'':'hidden'}><p class="oa-dt-info" data-dt-cpp-status>${esc(cppStatus(draft.whisperModel))}</p><div class="oa-inline-controls">${off('⬇ Przygotuj teraz','Rozkłada dołączony silnik whisper.cpp i pobiera wybrany model mowy (oficjalne pliki, sprawdzana suma kontrolna) do folderu OpisAI. Bez tego zrobi się to samo przy pierwszym dyktowaniu.')}</div></div>`+
-      `<div data-dt-nvidia ${nvidia?'':'hidden'}><div class="oa-inline-controls">${off('🚀 Skonfiguruj automatycznie','Robi wszystko, co automatyzowalne: sprawdza GPU, instaluje PyTorch (CUDA 12.8) + RealtimeSTT, weryfikuje że PyTorch widzi kartę. Model dociągnie się sam przy pierwszym dyktowaniu. Jeśli GPU nie jest widoczne — pokaże JEDEN ręczny krok (sterownik/Thunderbolt) jako link.')}</div><p class="oa-form-help">Jeden przycisk przeprowadza całość automatycznie (GPU → biblioteki → weryfikacja). Sterownika NVIDIA / GIGABYTE Control Center / autoryzacji Thunderbolt nie da się zrobić w tle (admin + restart) — jeśli GPU nie jest widoczne, dostaniesz jeden link do kliknięcia i wracasz tu. Ustawienia zaawansowane (compute_type, język, initial_prompt) są przechowywane w SQLite.</p></div>`+
+      `<div data-dt-cpp ${cpp?'':'hidden'}><p class="oa-dt-info" data-dt-cpp-status>${esc(cppStatus(draft.whisperModel))}</p><div class="oa-inline-controls">${offButton('⬇ Przygotuj teraz','Rozkłada dołączony silnik whisper.cpp i pobiera wybrany model mowy (oficjalne pliki, sprawdzana suma kontrolna) do folderu OpisAI. Bez tego zrobi się to samo przy pierwszym dyktowaniu.')}</div></div>`+
+      `<div data-dt-nvidia ${nvidia?'':'hidden'}><div class="oa-inline-controls">${offButton('🚀 Skonfiguruj automatycznie','Robi wszystko, co automatyzowalne: sprawdza GPU, instaluje PyTorch (CUDA 12.8) + RealtimeSTT, weryfikuje że PyTorch widzi kartę. Model dociągnie się sam przy pierwszym dyktowaniu. Jeśli GPU nie jest widoczne — pokaże JEDEN ręczny krok (sterownik/Thunderbolt) jako link.')}</div><p class="oa-form-help">Jeden przycisk przeprowadza całość automatycznie (GPU → biblioteki → weryfikacja). Sterownika NVIDIA / GIGABYTE Control Center / autoryzacji Thunderbolt nie da się zrobić w tle (admin + restart) — jeśli GPU nie jest widoczne, dostaniesz jeden link do kliknięcia i wracasz tu. Ustawienia zaawansowane (compute_type, język, initial_prompt) są przechowywane w SQLite.</p></div>`+
       `<h3 class="oa-dt-subhead">Rozpoznawanie mówców</h3><p class="oa-dt-info">Oznacza w transkrypcie, kto mówi — na podstawie Twojego profilu głosu (Ty = pierwsza etykieta, pozostałe osoby = druga). Wypowiedzi niepewne zostają bez etykiety. Audio nie opuszcza komputera.</p>`+
       toggle('diarization','Oznaczaj mówców w transkrypcie','Wymaga: biblioteki pyannote, modeli diaryzacji i profilu głosu (lista niżej). Gdy czegoś brakuje, dyktowanie działa normalnie — po prostu bez etykiet (dostaniesz komunikat).')+
       toggle('diarizationOverlay','Podgląd rozmowy przy dyktowaniu (dymki jak w komunikatorze)','Podczas dyktowania z rozpoznawaniem mówców przykrywa pole „Badanie kliniczne” widokiem-czatem: Ty po prawej, rozmówca po lewej, a gdy ktoś właśnie mówi — dymek z trzema kropkami. Czysty podgląd: pod spodem tekst normalnie trafia do pola, a po dyktowaniu podgląd znika i odsłania zapis.')+
       formRow('Etykieta — Ty:',`<input type="text" data-setting="labelDoctor" maxlength="24" placeholder="Lekarz" value="${esc(draft.labelDoctor)}">`)+formRow('Etykieta — rozmówca:',`<input type="text" data-setting="labelOther" maxlength="24" placeholder="Właściciel" value="${esc(draft.labelOther)}">`)+
-      `<p class="oa-dt-info">⬇ Biblioteki rozpoznawania mówców — do pobrania<br>⬇ Modele głosu — do pobrania<br>Profil głosu — jeszcze nie nagrany<br>Aby nagrać profil, kliknij „Pobierz brakujące składniki”.</p><div class="oa-inline-controls">${off('Pobierz brakujące składniki','Pobiera biblioteki i modele potrzebne do nagrania profilu głosu. Pierwsze przygotowanie może potrwać kilka minut.')}</div><div class="oa-inline-controls" style="margin-top:8px">${off('🎤 Nagraj profil głosu…','Aby nagrać profil, kliknij „Pobierz brakujące składniki”.')}${off('📥 Importuj profil…','Wybierz wcześniej wyeksportowany profil głosu w pliku JSON.')}</div></div>`;
+      `<p class="oa-dt-info">⬇ Biblioteki rozpoznawania mówców — do pobrania<br>⬇ Modele głosu — do pobrania<br>Profil głosu — jeszcze nie nagrany<br>Aby nagrać profil, kliknij „Pobierz brakujące składniki”.</p><div class="oa-inline-controls">${offButton('Pobierz brakujące składniki','Pobiera biblioteki i modele potrzebne do nagrania profilu głosu. Pierwsze przygotowanie może potrwać kilka minut.')}</div><div class="oa-inline-controls" style="margin-top:8px">${offButton('🎤 Nagraj profil głosu…','Aby nagrać profil, kliknij „Pobierz brakujące składniki”.')}${offButton('📥 Importuj profil…','Wybierz wcześniej wyeksportowany profil głosu w pliku JSON.')}</div></div>`;
     area.innerHTML=`<div class="oa-dt-settings"><fieldset class="oa-group"><legend>Dyktowanie</legend><p class="oa-dt-info">Przytrzymaj bąbelek, aby dyktować. Silnik mowy wybierasz niezależnie od generatora opisu — możesz łączyć ChatGPT z dyktowaniem Gemini.</p>${formRow('Silnik:',select('transcriber',DT_ENGINES,'Silnik'))}<p class="oa-dt-info oa-dt-scope" data-dt-scope></p>${{gemini,chatgpt_browser:chatgpt,local_whisper:whisper}[engine]}</fieldset>`+
       `<div style="margin-top:16px">${notice('W demonstracji dyktowanie odtwarza zapisany przykład: mikrofon, przeglądarka ChatGPT, klucz Gemini ani lokalny model nie są używane. Wybór silnika zmienia przebieg i panel dyktowania tak jak w aplikacji.')}</div></div>`;
     const root=area.querySelector('.oa-dt-settings'),q=sel=>root.querySelector(sel);
@@ -1672,10 +1669,9 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
   }
   /* SafeCoordinator.intercept_trigger: clicking recalls the open view, it never starts a second operation. */
   function recall(){
-    if(state.receipt){state.receipt.deliver?.();return true;} // the last text: its review is the current view
     if(state.recording){showDictation();return true;}
     if(raiseActive())return true;
-    if(state.job){const w=windows.get('opisai-progress');if(w){w.show();w.focus();}return true;}
+    if(state.job){const w=workspace?.win;if(w){w.show();w.focus();}return true;} // generation runs in the workspace window
     if(state.review){review(state.review);return true;}
     return false;
   }
@@ -1696,9 +1692,9 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
   function orbAction(action){ // _on_bubble_action: labelled actions run the gesture paths
     if(action==='describe')describe();else if(action==='dictate')dictate();else if(action==='finish'){if(state.recording)finishDictation();}
     else if(action==='show')recall();
-    else if(action==='cancel'){ // SafeCoordinator.cancel: generation, the microphone start or the last-text receipt
+    else if(action==='cancel'){ // SafeCoordinator.cancel: generation, the microphone start or a stop that still waits for its last text
       if(state.job)state.job.cancel();
-      else if(state.recording&&!state.recording.listening||state.receipt){dropDictation();toast('Dyktowanie anulowane. Pola wizyty pozostają bez zmian.');}
+      else if(state.recording&&!state.recording.listening){dropDictation();toast('Dyktowanie anulowane. Pola wizyty pozostają bez zmian.');}
     }
   }
 
@@ -2122,11 +2118,11 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
   }
   /* MacroController._spelling_target: no spelling lines while OpisAI reads, generates, reviews, writes, dictates or
    * has its settings open. SafeCoordinator.busy names its work, and so do these views: compose, review and the undo
-   * confirmation (_review_open), progress (job, _capture_busy, _writing), settings (_settings_open), dictation and its
-   * discard question (dictation_state.active). Other OpisAI windows are not work: notices and recovery reports (_say,
+   * confirmation (_review_open), progress (job, _capture_busy, _writing), settings (_settings_open); dictation is
+   * state.recording (dictation_state.active). Other OpisAI windows are not work: notices and recovery reports (_say,
    * _show_problem), history, About, a profile view. The operation record is not either: "Odrzuć" or × leave it behind. */
-  const SPELLING_WORK=['opisai-compose','opisai-review','opisai-undo','opisai-progress','opisai-settings','opisai-dictation','opisai-discard'];
-  const spellingBusy=()=>!!(state.job||state.review||state.recording||state.receipt)||['processing','recording','review'].includes(state.phase)||SPELLING_WORK.some(id=>!!windows.get(id)?.el?.isConnected);
+  const SPELLING_WORK=['opisai-compose','opisai-review','opisai-undo','opisai-progress','opisai-settings'];
+  const spellingBusy=()=>!!(state.job||state.review||state.recording)||['processing','recording','review'].includes(state.phase)||SPELLING_WORK.some(id=>!!windows.get(id)?.el?.isConnected);
   window.OpisAISpelling?.connect({enabled:()=>!!preferences.spelling,busy:spellingBusy,running:()=>!state.closed,theme:()=>themeName(),adopt:adoptWindow}); // assets/opisai-spelling.js; "Mój słownik pisowni" is an OpisAI window (InputDialog)
   function trayTooltip(){return state.closed?'OpisAI — zamknięte\nKliknij, aby uruchomić':`OpisAI — ${modelLabel()}\nKlik: opisz · Przytrzymaj: dyktuj · Prawy: menu`;}
   function syncTray(){$('.tray-opisai')?.setAttribute('aria-label',state.closed?'OpisAI — zamknięte. Kliknij, aby uruchomić.':'OpisAI. Kliknij: opisz. Prawy przycisk lub Shift+F10: menu.');}
