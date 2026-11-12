@@ -302,7 +302,7 @@
 @container(max-width:740px){.oa-settings-nav{width:155px;flex-basis:155px;padding:10px 6px}.oa-nav-item{padding:8px;font-size:11px!important;gap:6px}.oa-settings-page{padding:15px}.oa-form-row{display:block}.oa-form-row>label{display:block;margin-bottom:5px}.oa-footer{flex-wrap:wrap;justify-content:flex-end}.oa-footer .oa-footnote{flex-basis:100%}.oa-content{padding:8px 12px 12px}}
 @media(prefers-reduced-motion:reduce){.oa-app *{animation:none!important;transition:none!important}}
 /* ===== Documentation workflow (0.12.0rc32 ComposeDialog, ProgressPage, ReviewPage, MessageBox,
-   RecoveryDialog, undo and HistoryWindow). Lane A block: compose → progress → review → write → undo → history. */
+   RecoveryDialog, undo and HistoryWindow): compose → progress → review → write → undo → history. */
 .oa-link-btn{border:0;background:transparent;color:var(--oa-ink);padding:4px 8px;border-radius:6px;font:inherit;white-space:nowrap;cursor:pointer}
 .oa-link-btn:not(:disabled):hover{background:var(--oa-hover)}.oa-link-btn:disabled{opacity:.48;cursor:default}.oa-link-btn[hidden]{display:none}
 .oa-link-btn:focus-visible{outline:1px dashed var(--oa-ink);outline-offset:1px}
