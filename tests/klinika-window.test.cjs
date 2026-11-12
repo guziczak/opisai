@@ -11,6 +11,7 @@ const vm = require('node:vm');
 const test = require('node:test');
 const shellSource = fs.readFileSync(path.join(__dirname, '../assets/shell.js'), 'utf8');
 const clinicSource = fs.readFileSync(path.join(__dirname, '../assets/clinic.js'), 'utf8');
+const iconsSource = fs.readFileSync(path.join(__dirname, '../assets/clinic-icons.js'), 'utf8');
 const REVIEW_TITLE = '[DEMO] Klinika XP — PRZEGLĄD WIZYTY (TYLKO DO ODCZYTU)';
 const KEY = 'opisai.demo.visit.v3';
 
@@ -130,8 +131,9 @@ function matchChain(el, chain, index = chain.length - 1) {
 /* ------------------------------------------------------------------ the fixture */
 const FOCUSABLE = /^(?:BUTTON|INPUT|SELECT|TEXTAREA)$/;
 /* saved: the stored visit state the page starts with. storage: 'ok', 'full' (setItem throws, as on an exceeded quota) or
-   'denied' (reading window.localStorage throws, as in a browser that blocks site data). */
-function fixture({saved, storage = 'ok'} = {}) {
+   'denied' (reading window.localStorage throws, as in a browser that blocks site data). icons: the page's drawings
+   (assets/clinic-icons.js) are loaded too; without them Klinika renders its markup bare, which is all most tests need. */
+function fixture({saved, storage = 'ok', icons = false} = {}) {
   const doc = new Target(), win = new Target(), timers = new Map(), store = new Map();
   if (saved !== undefined) store.set(KEY, typeof saved === 'string' ? saved : JSON.stringify(saved));
   const failure = (name, message) => Object.assign(new Error(message), {name});
@@ -152,6 +154,7 @@ function fixture({saved, storage = 'ok'} = {}) {
   const context = vm.createContext(sandbox);
   vm.runInContext(shellSource, context, {filename: 'assets/shell.js'});
   sandbox.Shell = win.Shell;
+  if (icons) { vm.runInContext(iconsSource, context, {filename: 'assets/clinic-icons.js'}); sandbox.KxpIcons = win.KxpIcons; }
   vm.runInContext(clinicSource, context, {filename: 'assets/clinic.js'});
   function advance(ms) { const end = now + ms; for (;;) { const next = [...timers].sort((a, b) => a[1].due - b[1].due || a[0] - b[0])[0]; if (!next || next[1].due > end) break; now = Math.max(now, next[1].due); timers.delete(next[0]); next[1].fn(); } now = end; }
   /* An event goes from its target through the ancestors to the document and the window; a detached target has neither. */
@@ -401,4 +404,28 @@ test('visit list: the rest of a double click on a button of the list does not ac
   f.advance(100); f.key('Escape'); f.click(f.q('clinic', '[data-kxp="close-view"]')); // Esc in the focused field: back to the review, then „Zamknij”
   f.click(f.q('clinic', '[data-visit="V-158"]'), 1); f.click(f.q('clinic', '[data-visit="V-158"]'), 2);
   assert.deepEqual([f.ctx().mode, f.ctx().visitNumber], ['saved', '158/2026']);
+});
+
+/* ------------------------------------------------------------------ the photo slot */
+test('photo slot: a drawing of the patient\'s species above the caption, and a dialog that says what the drawing is', () => {
+  const f = fixture({icons: true}), slot = () => f.q('clinic', '.kxp-photo'), drawing = () => slot().querySelector('svg.kxp-portrait');
+  const shapes = () => drawing().querySelectorAll('path').map(shape => shape.getAttribute('d')).join(' ');
+  assert.ok(slot().classList.contains('has-portrait') && drawing(), 'the slot holds a drawing');
+  assert.deepEqual([slot().getAttribute('title'), slot().querySelector('span').textContent, drawing().getAttribute('aria-hidden')], ['Zdjęcie zwierzęcia', 'zdjęcie niedostępne', 'true'], 'title and caption stay; the drawing is decorative');
+  // the dialog behind the slot and behind the camera button of the ZWIERZĘ header
+  const TEXT = 'Makieta nie zawiera zdjęć pacjentów; rysunek pokazuje tylko gatunek zwierzęcia. W Klinice XP w tym miejscu jest zdjęcie z karty zwierzęcia.';
+  for (const opener of [slot(), f.q('clinic', '.kxp-head-tool[data-kxp="photo"]')]) {
+    f.click(opener);
+    assert.deepEqual([f.q('clinic-info', 'h2').textContent, f.q('clinic-info', '.clinic-dialog-body p').textContent], ['Zdjęcie zwierzęcia', TEXT]);
+    f.click(f.q('clinic-info', '[data-dialog-close]')); assert.equal(f.open('clinic-info'), false);
+  }
+  // one drawing per species: the slot follows the patient of the visit on the card
+  const seen = new Map([[f.ctx().patient, shapes()]]);
+  f.click(f.q('clinic-editor', '[data-tool="ok"]')); // the example saved: nothing is unsaved
+  for (const id of ['V-151', 'V-158']) { f.openList(); f.click(f.row(id).children[0]); f.key('Enter'); seen.set(f.ctx().patient, shapes()); }
+  assert.deepEqual([...seen.keys()], ['Fistaszek', 'Mela', 'Bruno']);
+  assert.equal(new Set(seen.values()).size, 3, 'three different drawings');
+  // without the module of drawings the slot is empty and keeps its caption and title
+  const bare = fixture().q('clinic', '.kxp-photo');
+  assert.deepEqual([bare.classList.contains('has-portrait'), bare.querySelector('svg'), bare.querySelector('span').textContent, bare.getAttribute('title')], [false, null, 'zdjęcie niedostępne', 'Zdjęcie zwierzęcia']);
 });

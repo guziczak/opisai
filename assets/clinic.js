@@ -339,7 +339,7 @@
     });
     setTimeout(() => d.host.querySelector('input:not([readonly]),select')?.focus(), 80);
   }
-  function photoInfo() { info('Zdjęcie zwierzęcia', 'Makieta nie zawiera zdjęć pacjentów. W Klinice XP w tym miejscu jest zdjęcie z karty zwierzęcia.'); }
+  function photoInfo() { info('Zdjęcie zwierzęcia', 'Makieta nie zawiera zdjęć pacjentów; rysunek pokazuje tylko gatunek zwierzęcia. W Klinice XP w tym miejscu jest zdjęcie z karty zwierzęcia.'); }
   function notReproduced(name) { info(name, `Moduł „${name}” nie jest odwzorowany w makiecie. Demonstracja obejmuje przebieg wizyty, opis w podoknie i listę wizyt.`); }
   function aboutMock() { dialog('about', 'O makiecie Kliniki XP', 470, 332, `<div class="kxp-about">${kx('caseVisit', 40)}<div><h2>Makieta Kliniki XP</h2><p>Niezależna rekonstrukcja układu okna wizyty do pokazania pracy z OpisAI. Nie jest produktem BRI ani kompletną Kliniką XP.</p><p>Odwzorowane: przebieg wizyty, osobne podokno opisu (F2), nowa wizyta (F4), przegląd zapisanej wizyty i lista wizyt (Ctrl+L). Dane są fikcyjne i zostają w tej przeglądarce.</p><p>Prawdziwe pole opisu Kliniki rysuje własne cienkie czerwone zygzaki pisowni (słownik programu); makieta ich nie rysuje. Gładkie linie pod słowami to warstwa OpisAI.</p></div></div>`); }
 
