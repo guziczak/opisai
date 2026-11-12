@@ -485,8 +485,9 @@ test('windows opened from Konfiguracja close with it (modal dialogs in rc32); Hi
   f.click('opisai-settings', '[data-action="close-settings"]');
   assert.deepEqual([...f.windows.keys()], ['opisai-history'], 'VitalParamsConfigDialog, AiActMatrixDialog and the diagnostics message go; _open_history has no parent');
   f.api.settings('privacy'); f.page().querySelector('[data-cfg="matrix"]').click();
-  f.windows.get('opisai-matrix').close(); f.windows.get('opisai-settings').close(); // a child closed first is not closed twice
-  assert.deepEqual([...f.windows.keys()], ['opisai-history']);
+  const matrix = f.windows.get('opisai-matrix'), close = matrix.close; let closes = 0; matrix.close = function () { closes++; return close.call(this); };
+  matrix.close(); f.windows.get('opisai-settings').close();
+  assert.equal(closes, 1, 'a child closed first is not closed again with Konfiguracja: closeWin() leaves a closed window alone'); assert.deepEqual([...f.windows.keys()], ['opisai-history']);
 });
 
 test('Historia: the rc32 group with its limits, no "Wyczyść historię" and no undo; the switch stops new records', () => {

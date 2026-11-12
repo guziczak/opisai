@@ -546,6 +546,8 @@ test('compose, the review and a message box that open with a control under the b
   f.advance(30000); assert.ok(f.q('opisai-review', '#oa-review-ack')); assert.deepEqual(f.win('opisai-review').bounds, beside, '"Porównaj" under the bubble: the review page moves the window that showed the progress');
   f.approve(); assert.equal(f.win('opisai-message').title, 'OpisAI — wpisano do pól');
   assert.deepEqual(f.win('opisai-message').bounds, beside, '"Gotowe" under the bubble: the receipt, once it has its height');
+  f.win('opisai-message').bounds = {}; f.click('opisai-message', '[data-action="toggle-details"]'); f.advance(50);
+  assert.deepEqual(Object.keys(f.win('opisai-message').bounds), ['height'], 'a view is placed once, when it opens: details shown later only change its height');
   f = fixture({rects: layout(false)}); f.api.bubbleAt(1100, 500); // the same windows with nothing of theirs under the bubble
   f.compose(); assert.equal(f.win('opisai-compose').bounds, undefined, 'rc32: a view opens where the desktop puts it');
   f.generate(); assert.equal(f.win('opisai-review').bounds, undefined);
