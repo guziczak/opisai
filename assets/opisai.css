@@ -515,6 +515,7 @@
 .oa-cfg-indent{margin:-4px 0 12px 160px}
 .oa-cfg-note{margin-top:16px}
 .oa-app .oa-cfg-windows{margin:4px 0 0 160px}
+@container (max-width:740px){.oa-settings-page .oa-btn{white-space:normal}.oa-settings-page .oa-number{flex-wrap:wrap}.oa-cfg-indent,.oa-app .oa-cfg-windows{margin-left:0}} /* a narrow window: a caption, or a value with its unit, wraps instead of leaving the page; stacked form rows have no label column to clear */
 .oa-cfg-hash{width:100%;margin-bottom:10px;font:12px Consolas,monospace!important;color:var(--oa-muted)!important}
 .oa-cfg-table{overflow:auto;border:1px solid var(--oa-line);border-radius:7px;background:var(--oa-field)}
 .oa-cfg-table .oa-options-table th{position:sticky;top:0;z-index:1}
@@ -544,15 +545,15 @@
 .oa-about-version{font-size:14px;font-weight:600;background:var(--oa-surface);border:1px solid var(--oa-line);border-radius:8px;padding:3px 9px;user-select:text}
 .oa-about-id p{font-size:14px}
 .oa-about .oa-about-tabs{padding:0 18px;border-bottom:0}
-.oa-about-page{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:6px;margin:0 18px;padding:9px 14px;border:1px solid var(--oa-line);border-radius:0 8px 8px 8px;background:var(--oa-surface);overflow:hidden}
+.oa-about-page{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:6px;margin:0 18px;padding:9px 14px;border:1px solid var(--oa-line);border-radius:0 8px 8px 8px;background:var(--oa-surface);overflow:auto} /* scrolls only in a window too small for the page (a phone): rc32 never gets below 640x460 */
 .oa-about-page>h2,.oa-about-card h2{font-size:16px;font-weight:600}.oa-about-page>p{line-height:1.4}
-.oa-about-card{border:1px solid var(--oa-line);border-radius:8px;background:var(--oa-bg);padding:9px 14px;display:flex;flex-direction:column;gap:5px;min-height:0}
+.oa-about-card{border:1px solid var(--oa-line);border-radius:8px;background:var(--oa-bg);padding:9px 14px;display:flex;flex-direction:column;gap:5px} /* never shorter than its text, so the text stays inside */
 .oa-about-card h3{font-size:15px}.oa-about-grow{flex:1 1 0}
 .oa-about-card ul,.oa-about-notes{margin:0;padding-left:22px;line-height:1.5}
-.oa-about-columns{display:flex;gap:12px;flex:1 1 0;min-height:0}.oa-about-columns>.oa-about-card{flex:1 1 0}
+.oa-about-columns{display:flex;gap:12px;flex:1 1 0}.oa-about-columns>.oa-about-card{flex:1 1 0}
 .oa-about-select{user-select:text}
 .oa-about-page select{width:100%;flex-shrink:0}
 .oa-about-license{flex:1 1 0;min-height:80px;width:100%;font:13px/1.5 'Segoe UI','Selawik',Arial,sans-serif;white-space:pre-wrap}
 .oa-app .oa-about-demo{margin:6px 18px 0;font-size:11px;color:var(--oa-muted);flex-shrink:0}
 .oa-about-foot{border-top:0;padding:8px 18px 12px;background:transparent}
-@container (max-width:560px){.oa-about-columns{flex-direction:column}}
+@container (max-width:560px){.oa-about-columns{flex-direction:column}.oa-about-columns>.oa-about-card{flex:1 0 auto}} /* stacked cards share the spare height, each from its own text */

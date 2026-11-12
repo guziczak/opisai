@@ -503,3 +503,20 @@ test('O aplikacji: the rc32 header, pages and copy texts; Kontakt without phone 
   const select = page().querySelector('[data-license]'); select.value = 'deps'; f.bubble(select, {type: 'change', target: select});
   assert.equal(page().querySelector('textarea').value, f.api.LICENSE_TEXTS.deps);
 });
+
+/* The layout contract of a window smaller than the rc32 dialogs can get (a phone), read from the stylesheet:
+ * measured in a browser at 390x844, a text block of O aplikacji lay over the next one and a caption left its button. */
+test('small windows: a tab page of O aplikacji scrolls and its cards hold their text; Konfiguracja wraps captions and stacked rows lose the label indent', () => {
+  const css = fs.readFileSync(path.join(__dirname, '../assets/opisai.css'), 'utf8').split('\n');
+  const rule = selector => { const line = css.find(l => l.startsWith(selector + '{')); assert.ok(line, `rule ${selector}`); return line.slice(selector.length + 1, line.indexOf('}')).split(';'); };
+  assert.ok(rule('.oa-about-page').includes('overflow:auto'), 'the page scrolls when the window cannot hold it');
+  for (const selector of ['.oa-about-card', '.oa-about-columns']) assert.ok(!rule(selector).some(d => d.startsWith('min-height')), `${selector} is never shorter than its text`);
+  const narrow = at => css.filter(l => l.startsWith(`@container (max-width:${at}px)`)).join('\n');
+  assert.match(narrow(560), /\.oa-about-columns\{flex-direction:column\}\.oa-about-columns>\.oa-about-card\{flex:1 0 auto\}/, 'stacked cards start from their own text');
+  assert.match(narrow(740), /\.oa-settings-page \.oa-btn\{white-space:normal\}/, 'the form rows stack at 740 px; from there a caption wraps');
+  assert.match(narrow(740), /\.oa-cfg-indent,\.oa-app \.oa-cfg-windows\{margin-left:0\}/);
+  const order = selector => css.findIndex(l => l.startsWith(selector + '{')), last = css.findLastIndex(l => l.startsWith('@container (max-width:740px)') && l.includes('.oa-cfg-indent'));
+  assert.ok(last > order('.oa-cfg-indent') && last > order('.oa-app .oa-cfg-windows'), 'the narrow rule follows the rules it adjusts (same weight)');
+  const f = fixture(); f.api.about(); const page = f.q('opisai-about', '[data-about-page]');
+  page.scrollTop = 40; f.click('opisai-about', '[data-about="contact"]'); assert.equal(page.scrollTop, 0, 'another tab starts at its top');
+});

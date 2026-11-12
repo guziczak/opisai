@@ -1424,8 +1424,9 @@
     historyRefresh = () => { if (win.el?.isConnected) draw(); };
     draw();
   }
-  /* O aplikacji OpisAI (ui/about.py, domain/app_info.py): header above the tabs, short pages that never scroll, copy
-   * buttons without settings or keys. Contact: name, company and e-mail only (the full data are in the application);
+  /* O aplikacji OpisAI (ui/about.py, domain/app_info.py): header above the tabs, short pages that scroll only in a
+   * window smaller than the dialog's minimum of 640x460 (a phone), copy buttons without settings or keys.
+   * Contact: name, company and e-mail only (the full data are in the application);
    * licences as in rc32, with a third entry for the demonstration page itself. */
   const APP_RELEASE_NOTES=['Panel badania ma poprawioną pisownię notatki; cytat lekarza w szczegółach.','Tylko pisownia: inne słowa, liczby i przeczenia zostają jak w notatce.','„Szmerów” zostaje przy drogach oddechowych; nazwa wiersza się nie dubluje.','„Sygnalment” zamiast „Sygnalement”; kreski nie chowają się pod Kliniką.']; // RELEASE_NOTES["0.12.0rc32"]
   const APP_CAPABILITIES=['Epikryzy z notatek i wpisywanie zatwierdzonej treści do Kliniki.','Dyktowanie: Gemini, Whisper lokalnie, ChatGPT w przeglądarce (próba).','Podgląd tekstu na żywo i kontrola układu dokumentacji.','Konfiguracja Gemini z logowaniem Google.']; // capability_summary()
@@ -1584,7 +1585,7 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
     if(win.options)Object.assign(win.options,{minWidth:Math.min(640,innerWidth-16),minHeight:Math.min(460,innerHeight-60)}); // AboutDialog.setMinimumSize(640, 460)
     function draw(){
       $$('[data-about]',root).forEach(el=>{const on=el.dataset.about===page;el.classList.toggle('active',on);el.setAttribute('aria-selected',String(on));el.tabIndex=on?0:-1;});
-      const target=$('[data-about-page]',root);target.setAttribute('aria-label',tabs.find(t=>t[0]===page)[1]);
+      const target=$('[data-about-page]',root);target.setAttribute('aria-label',tabs.find(t=>t[0]===page)[1]);target.scrollTop=0; // a tab scrolled in a small window does not move the next one
       if(page==='about')target.innerHTML=`<section class="oa-about-card oa-about-grow"><h2>Możliwości</h2><ul>${APP_CAPABILITIES.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></section><p>Generowanie: ${esc(providerNames().join(' · '))}</p><p>Przed wpisaniem do dokumentacji lekarz weterynarii sprawdza i zatwierdza treść. OpisAI nie zastępuje oceny lekarskiej.</p>`;
       else if(page==='changes')target.innerHTML=`<h2>Zmiany w wersji ${VERSION}</h2><ul class="oa-about-notes">${APP_RELEASE_NOTES.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><span class="oa-pg-gap"></span><p title="Automatyczna kontrola informacji zapisanych w tym wydaniu aplikacji.">Wersja i informacje o wydaniu są spójne.</p><p>${esc(APP_UPDATE_STATUS)}</p>`;
       else if(page==='contact'){
