@@ -200,7 +200,8 @@
       if (op.remember && !op.scope.required) rememberVariant(requested);
       op.finished = true; op.dictation = null; win.close(); generate(op);
     });
-    refresh(); setTimeout(() => (op.texts[scope.sources[0]] ? $$('[data-tile]', root).find(t => t.classList.contains('selected')) : $('[data-source]', root))?.focus(), 0);
+    // The window opens at its top: with stacked columns the selected tile lies below the sources, and focusing it must not scroll them away.
+    refresh(); setTimeout(() => (op.texts[scope.sources[0]] ? $$('[data-tile]', root).find(t => t.classList.contains('selected')) : $('[data-source]', root))?.focus({preventScroll: true}), 0);
   }
   function composeClosed(op) { // Anuluj or ×: nothing was sent; a dictation summary comes back
     if (op.finished) return; op.finished = true; state.resume = null;

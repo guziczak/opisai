@@ -96,7 +96,7 @@ class Element extends Target {
   querySelectorAll(selector) { const chains = parseSelectors(selector), found = []; (function walk(node) { for (const child of node.children) { if (chains.some(chain => matchChain(child, chain))) found.push(child); walk(child); } })(this); return found; }
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
   click() { if (!this.disabled) this.dispatchEvent({type: 'click', detail: 1}); }
-  focus() { this.doc.activeElement = this; }
+  focus(options) { this.doc.activeElement = this; if (!options?.preventScroll) this.doc.scrolledTo = this; } // a browser scrolls a focused element into view unless told not to
   blur() {}
   scrollIntoView() {}
   getBoundingClientRect() { return {top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0}; }
@@ -229,6 +229,16 @@ test('compose: whole visit reads the sub-window first, then sources in the confi
   assert.deepEqual(f.tiles().filter(t => t.selected).map(t => t.text), ['Sam opis'], 'Variant() = Wiernie · sam opis by default');
   assert.equal(f.tiles().findIndex(t => t.selected), 3, 'the faithful row');
   assert.equal(f.q('opisai-compose', '[data-action="generate"]').disabled, true);
+});
+
+test('compose opens at its top: the selected tile gets the keyboard without scrolling the stacked sources away', () => {
+  let f = fixture(); f.compose();
+  const tile = f.root('opisai-compose').querySelectorAll('[data-tile]').find(t => t.classList.contains('selected'));
+  assert.equal(f.doc.activeElement, tile, 'the keyboard starts on the chosen variant');
+  assert.notEqual(f.doc.scrolledTo, tile, 'focus({preventScroll: true}): in a narrow window the tiles lie below the sources');
+  f = fixture({fields: {...SAMPLE, badanie: ''}}); f.compose();
+  assert.equal(f.doc.activeElement, f.q('opisai-compose', '[data-source="badanie"]'), 'an empty first source is filled in first');
+  assert.notEqual(f.doc.scrolledTo, f.doc.activeElement);
 });
 
 test('compose: other sources or scope clear the consent visibly; the writing style alone keeps it (ApprovalState)', () => {
