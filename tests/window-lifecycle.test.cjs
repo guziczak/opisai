@@ -153,6 +153,10 @@ function press(f, target, key, extra = {}) {
   return event;
 }
 const click = (target, extra = {}) => target.dispatchEvent({ type: 'click', detail: 1, ...extra });
+// The focus is compared by identity and reported by a short name. A failed assert.equal on two fixture elements would
+// print and compare the whole document behind them: gigabytes of memory, and no readable failure.
+const named = element => !element ? String(element) : (element.tagName || 'document').toLowerCase() + (element.id ? '#' + element.id : '') + (element.className ? '.' + element.className.trim().split(/\s+/).join('.') : '');
+function focused(f, expected, message = 'The keyboard is elsewhere') { assert(f.doc.activeElement === expected, `${message} (focus on ${named(f.doc.activeElement)}, expected on ${named(expected)})`); }
 const menus = f => f.doc.querySelectorAll('.shell-menu').length;
 // A window that closes on Esc, as an OpisAI dialog or the Klinika sub-window does, with a focused control inside.
 function escapable(f, tag = 'textarea') {
@@ -241,11 +245,11 @@ test('a different pointer cannot move or end the active gesture; interrupted res
 test('Esc belongs to an open menu alone: the window underneath does not get the key', () => {
   const f = fixture(), { control, seen } = escapable(f); let closes = 0;
   f.shell.menu([{ label: 'Kopiuj', onClick() {} }], 10, 10, { onClose() { closes++; } }); // opened with the mouse: the focus stays in the window
-  assert.equal(menus(f), 1); assert.equal(f.doc.activeElement, control);
+  assert.equal(menus(f), 1); focused(f, control);
   const event = press(f, control, 'Escape');
   assert.equal(menus(f), 0); assert.equal(closes, 1); assert(event.defaultPrevented);
   assert.equal(seen.escapes, 0, 'The key that closed the menu cannot also cancel the window');
-  assert.equal(f.doc.activeElement, control);
+  focused(f, control);
   press(f, control, 'Escape', { repeat: true }); assert.equal(seen.escapes, 0, 'Still held, the key does nothing more');
   press(f, control, 'Escape'); assert.equal(seen.escapes, 1, 'Pressed again with nothing open, Esc reaches the window as before');
 });
@@ -255,11 +259,11 @@ test('Esc closes one layer at a time and hands the keyboard back', () => {
   const menu = f.shell.menu([{ label: 'Pisownia', children: [{ label: 'Podkreślaj', onClick() {} }] }, { label: 'Zamknij', onClick() {} }], 10, 10);
   const owner = menu.querySelector('button'); owner.focus();
   click(owner, { detail: 0 }); // Enter on an item with children: the submenu opens and takes the keyboard
-  assert.equal(menus(f), 2); assert.notEqual(f.doc.activeElement, owner); assert.equal(owner.getAttribute('aria-expanded'), 'true');
+  assert.equal(menus(f), 2); assert(f.doc.activeElement !== owner); assert.equal(owner.getAttribute('aria-expanded'), 'true');
   press(f, f.doc.activeElement, 'Escape');
-  assert.equal(menus(f), 1); assert.equal(f.doc.activeElement, owner, 'Esc in a submenu returns to its item'); assert.equal(owner.getAttribute('aria-expanded'), 'false');
+  assert.equal(menus(f), 1); focused(f, owner, 'Esc in a submenu returns to its item'); assert.equal(owner.getAttribute('aria-expanded'), 'false');
   press(f, owner, 'Escape');
-  assert.equal(menus(f), 0); assert.equal(f.doc.activeElement, control, 'Esc in the menu returns to the element that had the keyboard');
+  assert.equal(menus(f), 0); focused(f, control, 'Esc in the menu returns to the element that had the keyboard');
   assert.equal(seen.escapes, 0);
 
   // A menu over a flyout: the menu goes first, then the flyout; each returns the focus to its own opener.
@@ -267,9 +271,9 @@ test('Esc closes one layer at a time and hands the keyboard back', () => {
   power.focus(); click(power, { clientX: 600, clientY: 600 }); assert.equal(menus(f), 1);
   f.doc.querySelector('.shell-menu button').focus();
   press(f, f.doc.activeElement, 'Escape');
-  assert.equal(menus(f), 0); assert(start.isConnected, 'The flyout under the menu stays'); assert.equal(f.doc.activeElement, power);
+  assert.equal(menus(f), 0); assert(start.isConnected, 'The flyout under the menu stays'); focused(f, power);
   press(f, power, 'Escape');
-  assert(!start.isConnected); assert.equal(f.doc.activeElement, control); assert.equal(seen.escapes, 0);
+  assert(!start.isConnected); focused(f, control); assert.equal(seen.escapes, 0);
 });
 
 test('Esc with Shift, Alt or the Windows key still belongs to the open menu', () => {
@@ -288,11 +292,11 @@ test('Ctrl+Esc opens Start once per press, and the window with the keyboard neve
   const event = press(f, control, 'Escape', { ctrlKey: true });
   assert(event.defaultPrevented); assert.equal(seen.escapes, 0, 'The shortcut of the desktop is not an Esc for the window');
   assert.equal(menus(f), 0); assert(start(), 'Start replaces the menu');
-  assert.equal(f.doc.activeElement, start().querySelector('.start-search input'), 'Start has the keyboard: what is typed next searches, it does not reach the window');
+  focused(f, start().querySelector('.start-search input'), 'Start has the keyboard: what is typed next searches, it does not reach the window');
   press(f, control, 'Escape', { ctrlKey: true, repeat: true }); press(f, control, 'Escape', { ctrlKey: true, repeat: true });
   assert(start(), 'Held down, the shortcut does not close and reopen Start'); assert.equal(seen.escapes, 0);
   press(f, control, 'Escape', { ctrlKey: true });
-  assert(!start(), 'Pressed again, it closes Start'); assert.equal(seen.escapes, 0); assert.equal(f.doc.activeElement, control);
+  assert(!start(), 'Pressed again, it closes Start'); assert.equal(seen.escapes, 0); focused(f, control);
 
   // The lock screen has an Esc of its own; the shortcut opens nothing over it.
   f.shell.power('lock'); const curtain = f.doc.querySelector('.screen-curtain');
@@ -307,19 +311,19 @@ test('a chosen command returns the keyboard to where it was, unless the command 
 
   choose([{ label: 'Wybierz okno główne...', onClick() { ran++; } }], 0); // Enter on a command that only shows a notice
   assert.equal(ran, 1); assert.equal(menus(f), 0);
-  assert.equal(f.doc.activeElement, control, 'The focus cannot stay on the body, out of reach of the keyboard');
+  focused(f, control, 'The focus cannot stay on the body, out of reach of the keyboard');
   const repeat = press(f, control, 'Enter', { repeat: true });
   assert(repeat.defaultPrevented); assert.equal(enters, 0, 'The Enter that chose the command, still held, does not press the opener');
   press(f, control, 'Enter'); press(f, control, 'Enter', { repeat: true }); assert.equal(enters, 2, 'A new press and its repeats work as usual');
 
   choose([{ label: 'Kopiuj', onClick() { ran++; } }], 1); // a click: no key is held
-  assert.equal(f.doc.activeElement, control); press(f, control, 'Enter', { repeat: true }); assert.equal(enters, 3);
+  focused(f, control); press(f, control, 'Enter', { repeat: true }); assert.equal(enters, 3);
 
   choose([{ label: 'Konfiguracja...', onClick() { opened = f.shell.createWindow({ id: 'settings', title: 'Konfiguracja' }); } }], 0);
-  assert.equal(f.doc.activeElement, opened.el, 'A window opened by the command keeps the focus');
+  focused(f, opened.el, 'A window opened by the command keeps the focus');
 
   control.focus(); choose([{ label: 'Usuń', onClick() { control.remove(); } }], 0);
-  assert.equal(f.doc.activeElement, opened.el, 'An opener that is gone is not focused: the active window has the keyboard');
+  focused(f, opened.el, 'An opener that is gone is not focused: the active window has the keyboard');
 });
 
 test('with nothing to return to, the keyboard goes to the active window', () => {
@@ -328,19 +332,19 @@ test('with nothing to return to, the keyboard goes to the active window', () => 
   f.frame.el.dispatchEvent({ type: 'focusin', target: control }); // the window remembers its control, as it does in a browser
 
   blur(); f.shell.menu(items, 10, 10); press(f, f.doc.body, 'Escape');
-  assert.equal(menus(f), 0); assert.equal(f.doc.activeElement, control, 'Esc in the desktop\'s menu: the control that had the keyboard last');
+  assert.equal(menus(f), 0); focused(f, control, 'Esc in the desktop\'s menu: the control that had the keyboard last');
   assert.equal(seen.escapes, 0);
   blur(); click(f.shell.menu(items, 10, 10).querySelector('button'));
-  assert.equal(f.doc.activeElement, control, 'A command of that menu: the same');
+  focused(f, control, 'A command of that menu: the same');
 
   // A command that redraws the toolbar it was chosen from: the button that opened the menu is gone.
   const tool = f.doc.createElement('button'); f.frame.content.append(tool); tool.focus(); f.frame.el.dispatchEvent({ type: 'focusin', target: tool });
   const item = f.shell.menu([{ label: 'Sortuj według', onClick() { tool.remove(); } }], 10, 10).querySelector('button'); item.focus(); click(item, { detail: 0 });
-  assert.equal(f.doc.activeElement, f.frame.el, 'The control is gone too: the window itself, where its shortcuts work');
+  focused(f, f.frame.el, 'The control is gone too: the window itself, where its shortcuts work');
 
   // No window is shown: the focus is left alone.
   f.frame.minimize(); f.flushTimers(); blur(); f.shell.menu(items, 10, 10); press(f, f.doc.body, 'Escape');
-  assert.equal(menus(f), 0); assert.equal(f.doc.activeElement, f.doc.body);
+  assert.equal(menus(f), 0); focused(f, f.doc.body);
 });
 
 test('a command of a flyout leaves the keyboard with the active window; its Enter, still held, does nothing more', () => {
@@ -352,18 +356,18 @@ test('a command of a flyout leaves the keyboard with the active window; its Ente
   const start = () => f.doc.querySelector('#start-menu'), tile = id => f.doc.querySelector(`#start-menu .start-pinned [data-open="${id}"]`);
 
   f.shell.showStart(); tile('opisai').focus(); click(tile('opisai'), { detail: 0 }); // Enter on the tile
-  assert(!start()); assert.equal(f.doc.activeElement, control, 'The focus cannot stay on the body: the window that was active has it');
+  assert(!start()); focused(f, control, 'The focus cannot stay on the body: the window that was active has it');
   const repeat = press(f, control, 'Enter', { repeat: true });
   assert(repeat.defaultPrevented); assert.equal(enters, 0, 'The Enter that chose the tile does not reach the window');
   press(f, control, 'Enter'); assert.equal(enters, 1);
 
   f.shell.showStart(); tile('help').focus(); click(tile('help'));
-  assert(!start()); assert.equal(f.doc.activeElement, opened.el, 'A window opened by the command keeps the keyboard');
+  assert(!start()); focused(f, opened.el, 'A window opened by the command keeps the keyboard');
 
   // "Wszystkie" and "Wstecz" redraw the list inside Start: the keyboard stays in Start, on the button that leads back.
   f.shell.showStart(); const all = f.doc.querySelector('#all-apps'); all.focus(); click(all, { detail: 0 });
-  assert.equal(f.doc.activeElement, f.doc.querySelector('#back-pinned')); click(f.doc.activeElement, { detail: 0 });
-  assert.equal(f.doc.activeElement, f.doc.querySelector('#all-apps')); assert(start());
+  focused(f, f.doc.querySelector('#back-pinned')); click(f.doc.activeElement, { detail: 0 });
+  focused(f, f.doc.querySelector('#all-apps')); assert(start());
 });
 
 test('the lock screen keeps its own keys and gives the keyboard back', () => {
@@ -372,15 +376,15 @@ test('the lock screen keeps its own keys and gives the keyboard back', () => {
   f.frame.el.dispatchEvent({ type: 'focusin', target: control });
   for (const key of ['Escape', 'Enter']) {
     f.shell.power('lock'); const curtain = f.doc.querySelector('.screen-curtain'), button = curtain.querySelector('button');
-    assert.equal(f.doc.activeElement, button);
+    focused(f, button);
     const event = press(f, button, key);
     assert(!curtain.isConnected); assert(event.stopped, 'The key that wakes the desktop is not passed on: Esc would close a dialog behind the screen');
-    assert.equal(f.doc.activeElement, control, 'The window that was active has the keyboard again');
+    focused(f, control, 'The window that was active has the keyboard again');
     press(f, control, key, { repeat: true });
   }
   assert.equal(seen.escapes, 0); assert.equal(enters, 0, 'Still held, the waking key does nothing in that window');
   f.shell.power('sleep'); click(f.doc.querySelector('.screen-curtain button'));
-  assert(!f.doc.querySelector('.screen-curtain')); assert.equal(f.doc.activeElement, control, 'Woken with the mouse: the same');
+  assert(!f.doc.querySelector('.screen-curtain')); focused(f, control, 'Woken with the mouse: the same');
 });
 
 test('the power menu opens at its button from the keyboard, with the first item focused', () => {
@@ -389,10 +393,10 @@ test('the power menu opens at its button from the keyboard, with the first item 
   click(power, { detail: 0, clientX: 0, clientY: 0 }); // Enter or Space: the click has no pointer position
   let menu = f.doc.querySelector('.shell-menu');
   assert.deepEqual([menu.style.left, menu.style.top], ['700px', '540px'], 'Placed from the middle of the button, as a click there would place it');
-  assert.equal(f.doc.activeElement, menu.querySelector('button'), 'The arrow keys work at once');
-  press(f, f.doc.activeElement, 'Escape'); assert.equal(f.doc.activeElement, power);
+  focused(f, menu.querySelector('button'), 'The arrow keys work at once');
+  press(f, f.doc.activeElement, 'Escape'); focused(f, power);
   click(power, { clientX: 600, clientY: 600 }); menu = f.doc.querySelector('.shell-menu');
-  assert.deepEqual([menu.style.left, menu.style.top], ['380px', '420px']); assert.equal(f.doc.activeElement, power, 'With the mouse the menu follows the pointer and takes no focus');
+  assert.deepEqual([menu.style.left, menu.style.top], ['380px', '420px']); focused(f, power, 'With the mouse the menu follows the pointer and takes no focus');
 });
 
 test('"Przywróć ustawienia" clears the demo keys and reloads, also when the browser blocks storage', () => {
