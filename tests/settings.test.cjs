@@ -500,6 +500,7 @@ test('O aplikacji: the rc32 header, pages and copy texts; Kontakt without phone 
   assert.equal(f.api.LICENSE_TEXTS.deps, [rc32.license_summary, '', 'Wybrane biblioteki:', '', ...rc32.third_party.map(([n, l]) => n + ' — ' + l), '', 'Pełne teksty licencji bibliotek i ich zależności są dołączone do odpowiednich pakietów.'].join('\n'));
   assert.match(f.api.LICENSE_TEXTS.demo, /© 2026 Łukasz Guziczak \(GUITS\)\. Wszelkie prawa zastrzeżone, o ile nie zaznaczono inaczej\./);
   assert.match(f.api.LICENSE_TEXTS.demo, /SIL Open Font License 1\.1/); assert.match(f.api.LICENSE_TEXTS.demo, /Klinika XP jest produktem firmy BRI\./); assert.match(f.api.LICENSE_TEXTS.demo, /Windows jest znakiem towarowym Microsoft/);
+  assert.match(f.api.LICENSE_TEXTS.demo, /^Windows jest znakiem towarowym Microsoft Corporation\. Pulpit demonstracji jest własną stylizacją tej strony, a nie produktem Microsoft\.$/m, 'the styling belongs to this page: no pronoun that could point at Windows');
   const select = page().querySelector('[data-license]'); select.value = 'deps'; f.bubble(select, {type: 'change', target: select});
   assert.equal(page().querySelector('textarea').value, f.api.LICENSE_TEXTS.deps);
 });

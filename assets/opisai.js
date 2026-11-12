@@ -1573,7 +1573,7 @@ Tapety Horyzont i ikony narzędzi — przygotowane dla tej demonstracji (assets/
 
 Znaki towarowe:
 Klinika XP jest produktem firmy BRI. Makieta okna Kliniki w tej demonstracji to niezależna rekonstrukcja z fikcyjnymi danymi, a nie produkt BRI.
-Windows jest znakiem towarowym Microsoft Corporation. Pulpit demonstracji to jego własna stylizacja.
+Windows jest znakiem towarowym Microsoft Corporation. Pulpit demonstracji jest własną stylizacją tej strony, a nie produktem Microsoft.
 
 Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
   function about(initial){
