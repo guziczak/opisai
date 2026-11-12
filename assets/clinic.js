@@ -75,7 +75,7 @@
       return { ...base, ...rest, visits: [...rest.visits.map(doctor), ...base.visits.filter(v => !rest.visits.some(x => x.id === v.id))], current: { ...rest.current, meta: doctor(rest.current.meta) }, weights: Array.isArray(saved.weights) && saved.weights.length === 3 ? saved.weights : base.weights };
     } catch (_) { return base; }
   }
-  let state = loadState();
+  const state = loadState();
   let mainWindow = null, mainRoot = null, editorWindow = null, editorRoot = null, listWindow = null, listRoot = null;
   let closingEditor = false, statusText = '';
   const fieldUndo = {}, editTimers = new Map(), composing = new Set();
@@ -539,16 +539,6 @@
     return { ok: true, text: after };
   }
   function markTarget(key, enabled = true) { editorRoot?.querySelectorAll('.kxp-section').forEach(el => el.classList.toggle('is-target', enabled && el.dataset.section === key)); }
-  function reset() {
-    closeEditor(); listWindow?.close();
-    state = initialState(); for (const k of KEYS) delete fieldUndo[k]; statusText = '';
-    try { localStorage.removeItem('opisai.demo.visit.v2'); } catch (_) {}
-    persist();
-    if (mainRoot) renderMain();
-    openEditor();
-    announce(null, 'reset'); emit('clinic:focus', { field: state.activeField, fields: getFields() });
-    return getFields();
-  }
   function context() { const p = patientOf(state.current.patient); return { editorOpen: editorVisible(), writable: writable() && editorVisible(), mode: state.mode, title: SUB_TITLE, mainTitle: state.mode === 'saved' ? REVIEW_TITLE : MAIN_TITLE, patient: p.name, owner: p.owner, visitNumber: state.current.id === null ? '<NOWY>' : state.current.meta.number, session: editorVisible() ? editorSession : 0, message: NO_EDITOR }; }
 
   /* ---------------------------------------------------------------- window lifecycle */
@@ -568,7 +558,7 @@
     else if (event.key === 'F4') { event.preventDefault(); newVisit(); }
     else if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'l') { event.preventDefault(); openList(); }
   }
-  window.Clinic = { open, isOpen: () => !!(mainWindow && document.contains(mainWindow.el)), openEditor: startEditing, isEditorOpen: editorVisible, getContext: context, getFields, setFields, replaceText, focusField, getActiveField: () => state.activeField, reset, markTarget, getDefaultFields: () => ({ ...DEFAULT_FIELDS }) };
+  window.Clinic = { open, isOpen: () => !!(mainWindow && document.contains(mainWindow.el)), openEditor: startEditing, isEditorOpen: editorVisible, getContext: context, getFields, setFields, replaceText, focusField, getActiveField: () => state.activeField, markTarget, getDefaultFields: () => ({ ...DEFAULT_FIELDS }) };
   document.addEventListener('keydown', onKey);
   function init() {
     Shell.registerApp({ id: 'clinic', title: 'Klinika XP', icon: 'clinic', open });

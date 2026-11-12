@@ -406,6 +406,16 @@ test('visit list: the rest of a double click on a button of the list does not ac
   assert.deepEqual([f.ctx().mode, f.ctx().visitNumber], ['saved', '158/2026']);
 });
 
+/* ------------------------------------------------------------------ what Klinika offers the page */
+// OpisAI reads and writes the visit through window.Clinic. Clinic.reset() was left without a caller: the example comes
+// back through „Przywróć ustawienia” of the desktop, which removes every opisai.demo.* key and loads the page anew.
+test('window.Clinic: the visit API of the page, without a reset of its own', () => {
+  const f = fixture();
+  assert.deepEqual(Object.keys(f.clinic).sort(), ['focusField', 'getActiveField', 'getContext', 'getDefaultFields', 'getFields', 'isEditorOpen', 'isOpen', 'markTarget', 'open', 'openEditor', 'replaceText', 'setFields']);
+  for (const [name, member] of Object.entries(f.clinic)) assert.equal(typeof member, 'function', name);
+  assert.doesNotMatch(clinicSource, /\breset\b|visit\.v2/, 'no restore of the example and no earlier storage key in Klinika');
+});
+
 /* ------------------------------------------------------------------ the photo slot */
 test('photo slot: a drawing of the patient\'s species above the caption, and a dialog that says what the drawing is', () => {
   const f = fixture({icons: true}), slot = () => f.q('clinic', '.kxp-photo'), drawing = () => slot().querySelector('svg.kxp-portrait');
