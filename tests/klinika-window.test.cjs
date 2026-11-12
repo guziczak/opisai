@@ -378,6 +378,25 @@ test('a whole saved state is taken as it is: a draft, a saved visit in review, a
   assert.deepEqual([typed.ctx().mode, typed.q('clinic', '[data-meta="date"]').value, typed.clinic.getFields().diagnoza], ['new', '12/13', 'Nieżyt górnych dróg oddechowych.']);
 });
 
+// The demo's first example carried a doctor's name that read like a person's; a label replaced it, also in states
+// saved before. The visit under review was left out: the review showed the label, but F2 took the data to edit from
+// that visit, so the earlier name was back in the status bar and went into the list with the next save.
+test('a state saved with the earlier doctor name is read with the label, also on the visit under review', () => {
+  const earlier = /m\.doctor === '([^']+)'/.exec(clinicSource)[1], label = /const DOCTOR = '([^']+)'/.exec(clinicSource)[1];
+  const a = fixture(); a.key('s', {ctrlKey: true}); // the example saved: a visit in review
+  const state = a.saved(); for (const holder of [...state.visits, state.current.meta, state.loaded]) holder.doctor = earlier;
+  const f = fixture({saved: state}), chip = () => f.q('clinic', '.kxp-doctor').textContent;
+  assert.deepEqual([f.ctx().mode, chip()], ['saved', label]);
+  f.shell.windows.get('clinic').focus(); f.key('F2'); f.advance(100); // the edit starts from the visit under review
+  assert.deepEqual([f.ctx().mode, chip()], ['edit', label]);
+  f.key('s', {ctrlKey: true});
+  assert.equal(f.ctx().mode, 'saved'); assert.ok(!JSON.stringify(f.saved()).includes(earlier), 'nothing is stored with the earlier name');
+  f.openList(); assert.ok(!f.window('clinic-list').el.textContent.includes(earlier)); assert.equal(f.rows().length, 11);
+  // a review without a stored visit (the history of a patient with no visits) stays as it is
+  const none = a.saved(); none.mode = 'history'; none.loaded = null;
+  assert.equal(fixture({saved: none}).ctx().mode, 'history');
+});
+
 // The ZWIERZĘ card gives the animal's age on the day of the visit. With a visit date that is not a date (half typed, a
 // month 13, a word) the card read „Wiek: NaN miesięcy” as soon as the window was drawn again, and after a reload.
 test('the age in the ZWIERZĘ card stays an age while the visit date is not a date', () => {

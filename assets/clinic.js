@@ -72,7 +72,7 @@
       if (!wholeState(saved)) return base;
       const { spelling, ignoredWords, ...rest } = saved; // OpisAI's spelling was never Klinika's: older saves drop it
       const doctor = m => (m && m.doctor === 'Anna Nowak' ? { ...m, doctor: DOCTOR } : m); // the demo's earlier seed name, never a user's entry; seed visits added later join a saved list
-      return { ...base, ...rest, visits: [...rest.visits.map(doctor), ...base.visits.filter(v => !rest.visits.some(x => x.id === v.id))], current: { ...rest.current, meta: doctor(rest.current.meta) }, weights: Array.isArray(saved.weights) && saved.weights.length === 3 ? saved.weights : base.weights };
+      return { ...base, ...rest, visits: [...rest.visits.map(doctor), ...base.visits.filter(v => !rest.visits.some(x => x.id === v.id))], current: { ...rest.current, meta: doctor(rest.current.meta) }, loaded: doctor(rest.loaded ?? null), weights: Array.isArray(saved.weights) && saved.weights.length === 3 ? saved.weights : base.weights };
     } catch (_) { return base; }
   }
   const state = loadState();
