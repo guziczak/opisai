@@ -209,3 +209,9 @@
 
 /* Hover feedback is a short colour transition; none of it runs when the system asks for reduced motion. */
 @media (prefers-reduced-motion:reduce){.kxp-section.just-applied .kxp-memo{animation:none}:is(.kxp-app,.kxp-editor-root,.kxp-list,.clinic-dialog) *{transition:none!important}}
+
+/* Forced colours (Windows contrast themes) drop box-shadows and repaint borders in system colours, and that is all the
+   fields and the rows of the visit list use to show keyboard focus: there they get a real outline. The two icons that a
+   filter turns white keep their own colours, and the selected row is filled with the system's selection colours. */
+@media (forced-colors:active){.kxp-input:focus-visible,.kxp-history:focus-visible,.kxp-section .kxp-memo:focus-visible,.kxp-list-filter input:focus-visible,.kxp-list-table tr[data-list-row]:focus-visible,.clinic-form-field :is(input,select,textarea):focus{outline:2px solid Highlight;outline-offset:-2px}}
+@media (forced-colors:active){.kxp-doctor .kxp-icon,.clinic-button.primary .kxp-icon{filter:none}.kxp-list-table tr.is-selected td{forced-color-adjust:none;background:SelectedItem;color:SelectedItemText}.kxp-list-table tr.is-selected:focus-visible{outline-color:SelectedItemText}}

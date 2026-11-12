@@ -69,3 +69,24 @@ test('status bar: the doctor\'s name is a box of its own that ends in an ellipsi
   assert.match(name[1], /(?:^|;)padding-right:1px;margin-right:-1px(?:;|$)/);
   assert.match(clinicCss, /^\.kxp-status\{[^}]*white-space:nowrap/m, 'the bar is one line');
 });
+
+// Forced colours (Windows contrast themes) drop box-shadows and repaint borders and backgrounds in system colours.
+// The fields and the rows of the visit list show keyboard focus only with a border colour and an inset shadow, after
+// outline:0, so nothing was left of it there; two icons turned white by a filter vanished on a light palette; and the
+// selected row lost its fill.
+test('forced colours: an outline for fields and list rows, their own colours for the whitened icons, a fill for the selected row', () => {
+  const forced = [...clinicCss.matchAll(/^@media \(forced-colors:active\)\{(.*)\}$/gm)].map(m => m[1]).join('');
+  const ring = /(?:^|\})([^{}]+)\{outline:2px solid Highlight;outline-offset:-2px\}/.exec(forced);
+  assert.ok(ring, 'one rule gives the outline');
+  const ringed = ring[1].split(/,(?![^(]*\))/);
+  for (const selector of ['.kxp-input:focus-visible', '.kxp-history:focus-visible', '.kxp-section .kxp-memo:focus-visible', '.kxp-list-filter input:focus-visible', '.kxp-list-table tr[data-list-row]:focus-visible', '.clinic-form-field :is(input,select,textarea):focus'])
+    assert.ok(ringed.includes(selector), `${selector} gets an outline`);
+  // each of them has a rule that removes the outline for the normal rendering; a seventh would need a place here too
+  const removed = [...clinicCss.matchAll(/^([^{@\n]+)\{[^}]*outline:0[^}]*\}$/gm)].map(m => m[1]);
+  assert.deepEqual(removed, ['.kxp-input', '.kxp-history', '.kxp-memo', '.kxp-list-filter input', '.kxp-list-table tr[data-list-row]:focus-visible', '.clinic-form-field input,.clinic-form-field select,.clinic-form-field textarea']);
+  const whitened = [...clinicCss.matchAll(/^([^{@\n]+)\{filter:brightness\(0\) invert\(1\)\}$/gm)].map(m => m[1]);
+  assert.deepEqual(whitened, ['.kxp-doctor .kxp-icon', '.clinic-button.primary .kxp-icon']);
+  assert.ok(forced.includes(`${whitened.join(',')}{filter:none}`), 'the filter is off for both');
+  assert.ok(forced.includes('.kxp-list-table tr.is-selected td{forced-color-adjust:none;background:SelectedItem;color:SelectedItemText}'));
+  assert.ok(forced.includes('.kxp-list-table tr.is-selected:focus-visible{outline-color:SelectedItemText}'), 'the ring of the selected row is not drawn in the colour of its fill');
+});
