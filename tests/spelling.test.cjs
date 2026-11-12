@@ -151,7 +151,7 @@ function fixture({ fields = SAMPLE, storage = new Map(), editor = true } = {}) {
     setInterval: (fn, delay) => { intervals.set(++serial, { fn, delay, due: now + delay }); return serial; }, clearInterval: id => intervals.delete(id),
     Map, Set, WeakMap, Object, Array, Number, String, Math, JSON, Error, Infinity });
   vm.runInContext(source, context, { filename: 'assets/opisai-spelling.js' });
-  const host = { on: true, isBusy: false, enabled: () => host.on, busy: () => host.isBusy, running: () => true, theme: () => 'light' };
+  const host = { on: true, isBusy: false, adopted: [], enabled: () => host.on, busy: () => host.isBusy, running: () => true, theme: () => 'light', adopt: w => { host.adopted.push(w); } };
   const api = win.OpisAISpelling;
   function advance(milliseconds) {
     const end = now + milliseconds;
@@ -316,6 +316,8 @@ test('Pomiń lasts for this session only; Dodaj do słownika is kept in this bro
   assert.deepEqual(again.words(), ['fancy:spelling', 'Osłuchwo:spelling', 'rzęzenia:spelling'], 'a reload checks a skipped word again, never a word of the dictionary');
   const win = again.api.editWords(); const area = win.options.content.querySelector('textarea');
   assert.equal(win.options.title, 'Mój słownik pisowni'); assert.equal(area.value, 'nastroszna');
+  assert(again.host.adopted.length === 1 && again.host.adopted[0] === win, 'the dialog joins OpisAI\'s windows (rc32 InputDialog): its theme, recall by the bubble, "Zamknij"');
+  assert.equal(win.options.id, 'opisai-spelling-words'); assert.equal(win.options.className, 'oa-host oa-theme-light');
   assert.equal(win.options.content.querySelector('label').textContent, 'Jedno słowo w wierszu. Usunięcie wpisu ponownie włącza jego sprawdzanie.');
   area.value = ' Osłuchwo \n\nOsłuchwo\n'; win.options.content.querySelector('[data-words="ok"]').dispatchEvent({ type: 'click' }); again.advance(100);
   assert.deepEqual(JSON.parse(storage.get('opisai.demo.spelling.v1')), { words: ['Osłuchwo'] }, 'one word per line, trimmed, without repeats');

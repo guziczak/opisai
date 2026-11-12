@@ -146,7 +146,7 @@ function matchChain(el, chain, index = chain.length - 1) {
 
 /* ------------------------------------------------------------------ the fixture */
 const SAMPLE = {wywiad: 'Szczur, kicha od tygodnia.', badanie: 'T 38,1°C, HR 320/min.', diagnoza: 'Nieżyt górnych dróg oddechowych.'};
-function fixture({prefs, desktop = 'light', editor = true} = {}) {
+function fixture({prefs, desktop = 'light', editor = true, spelling = null} = {}) {
   const doc = new Target(), win = new Target(), timers = new Map(), toasts = [], notices = [], api = {}, storage = new Map(), clipboard = [];
   if (prefs) storage.set('opisai-demo-settings-v12', JSON.stringify(prefs));
   let now = 0, serial = 0, refuses = false; // refuses: a blocked or full browser storage
@@ -168,7 +168,7 @@ function fixture({prefs, desktop = 'light', editor = true} = {}) {
   const clinic = {fields: {...SAMPLE}, editor, session: 1, isOpen: () => true, isEditorOpen: () => clinic.editor, getFields: () => ({...clinic.fields}), getActiveField: () => 'badanie', focusField() {}, markTarget() {}, open() {}, openEditor() {},
     getContext: () => ({editorOpen: clinic.editor, writable: clinic.editor, mode: 'edit', title: '[DEMO] Rejestracja wizyty: Wywiad - Badanie - Diagnoza', mainTitle: '[DEMO] Klinika XP - [Przebieg wizyty - Zwierzę domowe]', patient: 'Fistaszek', visitNumber: '<NOWY>', session: clinic.editor ? clinic.session : 0}),
     setFields: () => ({ok: true})};
-  win.Clinic = clinic; win.Shell = shell;
+  win.Clinic = clinic; win.Shell = shell; if (spelling) win.OpisAISpelling = spelling; // assets/opisai-spelling.js loads before opisai.js
   const context = vm.createContext({window: win, document: doc, Element, Clinic: clinic, Shell: shell, __api: api,
     CSS: {escape: text => String(text).replace(/(["\\])/g, '\\$1')}, innerWidth: 1400, innerHeight: 900, navigator: {clipboard: {writeText: async text => { clipboard.push(text); }}}, performance: {now: () => now},
     matchMedia: () => ({matches: false, addEventListener() {}}), encodeURIComponent, Event: function Event(type) { this.type = type; },
@@ -434,6 +434,17 @@ test('Połączenie i model, Gemini over the API: the key variant fetches a key, 
   buttons()[0].click(); assert.match(f.toasts.at(-1), /^W demonstracji nic nie jest pobierane ani logowane\. .* loguje OAuth Gemini — bez klucza API\.$/);
   assert(!/Pobierz klucz|klucz Gemini|tworzy klucz/.test(group().textContent + buttons()[0].title + f.toasts.at(-1)), 'nothing under "Gemini OAuth" promises an API key');
   assert.deepEqual(f.options('[data-setting="model"]')[0], 'gemini-3.1-pro-preview');
+});
+
+test('Wygląd reaches "Mój słownik pisowni" too: the window of the spelling layer follows a saved and a followed theme', () => {
+  let host = null; const f = fixture({spelling: {connect(next) { host = next; }, refresh() {}}});
+  const words = f.shell.createWindow({id: 'opisai-spelling-words', title: 'Mój słownik pisowni', className: 'oa-host oa-theme-light', content: '<textarea></textarea>'});
+  host.adopt(words); assert.equal(f.themeOf('opisai-spelling-words'), 'light');
+  f.api.settings('appearance'); const save = () => f.click('opisai-settings', '[data-action="save-settings"]');
+  f.set('[data-setting="theme"]', 'dark'); assert.equal(f.themeOf('opisai-spelling-words'), 'light', 'the preview is the open Konfiguracja only');
+  save(); assert.equal(f.themeOf('opisai-spelling-words'), 'dark', 'a saved theme reaches every OpisAI window');
+  f.set('[data-setting="theme"]', 'auto'); save(); assert.equal(f.themeOf('opisai-spelling-words'), 'light');
+  f.shell.prefs.theme = 'dark'; f.win.dispatchEvent({type: 'shell:theme'}); assert.equal(f.themeOf('opisai-spelling-words'), 'dark', '"Automatyczny" follows the desktop');
 });
 
 test('Sekcje opisu: rc32 default sections and subsections in two tables; Konfiguruj shows the panel rows; no prompt text', () => {

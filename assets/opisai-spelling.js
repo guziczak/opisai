@@ -669,6 +669,7 @@
     body.innerHTML = `<label class="oa-spell-words-label" for="oa-spell-words-text">Jedno słowo w wierszu. Usunięcie wpisu ponownie włącza jego sprawdzanie.</label><textarea id="oa-spell-words-text" spellcheck="false"></textarea><div class="oa-spell-words-foot"><button type="button" class="oa-btn primary" data-words="ok">OK</button><button type="button" class="oa-btn" data-words="cancel">Anuluj</button></div>`;
     const area = body.querySelector('textarea'); area.value = personal.join('\n');
     const win = shell.createWindow({id: 'opisai-spelling-words', title: 'Mój słownik pisowni', icon: 'opisai', width: 440, height: 380, minWidth: 340, minHeight: 280, className: 'oa-host oa-theme-' + (host?.theme?.() || 'light'), content: body, resizable: true, maximizable: false, taskbar: false});
+    host?.adopt?.(win);   // one of OpisAI's windows (rc32 InputDialog is an AppDialog): it follows the theme, the bubble recalls it, "Zamknij" closes it
     const close = () => win.close();
     body.querySelector('[data-words="cancel"]').addEventListener('click', close);
     body.querySelector('[data-words="ok"]').addEventListener('click', () => {
@@ -695,7 +696,8 @@
   }
   /* _refresh_spelling_menu: suggestions and undo need the setting on and the active visit. */
   const available = () => { tick(); return !!(host?.enabled() && target); };
-  /* OpisAI connects its state: enabled() is the one source (the bubble menu's check item), busy() its work. */
+  /* OpisAI connects its state: enabled() is the one source (the bubble menu's check item), busy() its work,
+   * theme() its window theme and adopt() its window registry. */
   function connect(next) {
     host = next && typeof next.enabled === 'function' && typeof next.busy === 'function' ? next : null;
     if (!host) return;

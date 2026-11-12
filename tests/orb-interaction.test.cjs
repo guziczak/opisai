@@ -370,6 +370,17 @@ test('spelling busy names OpisAI\'s work as SafeCoordinator.busy does; its notic
   assert.equal(host.busy(), false, 'they keep the lines');
 });
 
+test('"Mój słownik pisowni" handed over by the spelling layer is one of OpisAI\'s windows: its theme, recalled by the bubble, closed by "Zamknij"', () => {
+  let host = null; const spelling = { connect(next) { host = next; }, refresh() {}, available: () => true, status: () => '', showIssues() {}, undo() {}, editWords() {} };
+  const f = fixture({ spelling, prefs: { theme: 'dark' } }), el = f.doc.createElement('section'); el.className = 'desktop-window oa-host oa-theme-light'; f.doc.body.append(el);
+  const words = { id: 'opisai-spelling-words', el, closed: false, show() { f.shown.push(this.id); }, focus() {}, close() { this.closed = true; el.remove(); } };
+  assert.equal(typeof host.adopt, 'function'); assert(host.adopt(words) === words);
+  assert(el.classList.contains('oa-theme-dark') && !el.classList.contains('oa-theme-light'), 'the OpisAI theme'); assert.equal(el.dataset.oaWindow, 'opisai-spelling-words');
+  assert.equal(host.busy(), false, 'the dictionary is not work: the spelling lines stay');
+  f.click(); f.advance(200); assert.deepEqual(f.actions, [], 'raise_active: a click on the bubble recalls it'); assert.deepEqual(f.shown, ['opisai-spelling-words']);
+  f.api.closeApp(); f.advance(1000); assert.equal(f.api.state.closed, true); assert.equal(words.closed, true, '"Zamknij" leaves no OpisAI window behind');
+});
+
 test('the menu and the model tooltip follow the OpisAI theme, not the desktop theme', () => {
   for (const [theme, dark] of [['light', false], ['dark', true], ['blue', false]]) {
     const f = fixture({ prefs: { theme } }), [x, y] = f.center(); f.doc.documentElement.setAttribute('data-theme', dark ? 'light' : 'dark');

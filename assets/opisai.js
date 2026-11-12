@@ -84,6 +84,9 @@
     else {win=Shell.createWindow({id,title,icon:'opisai',width,height,minWidth:Math.min(width,500),minHeight:Math.min(height,360),className:'oa-host oa-theme-'+themeName(),content:html,resizable:true,maximizable:true,taskbar:true,onClose:()=>onClose?.()});windows.set(id,win);}
     applyTheme(win); if(win?.el)win.el.dataset.oaWindow=id; holdPosition(); return win; // a work view stops the idle bounce where it is
   }
+  function adoptWindow(win) { // a window built elsewhere joins OpisAI's (WindowManager.register): its theme, recall by the bubble, "Zamknij"
+    if (!win?.id) return win; windows.set(win.id, win); if (win.el) win.el.dataset.oaWindow = win.id; applyTheme(win); holdPosition(); return win;
+  }
   function closeWin(id) { const win = windows.get(id); if (win?.el?.isConnected) win.close(); } // the map keeps closed windows: only an open one closes
   window.addEventListener?.('shell:theme',()=>{if(preferences.theme==='auto'||themePreview==='auto')refreshThemes();}); // "Automatyczny" follows a change of the desktop's colour mode
   function getFields() { return clone(window.Clinic?.getFields?.() || {wywiad:'',badanie:'',diagnoza:''}); }
@@ -707,7 +710,7 @@
     const answer=value=>{if(answered)return;answered=true;if(state.consent===ask)state.consent=null;done(value&&!ask.cancelled);}; // consent given during a cancelled start is still remembered
     const html=`<div class="oa-app oa-consent"><div class="oa-content"><h2>Dyktowanie przez Gemini Live</h2><p>Dźwięk z mikrofonu będzie przesyłany do usługi Google Gemini Live w celu zamiany mowy na tekst. Podczas nagrywania zobaczysz transkrypcję, a po zakończeniu sprawdzisz ją przed wpisaniem do Kliniki.</p>${check('Zapamiętaj zgodę na dyktowanie przez Gemini Live','oa-gemini-remember',true)}<p class="oa-muted">Zgodę możesz cofnąć w konfiguracji, w sekcji transkrypcji głosowej.</p></div><footer class="oa-footer"><span class="oa-footnote"></span>${button('Anuluj','cancel')}${button('Rozpocznij dyktowanie','start','primary')}</footer></div>`;
     const id='opisai-gemini-consent',win=Shell.createWindow({id,title:'OpisAI — dyktowanie',icon:'opisai',width:610,height:290,minWidth:420,minHeight:250,className:'oa-host oa-theme-'+themeName(),content:html,resizable:false,maximizable:false,taskbar:false,onClose:()=>answer(false)}),root=win.content;
-    windows.set(id,win);if(win.el)win.el.dataset.oaWindow=id;holdPosition();
+    adoptWindow(win);
     const max=win.el?.querySelector?.('[data-caption="max"]');if(max)max.hidden=true; // CompactDialog: only "×" in its title bar
     bind(root,'cancel',()=>win.close());
     bind(root,'start',()=>{if($('#oa-gemini-remember',root)?.checked){preferences.dictationConsent=true;savePreferences();}answer(true);win.close();});
@@ -2119,7 +2122,7 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
    * _show_problem), history, About, a profile view. The operation record is not either: "Odrzuć" or × leave it behind. */
   const SPELLING_WORK=['opisai-compose','opisai-review','opisai-undo','opisai-progress','opisai-settings','opisai-dictation','opisai-discard'];
   const spellingBusy=()=>!!(state.job||state.review||state.recording||state.receipt)||['processing','recording','review'].includes(state.phase)||SPELLING_WORK.some(id=>!!windows.get(id)?.el?.isConnected);
-  window.OpisAISpelling?.connect({enabled:()=>!!preferences.spelling,busy:spellingBusy,running:()=>!state.closed,theme:()=>themeName()}); // assets/opisai-spelling.js
+  window.OpisAISpelling?.connect({enabled:()=>!!preferences.spelling,busy:spellingBusy,running:()=>!state.closed,theme:()=>themeName(),adopt:adoptWindow}); // assets/opisai-spelling.js; "Mój słownik pisowni" is an OpisAI window (InputDialog)
   function trayTooltip(){return state.closed?'OpisAI — zamknięte\nKliknij, aby uruchomić':`OpisAI — ${modelLabel()}\nKlik: opisz · Przytrzymaj: dyktuj · Prawy: menu`;}
   function syncTray(){$('.tray-opisai')?.setAttribute('aria-label',state.closed?'OpisAI — zamknięte. Kliknij, aby uruchomić.':'OpisAI. Kliknij: opisz. Prawy przycisk lub Shift+F10: menu.');}
 
