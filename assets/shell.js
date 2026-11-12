@@ -181,15 +181,16 @@
   /* Esc as the desktop takes it in the capture phase, before the window that has the keyboard: a menu opened with the mouse
    * leaves the focus in that window, where Esc would cancel a dialog or the visit being edited. With a menu or flyout open,
    * Esc in any chord closes one layer (the submenu that has the keyboard, else the menu, else the flyout) and goes no further.
-   * Ctrl+Esc is the Start shortcut and, as in Windows, never reaches a window; while a lock or sleep screen is shown it is
-   * left to that screen. Held down, a key taken here or the Enter that chose a command does nothing more: its repeats would
-   * reach whatever has the focus now, or open and close Start in turn. */
+   * Ctrl+Esc is the Start shortcut and, as in Windows, never reaches a window: Start opens with the keyboard in its search
+   * field, so what is typed next does not go to the window either. While a lock or sleep screen is shown the chord is
+   * left to that screen. Held down, a key taken here or the Enter that chose a command does nothing more: its repeats
+   * would reach whatever has the focus now, or open and close Start in turn. */
   function popupKeys(e){
     if(e.repeat&&e.key===heldKey){e.preventDefault();e.stopImmediatePropagation();return;}
     heldKey='';if(e.key!=='Escape')return;
     const start=e.ctrlKey&&!$('.screen-curtain');if(!start&&!(menuEl||popup))return;
     e.preventDefault();e.stopImmediatePropagation();heldKey=e.key;
-    if(start)showStart();
+    if(start){showStart();$('#start-menu .start-search input')?.focus();}
     else if(subMenuEl?.contains(document.activeElement)){const owner=$('[aria-expanded="true"]',menuEl);closeSubmenu();owner?.focus();}
     else if(menuEl){const back=menuFocus;closeMenu();refocus(back);}
     else{closePopups();refocus(lastFocus);}

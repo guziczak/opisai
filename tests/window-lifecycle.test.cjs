@@ -288,6 +288,7 @@ test('Ctrl+Esc opens Start once per press, and the window with the keyboard neve
   const event = press(f, control, 'Escape', { ctrlKey: true });
   assert(event.defaultPrevented); assert.equal(seen.escapes, 0, 'The shortcut of the desktop is not an Esc for the window');
   assert.equal(menus(f), 0); assert(start(), 'Start replaces the menu');
+  assert.equal(f.doc.activeElement, start().querySelector('.start-search input'), 'Start has the keyboard: what is typed next searches, it does not reach the window');
   press(f, control, 'Escape', { ctrlKey: true, repeat: true }); press(f, control, 'Escape', { ctrlKey: true, repeat: true });
   assert(start(), 'Held down, the shortcut does not close and reopen Start'); assert.equal(seen.escapes, 0);
   press(f, control, 'Escape', { ctrlKey: true });
