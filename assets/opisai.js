@@ -1150,9 +1150,10 @@
   let settingsToast=null;
   const demoOnly=text=>{settingsToast?.remove?.();settingsToast=toast(text);}; // each replaces the last
   const HW_LLM={auto:'Automatycznie (najlepszy dostępny)',nvidia_external:'Karta NVIDIA RTX — zewnętrzna (np. AORUS AI BOX)',nvidia_internal:'Karta NVIDIA RTX — wewnętrzna',integrated:'Karta wbudowana (AMD Radeon / Intel)'}; // hardware.LLM_CHOICES
-  function settings(initial='connection'){
-    if(typeof initial!=='string'||!settingsNav.some(n=>n[1]===initial))initial='connection';
-    let page=initial,draft=clone(preferences);themePreview=null; // a reopened window starts from the saved settings
+  function settings(initial){
+    const named=typeof initial==='string'&&settingsNav.some(n=>n[1]===initial),open=windows.get('opisai-settings');
+    if(open?.el?.isConnected){open.show();if(named)open.oaPage(initial);return;} // _open_config: an open dialog is only presented, unsaved changes included; a named page is chosen as in its list
+    let page=named?initial:'connection',draft=clone(preferences);themePreview=null; // a new window starts from the saved settings
     const html=`<div class="oa-app oa-cfg"><div class="oa-settings-layout"><aside class="oa-settings-nav"><input class="oa-settings-search" type="search" placeholder="Szukaj ustawienia…" aria-label="Szukaj ustawienia"><nav aria-label="Sekcje konfiguracji">${settingsNav.map(([label,id,ic])=>id?`<button type="button" class="oa-nav-item" data-page="${id}">${icon(ic,16)}<span>${label}</span></button>`:`<div class="oa-nav-group">${label}</div>`).join('')}</nav></aside><section class="oa-settings-page" data-settings-page></section></div><footer class="oa-footer oa-cfg-foot"><span class="oa-cfg-folder"><small>Konfig:</small>${button('Otwórz folder','config-folder','','','title="Folder z plikiem konfiguracji OpisAI (opisai.sqlite3)"')}</span><span class="oa-pg-gap"></span><span class="sr-only" role="status" data-cfg-status></span>${button('Zapisz','save-settings','primary','','disabled title="Zapisz zmiany z TEJ karty (nie zamyka okna). Aktywny tylko gdy sa niezapisane zmiany; przelaczenie karty je odrzuca."')}${button('Zamknij','close-settings','','','title="Zamknij okno konfiguracji. Niezapisane zmiany z bieżącej karty zostaną odrzucone."')}</footer></div>`;
     const win=makeWindow('opisai-settings',`OpisAI ${VERSION} — konfiguracja`,880,700,html,()=>{themePreview=null;});const root=win.content;escapeCloses(win);
     const saveButton=$('[data-action="save-settings"]',root),status=$('[data-cfg-status]',root);
@@ -1162,6 +1163,10 @@
     function go(next){ // _on_nav_changed → _on_tab_changed: unsaved changes of the page are dropped
       draft=clone(preferences);preview(preferences.theme);page=next;status.textContent='';draw();
     }
+    win.oaPage=next=>{ // focus_connection, focus_dictation: the whole list again, then the page as a click in the list
+      const search=$('.oa-settings-search',root);if(search.value){search.value='';search.dispatchEvent(new Event('input'));}
+      if(next!==page)go(next);$('.oa-nav-item.active',root)?.focus();
+    };
     function draw(){
       $$('[data-page]',root).forEach(el=>{const on=el.dataset.page===page;el.classList.toggle('active',on);el.setAttribute('aria-current',on?'page':'false');});
       const area=$('[data-settings-page]',root);area.setAttribute('aria-label',settingsNav.find(n=>n[1]===page)[0]);area.scrollTop=0;
@@ -1570,9 +1575,10 @@ Klinika XP jest produktem firmy BRI. Makieta okna Kliniki w tej demonstracji to 
 Windows jest znakiem towarowym Microsoft Corporation. Pulpit demonstracji to jego własna stylizacja.
 
 Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
-  function about(initial='about'){
-    let page=['about','changes','contact','licenses'].includes(initial)?initial:'about',license='app';
-    const tabs=[['about','O aplikacji'],['changes','Co nowego'],['contact','Kontakt'],['licenses','Licencje']];
+  function about(initial){
+    const tabs=[['about','O aplikacji'],['changes','Co nowego'],['contact','Kontakt'],['licenses','Licencje']],named=tabs.some(t=>t[0]===initial),open=windows.get('opisai-about');
+    if(open?.el?.isConnected){open.show();if(named)open.oaPage(initial);return;} // _open_about: an open window is only presented; a named tab is chosen as by a click
+    let page=named?initial:'about',license='app';
     const html=`<div class="oa-app oa-about"><header class="oa-about-head"><span class="oa-about-mark" aria-hidden="true">${icon('opisai',30)}</span><div class="oa-about-id"><div class="oa-about-title"><h1>OpisAI</h1><span class="oa-about-version">Wersja ${VERSION}</span></div><p>Asystent dokumentacji weterynaryjnej</p></div></header><div class="oa-tabs oa-about-tabs" role="tablist" aria-label="Informacje o aplikacji">${tabs.map(([id,label])=>`<button type="button" role="tab" class="oa-tab" data-about="${id}">${label}</button>`).join('')}</div><div class="oa-about-page" role="tabpanel" data-about-page></div><p class="oa-about-demo">Interaktywna demonstracja w przeglądarce — bez połączeń z AI i bez mikrofonu.</p><footer class="oa-footer oa-about-foot">${button('Kopiuj wersję','copy-version')}${button('Kopiuj informacje','copy-about','','','title="Kopiuj wersję i możliwości aplikacji — bez ustawień i kluczy"')}<span class="oa-pg-gap"></span>${button('Zamknij','close','primary')}</footer></div>`;
     const win=makeWindow('opisai-about','O aplikacji OpisAI',840,540,html),root=win.content;escapeCloses(win);
     if(win.options)Object.assign(win.options,{minWidth:Math.min(640,innerWidth-16),minHeight:Math.min(460,innerHeight-60)}); // AboutDialog.setMinimumSize(640, 460)
@@ -1595,6 +1601,7 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
       el.addEventListener('click',()=>{page=el.dataset.about;draw();});
       el.addEventListener('keydown',e=>{if(e.key!=='ArrowRight'&&e.key!=='ArrowLeft')return;e.preventDefault();const i=tabs.findIndex(t=>t[0]===page);page=tabs[(i+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length][0];draw();$(`[data-about="${page}"]`,root)?.focus();});
     });
+    win.oaPage=next=>{if(next!==page){page=next;draw();}$(`[data-about="${page}"]`,root)?.focus();};
     bind(root,'close',()=>win.close());
     bind(root,'copy-version',()=>copyText(`OpisAI ${VERSION}`,$('[data-action="copy-version"]',root)));
     bind(root,'copy-about',()=>copyText(applicationInfoText(),$('[data-action="copy-about"]',root)));

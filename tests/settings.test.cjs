@@ -271,6 +271,38 @@ test('Bąbelek: a value outside the rc32 spin box ranges (10–3600 s, 0–999) 
   f.type('[data-setting="bounceInterval"]', 30); assert.equal(save().disabled, false);
 });
 
+test('Konfiguracja chosen again while open is only presented, with its page and unsaved changes; a named page is chosen as in the list (_open_config)', () => {
+  const f = fixture(); f.api.settings('bubble');
+  const win = f.windows.get('opisai-settings'), save = () => f.q('opisai-settings', '[data-action="save-settings"]'), active = () => f.q('opisai-settings', '.oa-nav-item.active').textContent;
+  let presented = 0; win.show = () => { presented++; };
+  f.set('[data-setting="bounceInterval"]', 120);
+  f.api.settings(); f.advance(0); // "Konfiguracja..." in the bubble menu
+  assert.equal(f.windows.get('opisai-settings'), win); assert.equal(presented, 1);
+  assert.equal(active(), 'Bąbelek'); assert.equal(f.page().querySelector('[data-setting="bounceInterval"]').value, '120'); assert.equal(save().disabled, false, 'the unsaved change is still there');
+  f.api.settings('bubble'); f.advance(0); assert.equal(f.page().querySelector('[data-setting="bounceInterval"]').value, '120', 'the page already shown is not reloaded'); assert.equal(save().disabled, false);
+  const search = f.q('opisai-settings', '.oa-settings-search'); search.value = 'motyw'; search.dispatchEvent({type: 'input'});
+  assert.equal(f.q('opisai-settings', '[data-page="dictation"]').hidden, true);
+  f.api.settings('dictation'); f.advance(0); // "Profil głosu (rozpoznawanie mówców)…"
+  assert.equal(presented, 3); assert.equal(active(), 'Dyktowanie'); assert.equal(f.doc.activeElement, f.q('opisai-settings', '[data-page="dictation"]'));
+  assert.equal(search.value, ''); assert.equal(f.root('opisai-settings').querySelectorAll('[data-page], .oa-nav-group').filter(el => el.hidden).length, 0, 'focus_dictation: the whole list again');
+  assert.equal(save().disabled, true); f.click('opisai-settings', '[data-page="bubble"]');
+  assert.equal(f.page().querySelector('[data-setting="bounceInterval"]').value, '10', '_on_tab_changed: the change of the page that was left is dropped'); assert.equal(f.api.preferences().bounceInterval, 10);
+  f.click('opisai-settings', '[data-action="close-settings"]'); f.api.settings(); f.advance(0);
+  assert.notEqual(f.windows.get('opisai-settings'), win); assert.equal(active(), 'Połączenie i model', 'a new window starts on the first page');
+});
+
+test('O aplikacji chosen again while open is only presented and keeps its tab and document (_open_about)', () => {
+  const f = fixture(); f.api.about();
+  const win = f.windows.get('opisai-about'), tab = () => f.q('opisai-about', '[data-about].active').textContent;
+  let presented = 0; win.show = () => { presented++; };
+  f.click('opisai-about', '[data-about="licenses"]');
+  const select = f.q('opisai-about', '[data-license]'); select.value = 'demo'; f.bubble(select, {type: 'change', target: select});
+  f.api.about(); f.advance(0);
+  assert.equal(f.windows.get('opisai-about'), win); assert.equal(presented, 1); assert.equal(tab(), 'Licencje'); assert.equal(f.q('opisai-about', 'textarea').value, f.api.LICENSE_TEXTS.demo);
+  f.api.about('contact'); assert.equal(tab(), 'Kontakt', 'a named tab is chosen as by a click');
+  f.click('opisai-about', '[data-action="close"]'); f.api.about(); assert.equal(tab(), 'O aplikacji');
+});
+
 test('Zapisz stores only its own page: a choice made elsewhere meanwhile is kept', () => {
   const f = fixture(); f.api.settings('history');
   f.api.preferences().livePreview = false; f.api.preferences().spelling = false; // the progress window and the spelling menu
@@ -286,7 +318,8 @@ test('Wygląd: Automatyczny (jak Windows), Jasny, Ciemny; "Automatyczny" follows
   for (const absent of ['Niebieski', 'Rozmiar tekstu', 'Animacje', 'Pokaż tekst na żywo']) assert(!f.page().textContent.includes(absent), absent);
   f.api.about(); assert.equal(f.themeOf('opisai-about'), 'light');
   f.set('[data-setting="theme"]', 'dark'); assert.equal(f.themeOf('opisai-settings'), 'dark', 'the open window previews the choice'); assert.equal(f.themeOf('opisai-about'), 'light');
-  f.api.settings('dictation'); assert.equal(f.themeOf('opisai-settings'), 'light', 'reopened (e.g. from the bubble menu): the saved settings, no stale preview');
+  f.api.settings(); assert.equal(f.themeOf('opisai-settings'), 'dark', 'chosen again from the bubble menu: the open window as it is'); assert.equal(f.page().querySelector('[data-setting="theme"]').value, 'dark');
+  f.api.settings('dictation'); assert.equal(f.themeOf('opisai-settings'), 'light', 'another page, named from the bubble menu ("Profil głosu…"): the saved settings, no stale preview');
   f.click('opisai-settings', '[data-page="appearance"]'); f.set('[data-setting="theme"]', 'dark');
   f.click('opisai-settings', '[data-action="close-settings"]'); f.api.settings('appearance'); assert.equal(f.themeOf('opisai-settings'), 'light'); assert.equal(f.api.preferences().theme, 'auto');
   f.shell.prefs.theme = 'dark'; f.win.dispatchEvent({type: 'shell:theme'});
