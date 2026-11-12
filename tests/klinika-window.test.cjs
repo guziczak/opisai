@@ -1,0 +1,249 @@
+'use strict';
+
+// The real Klinika mock-up (assets/clinic.js) inside the real desktop shell (assets/shell.js) on a small DOM (the
+// harness of settings.test.cjs). Timers are simulated. Input arrives as a browser delivers it: a press focuses the
+// nearest focusable element, an event travels from its target up to the window, and an element that has left the
+// document is heard by nobody above it. A double click is two clicks and then dblclick on the element of the second.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const test = require('node:test');
+const shellSource = fs.readFileSync(path.join(__dirname, '../assets/shell.js'), 'utf8');
+const clinicSource = fs.readFileSync(path.join(__dirname, '../assets/clinic.js'), 'utf8');
+const REVIEW_TITLE = '[DEMO] Klinika XP — PRZEGLĄD WIZYTY (TYLKO DO ODCZYTU)';
+
+/* ------------------------------------------------------------------ a small DOM */
+const VOID = /^(?:input|br|img|hr|meta|link|source|area|col|wbr)$/i;
+const decode = text => text.replace(/&(?:amp|lt|gt|quot|#39|nbsp);/g, m => ({'&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': '\u00a0'}[m]));
+class Target {
+  constructor() { this.listeners = new Map(); }
+  addEventListener(type, fn) { if (!this.listeners.has(type)) this.listeners.set(type, new Set()); this.listeners.get(type).add(fn); }
+  removeEventListener(type, fn) { this.listeners.get(type)?.delete(fn); }
+  dispatchEvent(event) {
+    event.target ??= this; event.currentTarget = this; event.preventDefault ??= () => { event.defaultPrevented = true; }; event.stopPropagation ??= () => {};
+    this['on' + event.type]?.(event);
+    for (const fn of [...(this.listeners.get(event.type) || [])]) fn.call(this, event);
+    return !event.defaultPrevented;
+  }
+}
+class Text { constructor(data) { this.nodeType = 3; this.data = String(data); this.parentNode = null; } get textContent() { return this.data; } }
+class Element extends Target {
+  constructor(tag, doc) {
+    super(); this.nodeType = 1; this.tagName = tag.toUpperCase(); this.doc = doc; this.childNodes = []; this.parentNode = null; this.attrs = new Map();
+    this.style = {setProperty(key, value) { this[key] = String(value); }};
+    const el = this;
+    this.dataset = new Proxy({}, {get: (_, key) => typeof key === 'string' ? el.getAttribute('data-' + key.replace(/[A-Z]/g, c => '-' + c.toLowerCase())) ?? undefined : undefined,
+      set: (_, key, value) => { el.setAttribute('data-' + key.replace(/[A-Z]/g, c => '-' + c.toLowerCase()), value); return true; }});
+    this.classList = {contains: name => el.className.split(/\s+/).includes(name), add: (...names) => { el.className = [...new Set([...el.className.split(/\s+/).filter(Boolean), ...names])].join(' '); },
+      remove: (...names) => { el.className = el.className.split(/\s+/).filter(n => n && !names.includes(n)).join(' '); },
+      toggle: (name, force) => { const on = force ?? !el.classList.contains(name); el.classList[on ? 'add' : 'remove'](name); return on; }};
+  }
+  get children() { return this.childNodes.filter(n => n.nodeType === 1); }
+  get isConnected() { return this === this.doc.documentElement || !!this.parentNode?.isConnected; }
+  get className() { return this.attrs.get('class') ?? ''; } set className(value) { this.attrs.set('class', String(value)); }
+  get id() { return this.attrs.get('id') ?? ''; } set id(value) { this.attrs.set('id', String(value)); }
+  get title() { return this.attrs.get('title') ?? ''; } set title(value) { this.attrs.set('title', String(value)); }
+  get hidden() { return this.attrs.has('hidden'); } set hidden(on) { this.toggleAttribute('hidden', !!on); }
+  get disabled() { return this.attrs.has('disabled'); } set disabled(on) { this.toggleAttribute('disabled', !!on); }
+  get value() {
+    if (this._value !== undefined) return this._value;
+    if (this.tagName === 'SELECT') { const options = this.querySelectorAll('option'); return (options.find(o => o.attrs.has('selected')) || options[0])?.textContent ?? ''; }
+    return this.attrs.get('value') ?? '';
+  }
+  set value(text) { this._value = String(text); }
+  get textContent() { return this.childNodes.map(n => n.textContent).join(''); }
+  set textContent(text) { this.replaceChildren(new Text(text ?? '')); }
+  get innerText() { return this.textContent; }
+  set innerHTML(html) {
+    this.replaceChildren();
+    const stack = [this];
+    for (const match of String(html).matchAll(/<\/?[a-zA-Z][^>]*>|[^<]+/g)) {
+      const token = match[0];
+      if (!token.startsWith('<')) { stack.at(-1).appendChild(new Text(decode(token))); continue; }
+      if (token.startsWith('</')) { if (stack.length > 1) stack.pop(); continue; }
+      const tag = token.match(/^<([\w-]+)/)[1], child = new Element(tag, this.doc);
+      for (const attr of token.slice(tag.length + 1, token.endsWith('/>') ? -2 : -1).matchAll(/([^\s=/>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g))
+        child.attrs.set(attr[1].toLowerCase(), decode(attr[2] ?? attr[3] ?? attr[4] ?? ''));
+      stack.at(-1).appendChild(child);
+      if (!VOID.test(tag) && !token.endsWith('/>')) stack.push(child);
+    }
+  }
+  setAttribute(name, value) { this.attrs.set(name.toLowerCase(), String(value)); }
+  getAttribute(name) { return this.attrs.has(name.toLowerCase()) ? this.attrs.get(name.toLowerCase()) : null; }
+  hasAttribute(name) { return this.attrs.has(name.toLowerCase()); }
+  toggleAttribute(name, force) { const on = force ?? !this.attrs.has(name); if (on) this.attrs.set(name, ''); else this.attrs.delete(name); return on; }
+  appendChild(node) { node.parentNode?.childNodes && node.parentNode.childNodes.splice(node.parentNode.childNodes.indexOf(node), 1); node.parentNode = this; this.childNodes.push(node); return node; }
+  append(...nodes) { for (const node of nodes) this.appendChild(typeof node === 'string' ? new Text(node) : node); }
+  replaceChildren(...nodes) { for (const node of this.childNodes) node.parentNode = null; this.childNodes = []; this.append(...nodes); }
+  remove() { if (this.parentNode) this.parentNode.childNodes.splice(this.parentNode.childNodes.indexOf(this), 1); this.parentNode = null; }
+  contains(other) { for (let node = other; node; node = node.parentNode) if (node === this) return true; return false; }
+  matches(selector) { return parseSelectors(selector).some(chain => matchChain(this, chain)); }
+  closest(selector) { for (let node = this; node?.nodeType === 1; node = node.parentNode) if (node.matches(selector)) return node; return null; }
+  querySelectorAll(selector) { const chains = parseSelectors(selector), found = []; (function walk(node) { for (const child of node.children) { if (chains.some(chain => matchChain(child, chain))) found.push(child); walk(child); } })(this); return found; }
+  querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+  focus() { this.doc.activeElement = this; }
+  getBoundingClientRect() { return {top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0}; }
+  getClientRects() { return this.isConnected ? [this.getBoundingClientRect()] : []; }
+}
+/* Selectors: compound (tag, #id, .class, [attr], [attr="v"], :not(...)) joined by descendant spaces, comma lists. */
+function splitTop(text, separator) {
+  const parts = []; let depth = 0, quote = '', start = 0;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quote) { if (c === '\\') i++; else if (c === quote) quote = ''; continue; }
+    if (c === '"' || c === "'") quote = c; else if (c === '(' || c === '[') depth++; else if (c === ')' || c === ']') depth--;
+    else if (depth === 0 && (separator === ',' ? c === ',' : /\s/.test(c))) { parts.push(text.slice(start, i)); start = i + 1; }
+  }
+  parts.push(text.slice(start)); return parts.map(p => p.trim()).filter(Boolean);
+}
+const selectorCache = new Map();
+function parseSelectors(selector) {
+  if (!selectorCache.has(selector)) selectorCache.set(selector, splitTop(selector, ',').map(one => splitTop(one, ' ').map(parseCompound)));
+  return selectorCache.get(selector);
+}
+function parseCompound(text) {
+  const parts = []; let i = 0;
+  while (i < text.length) {
+    let m;
+    if ((m = /^[\w-]+|^\*/.exec(text.slice(i)))) { parts.push({tag: m[0].toUpperCase()}); i += m[0].length; }
+    else if ((m = /^#([\w-]+)/.exec(text.slice(i)))) { parts.push({id: m[1]}); i += m[0].length; }
+    else if ((m = /^\.([\w-]+)/.exec(text.slice(i)))) { parts.push({cls: m[1]}); i += m[0].length; }
+    else if ((m = /^\[([\w-]+)(?:=(?:"((?:\\.|[^"\\])*)"|'((?:\\.|[^'\\])*)'|([^\]]+)))?\]/.exec(text.slice(i)))) { const value = m[2] ?? m[3] ?? m[4]; parts.push({attr: m[1], value: value === undefined ? undefined : value.replace(/\\(.)/g, '$1')}); i += m[0].length; }
+    else if ((m = /^:not\(/.exec(text.slice(i)))) { let depth = 1, j = i + 5; for (; j < text.length && depth; j++) { if (text[j] === '(') depth++; else if (text[j] === ')') depth--; } parts.push({not: parseCompound(text.slice(i + 5, j - 1))}); i = j; }
+    else throw new Error('Unsupported selector: ' + text);
+  }
+  return parts;
+}
+function matchCompound(el, parts) {
+  return parts.every(p => p.tag ? p.tag === '*' || el.tagName === p.tag : p.id ? el.id === p.id : p.cls ? el.classList.contains(p.cls)
+    : p.attr ? el.hasAttribute(p.attr) && (p.value === undefined || el.getAttribute(p.attr) === p.value) : p.not ? !matchCompound(el, p.not) : false);
+}
+function matchChain(el, chain, index = chain.length - 1) {
+  if (!matchCompound(el, chain[index])) return false;
+  if (index === 0) return true;
+  for (let node = el.parentNode; node?.nodeType === 1; node = node.parentNode) if (matchChain(node, chain, index - 1)) return true;
+  return false;
+}
+
+/* ------------------------------------------------------------------ the fixture */
+const FOCUSABLE = /^(?:BUTTON|INPUT|SELECT|TEXTAREA)$/;
+function fixture() {
+  const doc = new Target(), win = new Target(), timers = new Map();
+  let now = 0, serial = 0;
+  doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body); doc.activeElement = doc.body;
+  doc.createElement = tag => new Element(tag, doc); doc.contains = node => doc.documentElement.contains(node); doc.readyState = 'complete';
+  doc.querySelector = selector => doc.documentElement.querySelector(selector); doc.querySelectorAll = selector => doc.documentElement.querySelectorAll(selector);
+  for (const id of ['desktop', 'windows', 'snap-preview', 'shell-popups', 'notification-toasts', 'shell-status']) { const el = doc.createElement('div'); el.id = id; doc.body.append(el); }
+  win.getSelection = () => ({rangeCount: 0, removeAllRanges() {}, addRange() {}});
+  const sandbox = {window: win, document: doc, Node: Element, innerWidth: 1536, innerHeight: 866, navigator: {clipboard: {writeText: async () => {}, readText: async () => ''}},
+    localStorage: {getItem: () => null, setItem() {}, removeItem() {}},
+    CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
+    FormData: class { constructor(form) { this.pairs = form.querySelectorAll('input,select').map(el => [el.getAttribute('name'), el.value]); } [Symbol.iterator]() { return this.pairs[Symbol.iterator](); } },
+    setTimeout: (fn, delay = 0) => { timers.set(++serial, {fn, due: now + delay}); return serial; }, clearTimeout: id => timers.delete(id),
+    requestAnimationFrame: fn => sandbox.setTimeout(fn, 16), addEventListener() {}, removeEventListener() {}};
+  const context = vm.createContext(sandbox);
+  vm.runInContext(shellSource, context, {filename: 'assets/shell.js'});
+  sandbox.Shell = win.Shell;
+  vm.runInContext(clinicSource, context, {filename: 'assets/clinic.js'});
+  function advance(ms) { const end = now + ms; for (;;) { const next = [...timers].sort((a, b) => a[1].due - b[1].due || a[0] - b[0])[0]; if (!next || next[1].due > end) break; now = Math.max(now, next[1].due); timers.delete(next[0]); next[1].fn(); } now = end; }
+  /* An event goes from its target through the ancestors to the document and the window; a detached target has neither. */
+  function fire(target, type, init = {}) {
+    let stopped = false;
+    const event = {type, target, detail: 0, defaultPrevented: false, ...init, preventDefault() { event.defaultPrevented = true; }, stopPropagation() { stopped = true; }, stopImmediatePropagation() { stopped = true; }};
+    const nodes = []; for (let node = target; node; node = node.parentNode) nodes.push(node);
+    if (nodes.at(-1) === doc.documentElement) nodes.push(doc, win);
+    for (const node of nodes) { if (stopped) break; node.dispatchEvent(event); }
+    return event;
+  }
+  const focusTarget = el => { for (let node = el; node?.nodeType === 1; node = node.parentNode) if (FOCUSABLE.test(node.tagName) ? !node.disabled : node.hasAttribute('tabindex') || node.tabIndex !== undefined) return node; return doc.body; };
+  const f = {doc, win, advance, fire, shell: win.Shell, clinic: win.Clinic,
+    plain: value => JSON.parse(JSON.stringify(value)),
+    ctx: () => f.plain(win.Clinic.getContext()),
+    window: id => win.Shell.windows.get(id), open: id => win.Shell.windows.has(id), // elements and windows are compared by identity only: a failed assert would print the whole DOM
+    q(id, selector) { const el = f.window(id)?.el.querySelector(selector); assert.ok(el, `${id}: ${selector}`); return el; },
+    press(el) { fire(el, 'pointerdown'); const to = focusTarget(el); if (doc.activeElement !== to) { to.focus(); fire(to, 'focusin'); } },
+    click(el, detail = 1) { f.press(el); fire(el, 'pointerup'); return fire(el, 'click', {detail}); },
+    /* at() names the element under the pointer anew for every press, as a hit test does. */
+    doubleClick(at) { f.click(at(), 1); const second = at(); f.click(second, 2); fire(second, 'dblclick', {detail: 2}); },
+    key(key, init = {}) { return fire(doc.activeElement?.isConnected ? doc.activeElement : doc.body, 'keydown', {key, ...init}); },
+    openList() { f.shell.windows.get('clinic').focus(); f.key('l', {ctrlKey: true}); assert.ok(f.window('clinic-list')?.visible, 'Ctrl+L shows the visit list'); },
+    row: id => f.q('clinic-list', `[data-list-row="${id}"]`),
+    rows: () => f.window('clinic-list').el.querySelectorAll('[data-list-row]').map(row => row.dataset.listRow),
+    selected: () => f.window('clinic-list').el.querySelectorAll('[data-list-row]').filter(row => row.classList.contains('is-selected')).map(row => row.dataset.listRow),
+    summary: () => f.q('clinic-list', '[data-list-summary]').textContent};
+  advance(100);
+  return f;
+}
+
+/* ------------------------------------------------------------------ the visit list (Ctrl+L) */
+test('the fixture starts as the page does: the new visit of the example with its description sub-window', () => {
+  const f = fixture(), c = f.ctx();
+  assert.deepEqual([c.mode, c.editorOpen, c.patient, c.visitNumber], ['new', true, 'Fistaszek', '<NOWY>']);
+  assert.equal(f.shell.activeWindow.id, 'clinic-editor');
+  f.openList();
+  assert.deepEqual(f.rows(), ['V-158', 'V-151', 'V-140', 'V-133', 'V-122', 'V-104', 'V-097', 'V-088', 'V-071', 'V-063'], 'the newest visit first');
+  assert.deepEqual(f.selected(), ['V-158']);
+});
+
+test('visit list: a click selects the row where it is — the same element keeps the focus, the details follow, no visit opens', () => {
+  const f = fixture(); f.openList();
+  const row = f.row('V-104');
+  f.click(row.children[1]);
+  assert.ok(f.row('V-104') === row, 'the clicked row was not replaced');
+  assert.ok(f.doc.activeElement === row, 'so it still has the focus of the press');
+  assert.deepEqual(f.selected(), ['V-104']);
+  assert.match(f.summary(), /^Wywiad: kaszel 5 dni gł po bieganiu\./);
+  assert.match(f.q('clinic-list', '[data-list-animal]').textContent, /^ZWIERZĘ\nBruno\n/);
+  assert.equal(f.q('clinic-list', '[data-list-action="review"]').disabled, false);
+  assert.equal(f.ctx().mode, 'new', 'a single click opens nothing');
+  assert.equal(f.open('clinic-confirm'), false);
+});
+
+test('visit list: a double click opens the visit of that row in the read-only review', () => {
+  const f = fixture(); f.openList();
+  // The start is an unsaved new visit, so Klinika asks before it leaves the buffer.
+  f.doubleClick(() => f.row('V-104').children[1]);
+  assert.equal(f.shell.activeWindow.id, 'clinic-confirm', 'the question „Zmiana wizyty” is asked');
+  assert.match(f.window('clinic-confirm').el.textContent, /Zmiana wizyty odrzuci bieżący bufor edycji\. Kontynuować\?/);
+  assert.equal(f.ctx().mode, 'new');
+  f.click(f.q('clinic-confirm', '[data-confirm]'));
+  let c = f.ctx();
+  assert.deepEqual([c.mode, c.visitNumber, c.patient, c.mainTitle, c.editorOpen], ['saved', '104/2026', 'Bruno', REVIEW_TITLE, false]);
+  // From a review nothing is unsaved: the next double click opens at once.
+  f.openList();
+  f.doubleClick(() => f.row('V-088').children[0]);
+  c = f.ctx();
+  assert.deepEqual([c.mode, c.visitNumber, c.mainTitle], ['saved', '088/2026', REVIEW_TITLE]);
+  assert.equal(f.open('clinic-confirm'), false);
+  assert.equal(f.open('clinic-editor'), false, 'a review, not an edit: the description sub-window stays closed');
+});
+
+test('visit list: Enter opens the row that was clicked, and the buttons act on it', () => {
+  const f = fixture(); f.openList();
+  f.click(f.row('V-071').children[0]);
+  f.key('Enter');
+  assert.equal(f.shell.activeWindow.id, 'clinic-confirm', 'Enter reached the clicked row');
+  f.click(f.q('clinic-confirm', '[data-confirm]'));
+  assert.deepEqual([f.ctx().mode, f.ctx().visitNumber, f.ctx().patient], ['saved', '071/2026', 'Mela']);
+  f.openList();
+  f.click(f.row('V-133').children[2]); f.click(f.q('clinic-list', '[data-list-action="review"]'));
+  assert.deepEqual([f.ctx().mode, f.ctx().visitNumber], ['saved', '133/2026']);
+});
+
+test('visit list: a filter rebuilds the rows and keeps or moves the selection', () => {
+  const f = fixture(); f.openList();
+  f.click(f.row('V-097').children[0]);
+  f.q('clinic-list', '[name=animal]').value = 'mela'; f.fire(f.q('clinic-list', 'form'), 'submit');
+  assert.deepEqual(f.rows(), ['V-151', 'V-097', 'V-071']); assert.deepEqual(f.selected(), ['V-097'], 'a selected visit that is still listed stays selected');
+  assert.equal(f.q('clinic-list', '[data-list-count]').textContent, '3 wizyty');
+  f.q('clinic-list', '[name=text]').value = 'OTOSKOPIA'; f.fire(f.q('clinic-list', 'form'), 'submit');
+  assert.deepEqual(f.rows(), ['V-071']); assert.deepEqual(f.selected(), ['V-071'], 'otherwise the first row is selected');
+  assert.match(f.summary(), /^Wywiad: trzepie głową/);
+  f.q('clinic-list', '[name=text]').value = 'brak-takiego-tekstu'; f.fire(f.q('clinic-list', 'form'), 'submit');
+  assert.deepEqual(f.rows(), []); assert.match(f.window('clinic-list').el.textContent, /Brak wizyt spełniających warunki\./);
+  assert.equal(f.q('clinic-list', '[data-list-action="review"]').disabled, true); assert.equal(f.q('clinic-list', '[data-list-action="new"]').disabled, false);
+  assert.equal(f.summary(), '');
+  f.click(f.q('clinic-list', '[data-list-clear]'));
+  assert.equal(f.rows().length, 10); assert.deepEqual(f.selected(), ['V-158']);
+});

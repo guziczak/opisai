@@ -340,13 +340,19 @@
   function renderList() {
     if (!listRoot) return;
     const rows = listRows(); if (!rows.some(v => v.id === listSelected)) listSelected = rows[0]?.id || null;
+    listRoot.querySelector('[data-list-rows]').innerHTML = rows.map(v => { const q = patientOf(v.patient); return `<tr data-list-row="${esc(v.id)}" tabindex="0"><td>${esc(displayDate(v.occurred))} ${esc(v.occurred.slice(11, 16))}</td><td>${esc(v.type)}</td><td>${esc(v.number)}</td><td>${esc(q.name)}</td><td>${esc(q.owner)}</td><td>${esc(v.doctor)}</td></tr>`; }).join('') || '<tr><td colspan="6" class="clinic-empty-cell">Brak wizyt spełniających warunki.</td></tr>';
+    listRoot.querySelector('[data-list-count]').textContent = `${rows.length} ${plural(rows.length, 'wizyta', 'wizyty', 'wizyt')}`;
+    renderListSelection();
+  }
+  /* The selection is marked on the rows that are there. Building the rows anew on every click took the focus from the
+     clicked row and gave the second click of a double click another element, so that no dblclick came. */
+  function renderListSelection() {
     const sel = state.visits.find(v => v.id === listSelected), p = sel ? patientOf(sel.patient) : null;
-    listRoot.querySelector('[data-list-rows]').innerHTML = rows.map(v => { const q = patientOf(v.patient); return `<tr data-list-row="${esc(v.id)}" class="${v.id === listSelected ? 'is-selected' : ''}" tabindex="0"><td>${esc(displayDate(v.occurred))} ${esc(v.occurred.slice(11, 16))}</td><td>${esc(v.type)}</td><td>${esc(v.number)}</td><td>${esc(q.name)}</td><td>${esc(q.owner)}</td><td>${esc(v.doctor)}</td></tr>`; }).join('') || '<tr><td colspan="6" class="clinic-empty-cell">Brak wizyt spełniających warunki.</td></tr>';
+    listRoot.querySelectorAll('[data-list-row]').forEach(row => row.classList.toggle('is-selected', row.dataset.listRow === listSelected));
     listRoot.querySelector('[data-list-owner]').textContent = p ? `WŁAŚCICIEL\n${p.owner}\n${p.address}` : 'WŁAŚCICIEL\n—';
     listRoot.querySelector('[data-list-animal]').textContent = p ? `ZWIERZĘ\n${p.name}\n${p.species}` : 'ZWIERZĘ\n—';
     listRoot.querySelector('[data-list-summary]').textContent = sel ? KEYS.filter(k => sel.fields[k]).map(k => `${LABELS[k]}: ${sel.fields[k]}`).join('\n\n') : '';
     listRoot.querySelectorAll('[data-list-action]').forEach(b => { b.disabled = !sel && b.dataset.listAction !== 'new'; });
-    listRoot.querySelector('[data-list-count]').textContent = `${rows.length} ${plural(rows.length, 'wizyta', 'wizyty', 'wizyt')}`;
   }
   function openList(patientFilter) {
     if (patientFilter) { const p = patientOf(patientFilter); listFilter = { owner: '', animal: p.name, text: '' }; }
@@ -360,7 +366,7 @@
     listWindow = Shell.createWindow({ id: 'clinic-list', title: LIST_TITLE, icon: 'clinic', width, height, minWidth: 560, minHeight: 360, className: 'kxp-list-window', content: listRoot, resizable: true, maximizable: true, taskbar: true, owner: 'clinic', onClose: () => { listWindow = null; listRoot = null; } });
     listRoot.addEventListener('submit', event => { event.preventDefault(); listFilter = Object.fromEntries(new FormData(event.target)); renderList(); });
     listRoot.addEventListener('click', event => {
-      const row = event.target.closest('[data-list-row]'); if (row) { listSelected = row.dataset.listRow; renderList(); return; }
+      const row = event.target.closest('[data-list-row]'); if (row) { listSelected = row.dataset.listRow; renderListSelection(); return; }
       if (event.target.closest('[data-list-clear]')) { listFilter = { owner: '', animal: '', text: '' }; listRoot.querySelectorAll('.kxp-list-filter input').forEach(i => { i.value = ''; }); renderList(); return; }
       if (event.target.closest('[data-list-close]')) { listWindow?.close(); return; }
       const action = event.target.closest('[data-list-action]')?.dataset.listAction;
