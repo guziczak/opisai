@@ -253,6 +253,24 @@ test('Zapisz follows a number or text field while it is typed in, so the first c
   f.set('[data-setting="autoEnterSeconds"]', 4); assert.equal(seconds.value, '10', 'the end of the edit shows the value in use'); assert.equal(save().disabled, false);
 });
 
+test('Bąbelek: a value outside the rc32 spin box ranges (10–3600 s, 0–999) comes back into the field in range, and nothing is left to save', () => {
+  const f = fixture(); f.api.settings('bubble');
+  const save = () => f.q('opisai-settings', '[data-action="save-settings"]'), field = key => f.page().querySelector(`[data-setting="${key}"]`), unit = () => f.page().querySelector('[data-bounce-unit]').textContent;
+  assert.deepEqual(['min', 'max', 'step'].map(a => field('bounceInterval').getAttribute(a)), ['10', '3600', '10'], 'QSpinBox.setRange(10, 3600), setSingleStep(10)');
+  assert.deepEqual(['min', 'max', 'step'].map(a => field('bounceMax').getAttribute(a)), ['0', '999', '1'], 'QSpinBox.setRange(0, 999)');
+  f.set('[data-setting="bounceInterval"]', 3); assert.equal(field('bounceInterval').value, '10'); assert.equal(save().disabled, true, '3 s is stored as 10 s, which is the saved value');
+  f.set('[data-setting="bounceInterval"]', 99999); assert.equal(field('bounceInterval').value, '3600'); assert.equal(save().disabled, false);
+  save().click(); f.advance(0); assert.equal(f.saved().bounceInterval, 3600); assert.equal(save().disabled, true, 'saved: the field, the draft and the settings agree');
+  f.set('[data-setting="bounceInterval"]', ''); assert.equal(field('bounceInterval').value, '10', 'an emptied field');
+  f.set('[data-setting="bounceMax"]', -4); assert.equal(field('bounceMax').value, '0'); assert.equal(unit(), 'bez limitu');
+  f.set('[data-setting="bounceMax"]', 12.6); assert.equal(field('bounceMax').value, '13'); assert.equal(unit(), 'odbić');
+  f.set('[data-setting="bounceMax"]', 5000); assert.equal(field('bounceMax').value, '999');
+  save().click(); f.advance(0); assert.deepEqual([f.saved().bounceInterval, f.saved().bounceMax], [10, 999]); assert.equal(save().disabled, true);
+  assert.deepEqual([field('bounceInterval').value, field('bounceMax').value], ['10', '999']);
+  const typed = f.type('[data-setting="bounceInterval"]', 3); assert.equal(typed.value, '3', 'not rewritten under the cursor'); assert.equal(save().disabled, true, 'on the way to 30: still the saved 10');
+  f.type('[data-setting="bounceInterval"]', 30); assert.equal(save().disabled, false);
+});
+
 test('Zapisz stores only its own page: a choice made elsewhere meanwhile is kept', () => {
   const f = fixture(); f.api.settings('history');
   f.api.preferences().livePreview = false; f.api.preferences().spelling = false; // the progress window and the spelling menu

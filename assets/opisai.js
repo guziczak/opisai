@@ -1187,12 +1187,13 @@
         area.innerHTML=`<fieldset class="oa-group"><legend>AI Act / RODO</legend><p class="oa-cfg-text">Robocza matryca kwalifikacji OpisAI: kwalifikacja AI Act, ryzyka i kontrole oraz checklista wdrożeniowa. Sama edycja otwiera się w osobnym, większym oknie. Źródłem prawdy jest jeden plik XLSX.</p><div class="oa-inline-controls">${cfgButton('Otwórz edycję matrycy...','matrix','Otwiera osobne okno z trzema arkuszami: Kwalifikacja, Ryzyka_i_kontrole, Checklista.')}${cfgButton('Otwórz plik XLSX...','xlsx','Otwiera źródłowy skoroszyt OpisAI_matryca_kwalifikacji_AI_Act.xlsx.')}</div>${cfgHint('XLSX: OpisAI_matryca_kwalifikacji_AI_Act.xlsx (w folderze OpisAI)<br>Status: brak - zostanie utworzony z domyślnej matrycy.')}${cfgHint('To robocza matryca zgodności, nie opinia prawna. Przy zmianie funkcji klinicznych, dostawców AI albo sposobu użycia trzeba ją przejrzeć ponownie.')}</fieldset><div class="oa-cfg-note">${notice('Tryb demonstracyjny: witryna nie wysyła treści wizyty do modeli AI, nie uruchamia mikrofonu i nie zapisuje danych w zewnętrznej Klinice.')}</div>`;
       }
       $$('[data-setting]',area).forEach(el=>{
-        const edit=()=>{
+        const edit=event=>{
           const key=el.dataset.setting;draft[key]=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;
+          if(key==='bounceInterval'||key==='bounceMax'){normalizeBounce(draft);if(event.type==='change')el.value=draft[key];} // the spin box ranges of rc32 (10–3600 s, 0–999): the draft holds what would be stored, the field takes it when the edit ends
           if(key==='provider'||key==='transport'||key==='auth'){connectCascade(draft);draw();}
           if(key==='transcriber')draw();
           if(key==='theme')preview(draft.theme);
-          if(key==='bounceMax'){const unit=$('[data-bounce-unit]',area);if(unit)unit.textContent=Number(el.value)>0?'odbić':'bez limitu';}
+          if(key==='bounceMax'){const unit=$('[data-bounce-unit]',area);if(unit)unit.textContent=draft.bounceMax>0?'odbić':'bez limitu';}
           status.textContent='';
         };
         el.addEventListener('change',edit);if(el.type==='number'||el.type==='text')el.addEventListener('input',edit); // typing counts at once: QSpinBox.valueChanged and QLineEdit.textChanged → _mark_dirty
