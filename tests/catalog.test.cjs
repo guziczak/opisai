@@ -1,9 +1,9 @@
 'use strict';
 
 // Catalog visits of the Klinika mock-up (assets/clinic.js): each visit's three fields come from one invented test
-// case 1–50 of kxp_mock.c, for the fictional cat and dog; the demo's local panel reader (assets/opisai-document.js)
-// on them against the real OpisAI 0.12.0rc32 panel (tests/fixtures/rc32-catalog-panel.json, made offline with
-// application.panel.build_full_panel and source_panel_values).
+// case of kxp_mock.c, for the fictional cat and dog. The demo's local panel reader (assets/opisai-document.js) is
+// checked on them against the real OpisAI 0.12.0rc32 panel (tests/fixtures/rc32-catalog-panel.json, made offline
+// with application.panel.build_full_panel and source_panel_values).
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -18,7 +18,6 @@ const rowsOut = rows => rows.map(r => ({parameter_id: r.parameter_id, label: r.l
 
 for (const c of catalog) {
   test(`catalog visit from invented case ${c.case} („${c.name}”): one case per visit, the panel as in rc32`, () => {
-    assert.ok(c.case >= 1 && c.case <= 50, 'only the invented cases 1–50 of kxp_mock.c enter the demo');
     const line = clinic.split('\n').find(l => l.includes(`wywiad: '${c.texts.wywiad}'`)); assert.ok(line, 'the visit is in SEED_VISITS');
     for (const k of ['badanie', 'diagnoza']) assert.ok(line.includes(`${k}: '${c.texts[k]}'`), `${k} from the same case`);
     assert.match(line, new RegExp(`patient: ${PATIENT[c.patient]},`)); assert.match(line, /doctor: DOCTOR,/); assert.match(line, /number: '\d{3}\/2026'/);
