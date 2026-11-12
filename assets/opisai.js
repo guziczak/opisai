@@ -72,7 +72,7 @@
   const check = (label,id,checked=false,extra='') => `<label class="oa-ack"><input type="checkbox" id="${id}" ${checked?'checked':''} ${extra}><span>${label}</span></label>`;
   const notice = (text,kind='info',extra='') => `<div class="oa-notice ${kind}" ${extra}>${icon(kind==='error'?'info':'shield',17)}<div>${text}</div></div>`;
   const clone = value => JSON.parse(JSON.stringify(value));
-  const savePreferences = () => { try { localStorage.setItem(PREF_KEY,JSON.stringify(preferences)); } catch (_) {} };
+  const savePreferences = () => { try { localStorage.setItem(PREF_KEY,JSON.stringify(preferences)); return true; } catch (_) { return false; } }; // false: the browser refused; the settings work until the page is refreshed
   const stamp = () => new Intl.DateTimeFormat('pl-PL',{hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date());
   const toast = message => window.Shell?.toast(message);
   function bind(root, action, callback) { $$(`[data-action="${action}"]`,root).forEach(el => el.addEventListener('click',callback)); }
@@ -1147,7 +1147,7 @@
   const offButton=(label,title,kind='')=>`<button type="button" class="oa-btn ${kind}" disabled title="${esc(title+IN_APP)}"><span>${label}</span></button>`;
   const lockedSwitch=(label,title,on)=>`<label class="oa-switch-row oa-cfg-locked" title="${esc(title)}"><input type="checkbox" ${on?'checked':''} disabled><div>${label}</div></label>`;
   const cfgHint=html=>`<p class="oa-cfg-hint">${html}</p>`; // _style_hint
-  let settingsToast=null;
+  let settingsToast=null,storageNotice=false;
   const demoOnly=text=>{settingsToast?.remove?.();settingsToast=toast(text);}; // each replaces the last
   const HW_LLM={auto:'Automatycznie (najlepszy dostępny)',nvidia_external:'Karta NVIDIA RTX — zewnętrzna (np. AORUS AI BOX)',nvidia_internal:'Karta NVIDIA RTX — wewnętrzna',integrated:'Karta wbudowana (AMD Radeon / Intel)'}; // hardware.LLM_CHOICES
   function settings(initial){
@@ -1224,12 +1224,14 @@
     bind(root,'save-settings',()=>{ // _on_accept: stores this page and keeps the window open
       if(!dirty())return;
       for(const key of PAGE_KEYS[page])preferences[key]=draft[key];
-      normalizeBounce(preferences);normalizeDictation(preferences);connectCascade(preferences);savePreferences();
+      normalizeBounce(preferences);normalizeDictation(preferences);connectCascade(preferences);const stored=savePreferences();
       themePreview=null;refreshThemes();window.OpisAISpelling?.refresh?.();
       const compose=windows.get('opisai-compose');if(page==='connection'&&compose?.el?.isConnected)$('#oa-compose-ack',compose.content)?.dispatchEvent(new Event('change')); // the route and the consent follow the new connection
       refreshSave(); // the same draft object: a page's own handlers keep it
-      const scope=$('[data-dt-scope]',root);if(scope)scope.textContent='Zapisano ustawienia dla następnego dyktowania.\nZmiana silnika, trybu kart, klipu i Autoenter nie przełącza trwającego nagrania.';
-      status.textContent='Zapisano zmiany z tej karty.';$('[data-action="close-settings"]',root)?.focus();
+      const scope=$('[data-dt-scope]',root);if(scope)scope.textContent=(stored?'Zapisano ustawienia dla następnego dyktowania.':'Ustawienia dla następnego dyktowania działają do odświeżenia strony.')+'\nZmiana silnika, trybu kart, klipu i Autoenter nie przełącza trwającego nagrania.';
+      status.textContent=stored?'Zapisano zmiany z tej karty.':'Nie udało się zapisać w przeglądarce. Zmiany z tej karty działają do odświeżenia strony.';
+      if(!stored&&!storageNotice){storageNotice=true;window.Shell?.notify?.({app:'OpisAI',icon:'opisai',title:'Nie udało się zapisać w przeglądarce',message:'Zmiany w Konfiguracji działają do odświeżenia strony.'});} // a blocked or full browser storage, said once (as Notatnik does)
+      $('[data-action="close-settings"]',root)?.focus();
     });
     draw();
     setTimeout(()=>$('.oa-nav-item.active',root)?.focus(),0);

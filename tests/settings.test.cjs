@@ -146,16 +146,16 @@ function matchChain(el, chain, index = chain.length - 1) {
 /* ------------------------------------------------------------------ the fixture */
 const SAMPLE = {wywiad: 'Szczur, kicha od tygodnia.', badanie: 'T 38,1°C, HR 320/min.', diagnoza: 'Nieżyt górnych dróg oddechowych.'};
 function fixture({prefs, desktop = 'light', editor = true} = {}) {
-  const doc = new Target(), win = new Target(), timers = new Map(), toasts = [], api = {}, storage = new Map(), clipboard = [];
+  const doc = new Target(), win = new Target(), timers = new Map(), toasts = [], notices = [], api = {}, storage = new Map(), clipboard = [];
   if (prefs) storage.set('opisai-demo-settings-v12', JSON.stringify(prefs));
-  let now = 0, serial = 0;
+  let now = 0, serial = 0, refuses = false; // refuses: a blocked or full browser storage
   doc.documentElement = new Element('html', doc); doc.body = new Element('body', doc); doc.documentElement.append(doc.body);
   doc.documentElement.setAttribute('data-theme', desktop);
   doc.createElement = tag => new Element(tag, doc); doc.createElementNS = (_, tag) => new Element(tag, doc);
   doc.querySelector = selector => doc.documentElement.querySelector(selector); doc.querySelectorAll = selector => doc.documentElement.querySelectorAll(selector);
   doc.getElementById = id => doc.querySelector('#' + id); doc.hidden = false; doc.readyState = 'complete';
   const windows = new Map();
-  const shell = {windows, prefs: {theme: desktop}, toast: message => { toasts.push(message); return {remove() {}}; }, menu: () => null, confirm: o => toasts.push(o.message), registerApp() {},
+  const shell = {windows, prefs: {theme: desktop}, toast: message => { toasts.push(message); return {remove() {}}; }, notify: n => { notices.push({...n}); }, menu: () => null, confirm: o => toasts.push(o.message), registerApp() {},
     createWindow(o) {
       if (windows.has(o.id)) { const existing = windows.get(o.id); existing.show(); return existing; }
       const el = doc.createElement('section'); el.setAttribute('data-window', o.id); el.className = o.className || ''; const content = doc.createElement('div'); content.className = 'window-content'; el.append(content); content.innerHTML = o.content; doc.body.append(el);
@@ -171,7 +171,7 @@ function fixture({prefs, desktop = 'light', editor = true} = {}) {
   const context = vm.createContext({window: win, document: doc, Element, Clinic: clinic, Shell: shell, __api: api,
     CSS: {escape: text => String(text).replace(/(["\\])/g, '\\$1')}, innerWidth: 1400, innerHeight: 900, navigator: {clipboard: {writeText: async text => { clipboard.push(text); }}}, performance: {now: () => now},
     matchMedia: () => ({matches: false, addEventListener() {}}), encodeURIComponent, Event: function Event(type) { this.type = type; },
-    localStorage: {getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key)},
+    localStorage: {getItem: key => storage.get(key) ?? null, setItem: (key, value) => { if (refuses) throw new Error('QuotaExceededError'); storage.set(key, String(value)); }, removeItem: key => storage.delete(key)},
     setTimeout: (fn, delay = 0) => { timers.set(++serial, {fn, due: now + delay}); return serial; }, clearTimeout: id => timers.delete(id),
     setInterval: () => ++serial, clearInterval() {}, requestAnimationFrame: fn => ++serial, cancelAnimationFrame() {},
     Intl, Date, JSON, Math, Object, Array, Number, String, Map, Set, Promise, RegExp, Proxy});
@@ -179,7 +179,7 @@ function fixture({prefs, desktop = 'light', editor = true} = {}) {
   win.OpisAIDocument = context.OpisAIDocument;
   vm.runInContext(controllerSource, context, {filename: 'assets/opisai.js'});
   function advance(ms) { const end = now + ms; for (;;) { const next = [...timers].sort((a, b) => a[1].due - b[1].due || a[0] - b[0])[0]; if (!next || next[1].due > end) break; now = Math.max(now, next[1].due); timers.delete(next[0]); next[1].fn(); } now = end; }
-  const f = {api, doc, win, shell, clinic, windows, toasts, storage, clipboard, advance,
+  const f = {api, doc, win, shell, clinic, windows, toasts, notices, storage, clipboard, advance, refuseStorage(on) { refuses = on; },
     root: id => windows.get(id)?.content,
     q(id, selector) { const el = windows.get(id)?.content.querySelector(selector); assert.ok(el, `${id}: ${selector}`); return el; },
     click(id, selector) { f.q(id, selector).click(); f.advance(0); },
@@ -301,6 +301,25 @@ test('O aplikacji chosen again while open is only presented and keeps its tab an
   assert.equal(f.windows.get('opisai-about'), win); assert.equal(presented, 1); assert.equal(tab(), 'Licencje'); assert.equal(f.q('opisai-about', 'textarea').value, f.api.LICENSE_TEXTS.demo);
   f.api.about('contact'); assert.equal(tab(), 'Kontakt', 'a named tab is chosen as by a click');
   f.click('opisai-about', '[data-action="close"]'); f.api.about(); assert.equal(tab(), 'O aplikacji');
+});
+
+test('Zapisz when the browser refuses to store: the change works, no saving is claimed and one notice says it lasts until the page is refreshed', () => {
+  const f = fixture(); f.api.settings('appearance'); f.api.about();
+  const save = () => f.q('opisai-settings', '[data-action="save-settings"]'), status = () => f.q('opisai-settings', '[data-cfg-status]').textContent;
+  const scope = () => f.page().querySelector('[data-dt-scope]').textContent.split('\n')[0];
+  f.refuseStorage(true); // localStorage.setItem throws: blocked or full
+  f.set('[data-setting="theme"]', 'dark'); save().click(); f.advance(0);
+  assert.equal(f.api.preferences().theme, 'dark'); assert.equal(f.themeOf('opisai-about'), 'dark', 'the setting is in use'); assert.equal(save().disabled, true);
+  assert.deepEqual(f.saved(), {}, 'nothing was stored');
+  assert.equal(status(), 'Nie udało się zapisać w przeglądarce. Zmiany z tej karty działają do odświeżenia strony.');
+  assert.deepEqual(f.notices, [{app: 'OpisAI', icon: 'opisai', title: 'Nie udało się zapisać w przeglądarce', message: 'Zmiany w Konfiguracji działają do odświeżenia strony.'}]);
+  f.click('opisai-settings', '[data-page="dictation"]'); f.set('[data-setting="transcriber"]', 'local_whisper'); save().click(); f.advance(0);
+  assert.equal(scope(), 'Ustawienia dla następnego dyktowania działają do odświeżenia strony.', 'the note of the page does not claim it either');
+  assert.match(status(), /^Nie udało się zapisać w przeglądarce\./); assert.equal(f.notices.length, 1, 'the notice comes once');
+  f.refuseStorage(false);
+  f.set('[data-setting="transcriber"]', 'chatgpt_browser'); save().click(); f.advance(0);
+  assert.equal(status(), 'Zapisano zmiany z tej karty.'); assert.equal(scope(), 'Zapisano ustawienia dla następnego dyktowania.');
+  assert.deepEqual([f.saved().theme, f.saved().transcriber], ['dark', 'chatgpt_browser'], 'a later save stores everything in use'); assert.equal(f.notices.length, 1);
 });
 
 test('Zapisz stores only its own page: a choice made elsewhere meanwhile is kept', () => {
