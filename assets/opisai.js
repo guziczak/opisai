@@ -1846,7 +1846,8 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
     if(state.recording){finishDictation();messageBox({title:'OpisAI — informacja',icon:'info',text:'Zakończ odczyt albo dyktowanie przed zamknięciem.'});return;} // can_quit → _say: OpisAI's own message box
     if(state.job){state.job.cancel();messageBox({title:'OpisAI — informacja',icon:'info',text:'Kończę transport. Zamknij aplikację po zwolnieniu bieżącej operacji.'});return;}
     liveWindows().forEach(w=>w.close());state.review=null;state.operation=null;state.active=null;dismissCard(true);markField(null);
-    const finish=()=>{state.closed=true;syncTray();orb.exit=null;stopPhysics();if(orb.el)orb.el.classList.add('is-hidden');hideHint();toast('OpisAI zostało zamknięte. W demonstracji bąbelek wróci po kliknięciu ikony OpisAI w zasobniku albo na pulpicie.');};
+    state.closed=true;syncTray(); // closed from here on, the collapse is only its picture: what is asked for meanwhile starts OpisAI again, so nothing opens over a bubble about to hide
+    const finish=()=>{orb.exit=null;stopPhysics();if(orb.el)orb.el.classList.add('is-hidden');hideHint();toast('OpisAI zostało zamknięte. W demonstracji bąbelek wróci po kliknięciu ikony OpisAI w zasobniku albo na pulpicie.');};
     cancelGesture();releaseIdleMotion();stopPhysics();hideHint();
     if(orbReduced()){finish();return;}
     orb.exit={start:nowS(),done:finish};orb.scale=1;orb.scaleTarget=1;orb.scaleVel=0;orb.amp=orb.ampTarget=0;orb.sx=orb.sy=1;orbKick();
@@ -2218,7 +2219,7 @@ Dane wizyt są fikcyjne. Wynik demonstracji nie jest poradą weterynaryjną.`};
     const wrap=orb.el;if(!wrap)return;
     const reduced=orbReduced(),phase=state.phase,[label,color]=ORB_STATES[phase]||ORB_STATES.idle,m=orbMotion.snapshot();
     const r=orb.jellyR!==null?orb.jellyR:ORB_R*orb.scale*(1-.07*orb.dip),r0=ORB_R,jelly=orb.jellyR!==null;
-    wrap.classList.toggle('is-hidden',state.closed||orb.soaked);wrap.classList.toggle('is-physics',!!orb.phys);
+    wrap.classList.toggle('is-hidden',state.closed&&!orb.exit||orb.soaked);wrap.classList.toggle('is-physics',!!orb.phys);
     wrap.style.transform=`translate3d(${orb.x.toFixed(2)}px,${orb.y.toFixed(2)}px,0)`;
     const anchor=orb.phys&&(orb.phys.charging||physOnGround())?1:0;
     const d=r<.5?'':OpisAIOrbMotion.contour({r,amp:jelly?0:orb.amp,hp1:orb.hp1,hp2:orb.hp2,angle:jelly?0:m.angle,stretch:jelly?0:m.stretch,bulge:orb.bulge,bulgeAngle:orb.bulgeAngle,sx:orb.sx,sy:orb.sy,anchor,contact:jelly?orb.contact:0});

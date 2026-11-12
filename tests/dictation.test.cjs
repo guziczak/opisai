@@ -444,6 +444,21 @@ test('after "Zamknij" a window asked for from Start, the desktop or the guide st
   }
 });
 
+test('"Zamknij" closes OpisAI at once and the collapse only plays it out: what is asked for during those 0.38 s starts OpisAI again', () => {
+  const closing = prefs => { const f = fixture({ prefs }), wrap = f.doc.querySelector('.oa-orb-wrap'); f.api.closeApp(); f.advance(150);
+    assert.equal(f.state.closed, true, 'closed from the moment "Zamknij" is chosen'); assert(!wrap.classList.contains('is-hidden'), 'the bubble is still collapsing'); f.shown.length = 0; return [f, wrap]; };
+  for (const [id, open] of [['opisai-settings', f => f.api.settings('connection')], ['opisai-history', f => f.api.history()], ['opisai-about', f => f.api.about()]]) {
+    const [f, wrap] = closing(); open(f); f.advance(1000);
+    assert.deepEqual(f.shown, [id]); assert.equal(f.state.closed, false, id + ': OpisAI runs again');
+    assert(!wrap.classList.contains('is-hidden'), id + ': it is not left over a bubble that hides 0.2 s later'); assert.equal(f.phase, 'idle');
+    assert(!f.toasts.some(text => /zostało zamknięte/.test(text)), id + ': the exit was called off, nothing says "closed"');
+  }
+  const [f, wrap] = closing({ transcriber: 'local_whisper' }); f.api.dictate(); f.advance(2600);
+  assert.equal(f.phase, 'recording'); assert.equal(f.state.closed, false, '"Dyktuj": no recording over a hidden bubble either'); assert(!wrap.classList.contains('is-hidden'));
+  const [g, gone] = closing(); g.advance(1000); // nothing asked for: the exit ends as before
+  assert.equal(g.state.closed, true); assert(gone.classList.contains('is-hidden')); assert(g.toasts.some(text => /zostało zamknięte/.test(text)));
+});
+
 test('the context menu of the dictation preview has the theme in use: "Automatyczny" follows the desktop, like the panel itself', () => {
   for (const [theme, desktop, dark] of [['dark', 'light', true], ['auto', 'dark', true], ['auto', 'light', false], ['light', 'dark', false]]) {
     const f = fixture({ prefs: { transcriber: 'local_whisper', theme } }); f.doc.documentElement.setAttribute('data-theme', desktop);
