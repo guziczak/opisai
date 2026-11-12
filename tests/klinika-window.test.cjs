@@ -247,3 +247,38 @@ test('visit list: a filter rebuilds the rows and keeps or moves the selection', 
   f.click(f.q('clinic-list', '[data-list-clear]'));
   assert.equal(f.rows().length, 10); assert.deepEqual(f.selected(), ['V-158']);
 });
+
+test('visit list: once the chosen visit is shown the list is put away; Ctrl+L brings it back as it was', () => {
+  const f = fixture(), list = () => f.window('clinic-list');
+  f.openList();
+  f.doubleClick(() => f.row('V-104').children[1]);
+  assert.equal(list().visible, true, 'the list waits while Klinika asks about the unsaved buffer');
+  f.click(f.q('clinic-confirm', '[data-dialog-close]'));
+  assert.deepEqual([f.ctx().mode, list().visible, f.open('clinic-confirm')], ['new', true, false], '„Anuluj” changes nothing');
+  f.doubleClick(() => f.row('V-104').children[1]); f.click(f.q('clinic-confirm', '[data-confirm]'));
+  assert.deepEqual([f.ctx().visitNumber, list().visible, f.shell.activeWindow.id], ['104/2026', false, 'clinic'], 'the review is in front and the list is away');
+  f.advance(200); assert.equal(list().el.hidden, true);
+  f.openList();
+  assert.equal(list().el.hidden, false); assert.deepEqual(f.selected(), ['V-104']);
+  assert.ok(f.doc.activeElement === f.row('V-104'), 'the list returns with its selection and the focus on that row');
+  // Enter and the buttons do the same as the double click.
+  f.click(f.row('V-097').children[0]); f.key('Enter');
+  assert.deepEqual([f.ctx().visitNumber, list().visible, f.shell.activeWindow.id], ['097/2026', false, 'clinic']);
+  f.openList(); f.click(f.row('V-133').children[0]); f.click(f.q('clinic-list', '[data-list-action="review"]'));
+  assert.deepEqual([f.ctx().visitNumber, list().visible], ['133/2026', false]);
+  // „Przejdź do edycji (F2)” goes on to the description sub-window of the chosen visit.
+  f.openList(); f.click(f.row('V-151').children[0]); f.click(f.q('clinic-list', '[data-list-action="edit"]'));
+  const c = f.ctx();
+  assert.deepEqual([c.mode, c.visitNumber, c.editorOpen, list().visible, f.shell.activeWindow.id], ['edit', '151/2026', true, false, 'clinic-editor']);
+  // A new visit starts with a dialog above the list: the list stays.
+  f.openList(); f.click(f.q('clinic-list', '[data-list-action="new"]'));
+  assert.deepEqual([f.open('clinic-meta'), list().visible], [true, true]);
+});
+
+test('visit list: a visit opened elsewhere in Klinika leaves the list where it is', () => {
+  const f = fixture(); f.openList();
+  // double click in the history of the main window
+  f.click(f.q('clinic', '[data-visit="V-140"]'), 1); f.click(f.q('clinic', '[data-visit="V-140"]'), 2);
+  f.click(f.q('clinic-confirm', '[data-confirm]'));
+  assert.deepEqual([f.ctx().mode, f.ctx().visitNumber, f.window('clinic-list').visible], ['saved', '140/2026', true]);
+});

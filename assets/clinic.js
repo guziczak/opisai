@@ -281,9 +281,9 @@
     if (writable() && editorWindow && dirty()) confirmDialog('Nowa wizyta', 'Otwarcie nowej wizyty odrzuci bieżący bufor edycji. Kontynuować?', 'Kontynuuj', () => { closeEditor(); begin(); });
     else begin();
   }
-  function activateVisit(id, editAfter = false) {
+  function activateVisit(id, editAfter = false, shown) {
     const v = state.visits.find(row => row.id === id); if (!v) return;
-    const go = () => { closeEditor(); state.loaded = v; state.current = { id: v.id, patient: v.patient, meta: metaFromVisit(v), fields: { ...v.fields } }; state.mode = 'saved'; statusText = ''; for (const k of KEYS) delete fieldUndo[k]; refreshAll(); open(); announce(null, 'switch'); if (editAfter) startEditing(); };
+    const go = () => { closeEditor(); state.loaded = v; state.current = { id: v.id, patient: v.patient, meta: metaFromVisit(v), fields: { ...v.fields } }; state.mode = 'saved'; statusText = ''; for (const k of KEYS) delete fieldUndo[k]; refreshAll(); open(); shown?.(); announce(null, 'switch'); if (editAfter) startEditing(); };
     if (writable() && editorWindow && dirty()) confirmDialog('Zmiana wizyty', 'Zmiana wizyty odrzuci bieżący bufor edycji. Kontynuować?', 'Kontynuuj', go); else go();
   }
   function syncMetaInputs() {
@@ -354,6 +354,9 @@
     listRoot.querySelector('[data-list-summary]').textContent = sel ? KEYS.filter(k => sel.fields[k]).map(k => `${LABELS[k]}: ${sel.fields[k]}`).join('\n\n') : '';
     listRoot.querySelectorAll('[data-list-action]').forEach(b => { b.disabled = !sel && b.dataset.listAction !== 'new'; });
   }
+  /* The list is owned by the main window and stays above it. Once a visit chosen in it is shown, the list is put away,
+     or the visit would open behind it; Ctrl+L brings the list back as it was. A declined question leaves it in place. */
+  function openFromList(id, edit = false) { activateVisit(id, edit, () => listWindow?.minimize()); }
   function openList(patientFilter) {
     if (patientFilter) { const p = patientOf(patientFilter); listFilter = { owner: '', animal: p.name, text: '' }; }
     if (listWindow && listRoot && document.contains(listRoot)) { listWindow.show(); listWindow.focus(); if (patientFilter) { listRoot.querySelector('[name=animal]').value = listFilter.animal; renderList(); } return; }
@@ -371,10 +374,10 @@
       if (event.target.closest('[data-list-close]')) { listWindow?.close(); return; }
       const action = event.target.closest('[data-list-action]')?.dataset.listAction;
       if (action === 'new') { const sel = state.visits.find(v => v.id === listSelected); newVisit(sel ? sel.patient : state.current.patient); }
-      else if (action && listSelected) activateVisit(listSelected, action === 'edit');
+      else if (action && listSelected) openFromList(listSelected, action === 'edit');
     });
-    listRoot.addEventListener('dblclick', event => { const row = event.target.closest('[data-list-row]'); if (row) activateVisit(row.dataset.listRow); });
-    listRoot.addEventListener('keydown', event => { const row = event.target.closest('[data-list-row]'); if (row && event.key === 'Enter') activateVisit(row.dataset.listRow); });
+    listRoot.addEventListener('dblclick', event => { const row = event.target.closest('[data-list-row]'); if (row) openFromList(row.dataset.listRow); });
+    listRoot.addEventListener('keydown', event => { const row = event.target.closest('[data-list-row]'); if (row && event.key === 'Enter') openFromList(row.dataset.listRow); });
     renderList();
   }
 
