@@ -390,7 +390,7 @@
       else if (action && listSelected) openFromList(listSelected, action === 'edit');
     });
     listRoot.addEventListener('dblclick', event => { const row = event.target.closest('[data-list-row]'); if (row) openFromList(row.dataset.listRow); });
-    listRoot.addEventListener('keydown', event => { const row = event.target.closest('[data-list-row]'); if (row && event.key === 'Enter') openFromList(row.dataset.listRow); });
+    listRoot.addEventListener('keydown', event => { const row = event.target.closest('[data-list-row]'); if (row && event.key === 'Enter') { listSelected = row.dataset.listRow; renderListSelection(); openFromList(listSelected); } }); // Enter selects the row it opens, as a double click does
     renderList();
   }
 

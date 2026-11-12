@@ -242,6 +242,28 @@ test('visit list: Enter opens the row that was clicked, and the buttons act on i
   assert.deepEqual([f.ctx().mode, f.ctx().visitNumber], ['saved', '133/2026']);
 });
 
+// A row reached with the Tab key has the focus but is not the selected one. Enter opened it and left the selection, the
+// details and the buttons on another visit, and that is what the list showed when it came back.
+test('visit list: Enter on a row reached by keyboard selects the row it opens', () => {
+  const f = fixture(); f.key('s', {ctrlKey: true}); // the example saved: nothing is unsaved
+  f.openList();
+  assert.deepEqual(f.selected(), ['V-160']);
+  const row = f.row('V-097'); row.focus(); f.fire(row, 'focusin'); // as the Tab key does: the focus moves, the selection stays
+  assert.deepEqual(f.selected(), ['V-160'], 'focus alone selects nothing');
+  f.key('Enter');
+  assert.deepEqual([f.ctx().mode, f.ctx().visitNumber, f.window('clinic-list').visible], ['saved', '097/2026', false]);
+  f.openList();
+  assert.deepEqual(f.selected(), ['V-097'], 'the list comes back with the opened visit selected');
+  assert.match(f.summary(), /^Wywiad: kicha od 4 dni/);
+  assert.ok(f.doc.activeElement === f.row('V-097'), 'and with the focus on it');
+  // With an unsaved buffer the row is selected, Klinika asks, and „Anuluj” leaves the open visit as it was.
+  f.shell.windows.get('clinic').focus(); f.key('F2'); f.advance(100); assert.equal(f.clinic.setFields({wywiad: 'Kicha od tygodnia.'}).ok, true);
+  f.openList(); const other = f.row('V-071'); other.focus(); f.fire(other, 'focusin'); f.key('Enter');
+  assert.deepEqual([f.selected(), f.open('clinic-confirm'), f.ctx().visitNumber], [['V-071'], true, '097/2026']);
+  f.click(f.q('clinic-confirm', '[data-dialog-close]'));
+  assert.deepEqual([f.ctx().mode, f.ctx().visitNumber, f.window('clinic-list').visible, f.selected()], ['edit', '097/2026', true, ['V-071']]);
+});
+
 test('visit list: a filter rebuilds the rows and keeps or moves the selection', () => {
   const f = fixture(); f.openList();
   f.click(f.row('V-097').children[0]);
